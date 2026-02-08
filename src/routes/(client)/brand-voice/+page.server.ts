@@ -8,7 +8,8 @@ import {
   recordApproval,
   recordRejection,
   getFeedbackStats,
-  type ContentType
+  type ContentType,
+  type ToneType
 } from '$lib/server/ai';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -463,7 +464,7 @@ ${feedback || 'No specific feedback provided'}
       // Convert to VoiceAnalysis format and generate profile
       const analysis = {
         tone: voiceProfile.tone,
-        tones: ['professional'] as const,
+        tones: ['professional'] as ToneType[],
         personality: voiceProfile.personality,
         formalityLevel: (voiceProfile.formalityLevel || 'professional') as 'formal' | 'professional' | 'casual' | 'friendly',
         targetAudience: voiceProfile.targetAudience || 'Adults seeking dental care',

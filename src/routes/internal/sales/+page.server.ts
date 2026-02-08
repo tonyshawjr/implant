@@ -126,6 +126,7 @@ export const load: PageServerLoad = async () => {
       // Count by stage
       prisma.prospect.groupBy({
         by: ['stage'],
+        orderBy: { stage: 'asc' },
         _count: true,
         _sum: {
           monthlyValue: true
@@ -284,8 +285,8 @@ export const load: PageServerLoad = async () => {
   // Stage statistics
   const stageStats = pipelineStats[1].reduce((acc, stat) => {
     acc[stat.stage] = {
-      count: stat._count,
-      value: stat._sum.monthlyValue ? Number(stat._sum.monthlyValue) : 0
+      count: stat._count as number,
+      value: stat._sum?.monthlyValue ? Number(stat._sum.monthlyValue) : 0
     };
     return acc;
   }, {} as Record<string, { count: number; value: number }>);

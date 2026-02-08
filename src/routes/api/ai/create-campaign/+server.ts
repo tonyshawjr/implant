@@ -166,9 +166,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       );
     }
 
-    // Get territory
+    // Get territory (must be assigned to the organization)
     const territory = await prisma.territory.findFirst({
-      where: { id: body.territoryId, organizationId }
+      where: {
+        id: body.territoryId,
+        assignments: {
+          some: {
+            organizationId,
+            status: 'active'
+          }
+        }
+      }
     });
 
     if (!territory) {

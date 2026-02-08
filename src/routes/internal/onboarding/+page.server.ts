@@ -161,6 +161,7 @@ export const load: PageServerLoad = async () => {
       prisma.clientOnboarding.groupBy({
         by: ['currentPhase'],
         where: { completedAt: null },
+        orderBy: { currentPhase: 'asc' },
         _count: true
       }),
       // Delayed (started more than 14 days ago and not completed)
@@ -207,7 +208,7 @@ export const load: PageServerLoad = async () => {
 
   // Group by phase for stats
   const byPhase = onboardingStats[3].reduce((acc, stat) => {
-    acc[stat.currentPhase] = stat._count;
+    acc[stat.currentPhase] = stat._count as number;
     return acc;
   }, {} as Record<number, number>);
 
