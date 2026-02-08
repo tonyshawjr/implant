@@ -1,0 +1,1688 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  super_admin
+  admin
+  support
+  client_owner
+  client_admin
+  client_staff
+}
+
+enum OrgStatus {
+  active
+  suspended
+  churned
+}
+
+enum TerritoryStatus {
+  available
+  locked
+  waitlist
+}
+
+enum TerritoryType {
+  standard
+  premium
+  metro
+}
+
+enum ContractStatus {
+  active
+  pending
+  expired
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  pending
+  paid
+  overdue
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum PaymentMethodType {
+  credit_card
+  ach
+  wire
+}
+
+enum CampaignPlatform {
+  google
+  facebook
+  instagram
+  meta
+}
+
+enum CampaignStatus {
+  draft
+  pending_review
+  active
+  paused
+  completed
+}
+
+enum CampaignType {
+  awareness
+  lead_gen
+  retargeting
+}
+
+enum CreativeType {
+  image
+  video
+  carousel
+  text
+}
+
+enum CreativeStatus {
+  draft
+  pending_review
+  approved
+  rejected
+}
+
+enum LeadSource {
+  google
+  facebook
+  instagram
+  website
+  referral
+  manual
+}
+
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  appointment_set
+  consultation_completed
+  converted
+  lost
+}
+
+enum LeadTemperature {
+  hot
+  warm
+  cold
+}
+
+enum InsuranceStatus {
+  has_insurance
+  no_insurance
+  unknown
+}
+
+enum VoiceProfileStatus {
+  pending
+  analyzing
+  in_review
+  approved
+  rejected
+}
+
+enum VoiceSourceType {
+  website
+  document
+  audio
+  video
+  text
+}
+
+enum FormalityLevel {
+  formal
+  professional
+  casual
+  friendly
+}
+
+enum TicketCategory {
+  billing
+  technical
+  campaign
+  leads
+  account
+  other
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum TicketStatus {
+  open
+  pending
+  in_progress
+  escalated
+  resolved
+  closed
+}
+
+enum ProspectSource {
+  inbound
+  outbound
+  referral
+  event
+  website
+}
+
+enum ProspectStage {
+  new
+  qualified
+  demo_scheduled
+  proposal_sent
+  negotiation
+  closed_won
+  closed_lost
+}
+
+enum ProposalStatus {
+  draft
+  sent
+  viewed
+  accepted
+  declined
+  expired
+}
+
+enum AlertSeverity {
+  info
+  warning
+  critical
+}
+
+enum AlertType {
+  performance_drop
+  contract_renewal
+  low_engagement
+  payment_issue
+  anomaly
+}
+
+enum PhaseStatus {
+  pending
+  in_progress
+  completed
+}
+
+enum ActivityType {
+  call
+  email
+  sms
+  note
+  status_change
+  appointment
+}
+
+enum ActivityDirection {
+  inbound
+  outbound
+}
+
+enum SalesActivityType {
+  call
+  email
+  meeting
+  demo
+  proposal
+  note
+  stage_change
+}
+
+enum CommunicationEntryType {
+  call
+  email
+  meeting
+  note
+  alert
+}
+
+enum CommunicationDirection {
+  inbound
+  outbound
+  internal
+}
+
+enum ReviewType {
+  monthly_performance
+  quarterly_business
+  contract_renewal
+}
+
+enum ReviewStatus {
+  scheduled
+  completed
+  cancelled
+  rescheduled
+}
+
+enum FeedbackType {
+  general
+  feature_request
+  bug_report
+  complaint
+  praise
+}
+
+enum FeedbackStatus {
+  new
+  reviewed
+  in_progress
+  resolved
+  closed
+}
+
+enum AnomalyType {
+  performance
+  spend
+  lead_quality
+  engagement
+  system
+}
+
+enum ModelType {
+  voice_analysis
+  ad_generation
+  lead_scoring
+  anomaly_detection
+}
+
+enum ModelStatus {
+  training
+  active
+  deprecated
+}
+
+enum LogLevel {
+  info
+  success
+  warning
+  error
+}
+
+enum ContactType {
+  primary
+  billing
+  office_manager
+  marketing
+}
+
+enum TerritoryReservationStatus {
+  active
+  expired
+  converted
+  cancelled
+}
+
+enum WaitlistStatus {
+  waiting
+  notified
+  converted
+  expired
+}
+
+enum TerritoryAssignmentStatus {
+  active
+  expired
+  cancelled
+}
+
+enum InvoiceLineItemType {
+  subscription
+  territory
+  ad_spend
+  setup
+  other
+}
+
+enum AddOnType {
+  recurring
+  one_time
+}
+
+enum OrganizationAddonStatus {
+  active
+  cancelled
+  expired
+}
+
+enum OptimizationType {
+  bid_adjustment
+  audience_change
+  budget_change
+  creative_swap
+  pause_ad
+  scale_ad
+}
+
+enum OptimizationImpact {
+  positive
+  neutral
+  negative
+}
+
+enum LandingPageCategory {
+  implant
+  cosmetic
+  general
+  promo
+}
+
+enum LandingPageStatus {
+  draft
+  published
+  archived
+}
+
+enum AssetType {
+  image
+  video
+  audio
+  document
+}
+
+enum ArticleStatus {
+  draft
+  published
+  archived
+}
+
+enum ArticleVisibility {
+  public
+  internal
+  client
+}
+
+// ============================================================================
+// 1. AUTHENTICATION & USERS (3 tables)
+// ============================================================================
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  firstName        String    @map("first_name")
+  lastName         String    @map("last_name")
+  phone            String?
+  avatarUrl        String?   @map("avatar_url")
+  role             UserRole  @default(client_staff)
+  organizationId   String?   @map("organization_id")
+  isActive         Boolean   @default(true) @map("is_active")
+  emailVerifiedAt  DateTime? @map("email_verified_at")
+  lastLoginAt      DateTime? @map("last_login_at")
+  loginCount       Int       @default(0) @map("login_count")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  // Relations
+  organization             Organization?         @relation(fields: [organizationId], references: [id])
+  sessions                 Session[]
+  passwordResets           PasswordReset[]
+  managedOrganizations     Organization[]        @relation("AccountManager")
+  assignedLeads            Lead[]                @relation("AssignedTo")
+  leadActivities           LeadActivity[]        @relation("PerformedBy")
+  campaignsCreated         Campaign[]            @relation("CampaignCreator")
+  campaignsApproved        Campaign[]            @relation("CampaignApprover")
+  voiceProfilesApproved    VoiceProfile[]        @relation("VoiceApprover")
+  ticketsSubmitted         SupportTicket[]       @relation("TicketSubmitter")
+  ticketsAssigned          SupportTicket[]       @relation("TicketAssignee")
+  ticketMessages           TicketMessage[]
+  prospectsAssigned        Prospect[]            @relation("ProspectAssignee")
+  prospectActivities       ProspectActivity[]
+  proposalsCreated         Proposal[]            @relation("ProposalCreator")
+  territoryReservations    TerritoryReservation[] @relation("ReservedBy")
+  onboardingsAssigned      ClientOnboarding[]    @relation("OnboardingAssignee")
+  onboardingTasksCompleted OnboardingTask[]
+  communicationLogs        CommunicationLog[]
+  reviewsConducted         MonthlyReview[]
+  feedbackResponses        ClientFeedback[]      @relation("FeedbackResponder")
+  anomaliesAcknowledged    AiAnomaly[]           @relation("AnomalyAcknowledger")
+  anomaliesResolved        AiAnomaly[]           @relation("AnomalyResolver")
+  alertsAcknowledged       ClientHealthAlert[]
+  contractsSigned          Contract[]            @relation("ContractSigner")
+  articlesAuthored         KnowledgeBaseArticle[]
+  creativesApproved        CreativeAsset[]
+  systemSettingsUpdated    SystemSetting[]
+  landingPagesCreated      LandingPage[]
+  templatesCreated         LandingPageTemplate[]
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([role])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// ============================================================================
+// 2. ORGANIZATIONS (3 tables)
+// ============================================================================
+
+model Organization {
+  id               String     @id @default(uuid())
+  name             String
+  slug             String     @unique
+  logoUrl          String?    @map("logo_url")
+  website          String?
+  phone            String?
+  email            String?
+  addressLine1     String?    @map("address_line1")
+  addressLine2     String?    @map("address_line2")
+  city             String?
+  state            String?
+  postalCode       String?    @map("postal_code")
+  country          String     @default("US")
+  timezone         String     @default("America/New_York")
+  status           OrgStatus  @default(active)
+  healthScore      Decimal?   @default(0) @map("health_score") @db.Decimal(5, 2)
+  avgCaseValue     Decimal?   @default(4000) @map("avg_case_value") @db.Decimal(10, 2)
+  clientSince      DateTime?  @map("client_since")
+  accountManagerId String?    @map("account_manager_id")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  deletedAt        DateTime?  @map("deleted_at")
+
+  // Relations
+  accountManager        User?                  @relation("AccountManager", fields: [accountManagerId], references: [id])
+  users                 User[]
+  contacts              OrganizationContact[]
+  healthScoreHistory    HealthScoreHistory[]
+  territoryAssignments  TerritoryAssignment[]
+  contracts             Contract[]
+  invoices              Invoice[]
+  paymentMethods        PaymentMethod[]
+  organizationAddons    OrganizationAddon[]
+  campaigns             Campaign[]
+  leads                 Lead[]
+  voiceProfiles         VoiceProfile[]
+  landingPages          LandingPage[]
+  creativeAssets        CreativeAsset[]
+  supportTickets        SupportTicket[]
+  clientHealthAlerts    ClientHealthAlert[]
+  clientOnboarding      ClientOnboarding?
+  communicationLogs     CommunicationLog[]
+  monthlyReviews        MonthlyReview[]
+  clientFeedback        ClientFeedback[]
+  aiAnomalies           AiAnomaly[]
+  competitorReports     CompetitorReport[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([healthScore])
+  @@index([accountManagerId])
+  @@map("organizations")
+}
+
+model OrganizationContact {
+  id             String      @id @default(uuid())
+  organizationId String      @map("organization_id")
+  contactType    ContactType @map("contact_type")
+  firstName      String      @map("first_name")
+  lastName       String      @map("last_name")
+  title          String?
+  email          String?
+  phone          String?
+  isPrimary      Boolean     @default(false) @map("is_primary")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_contacts")
+}
+
+model HealthScoreHistory {
+  id                  String   @id @default(uuid())
+  organizationId      String   @map("organization_id")
+  score               Decimal  @db.Decimal(5, 2)
+  leadVolumeScore     Decimal? @map("lead_volume_score") @db.Decimal(5, 2)
+  costEfficiencyScore Decimal? @map("cost_efficiency_score") @db.Decimal(5, 2)
+  engagementScore     Decimal? @map("engagement_score") @db.Decimal(5, 2)
+  paymentHistoryScore Decimal? @map("payment_history_score") @db.Decimal(5, 2)
+  contractTenureScore Decimal? @map("contract_tenure_score") @db.Decimal(5, 2)
+  calculatedAt        DateTime @map("calculated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("health_score_history")
+}
+
+// ============================================================================
+// 3. TERRITORIES (5 tables)
+// ============================================================================
+
+model Territory {
+  id                String          @id @default(uuid())
+  name              String
+  city              String
+  state             String
+  centerLat         Decimal         @map("center_lat") @db.Decimal(10, 8)
+  centerLng         Decimal         @map("center_lng") @db.Decimal(11, 8)
+  radiusMiles       Int             @map("radius_miles")
+  territoryType     TerritoryType   @default(standard) @map("territory_type")
+  status            TerritoryStatus @default(available)
+  population        Int?
+  households        Int?
+  medianAge         Decimal?        @map("median_age") @db.Decimal(4, 1)
+  medianIncome      Int?            @map("median_income")
+  implantCandidates Int?            @map("implant_candidates")
+  competitionCount  Int?            @map("competition_count")
+  monthlyBasePrice  Decimal?        @map("monthly_base_price") @db.Decimal(10, 2)
+  performanceScore  Decimal?        @map("performance_score") @db.Decimal(5, 2)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  zipCodes     TerritoryZipCode[]
+  assignments  TerritoryAssignment[]
+  waitlist     TerritoryWaitlist[]
+  reservations TerritoryReservation[]
+  campaigns    Campaign[]
+  leads        Lead[]
+  proposals    Proposal[]
+  competitorReports CompetitorReport[]
+
+  @@index([state, city])
+  @@index([status])
+  @@index([centerLat, centerLng])
+  @@map("territories")
+}
+
+model TerritoryZipCode {
+  id          String  @id @default(uuid())
+  territoryId String  @map("territory_id")
+  zipCode     String  @map("zip_code")
+  city        String?
+  isPrimary   Boolean @default(false) @map("is_primary")
+
+  territory Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+
+  @@index([territoryId])
+  @@index([zipCode])
+  @@map("territory_zip_codes")
+}
+
+model TerritoryAssignment {
+  id             String                    @id @default(uuid())
+  territoryId    String                    @map("territory_id")
+  organizationId String                    @map("organization_id")
+  assignedAt     DateTime                  @map("assigned_at")
+  expiresAt      DateTime?                 @map("expires_at")
+  isExclusive    Boolean                   @default(true) @map("is_exclusive")
+  monthlyRate    Decimal                   @map("monthly_rate") @db.Decimal(10, 2)
+  status         TerritoryAssignmentStatus @default(active)
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+
+  territory    Territory    @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("territory_assignments")
+}
+
+model TerritoryWaitlist {
+  id           String         @id @default(uuid())
+  territoryId  String         @map("territory_id")
+  prospectId   String?        @map("prospect_id")
+  contactName  String         @map("contact_name")
+  contactEmail String         @map("contact_email")
+  contactPhone String?        @map("contact_phone")
+  practiceName String?        @map("practice_name")
+  position     Int
+  joinedAt     DateTime       @map("joined_at")
+  notifiedAt   DateTime?      @map("notified_at")
+  status       WaitlistStatus @default(waiting)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  territory Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  prospect  Prospect? @relation(fields: [prospectId], references: [id])
+
+  @@index([territoryId])
+  @@index([territoryId, position])
+  @@map("territory_waitlist")
+}
+
+model TerritoryReservation {
+  id          String                     @id @default(uuid())
+  territoryId String                     @map("territory_id")
+  prospectId  String                     @map("prospect_id")
+  reservedBy  String                     @map("reserved_by")
+  reservedAt  DateTime                   @map("reserved_at")
+  expiresAt   DateTime                   @map("expires_at")
+  status      TerritoryReservationStatus @default(active)
+  notes       String?
+  createdAt   DateTime                   @default(now()) @map("created_at")
+
+  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  prospect    Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  reservedByUser User   @relation("ReservedBy", fields: [reservedBy], references: [id])
+
+  @@map("territory_reservations")
+}
+
+// ============================================================================
+// 4. BILLING (8 tables)
+// ============================================================================
+
+model Plan {
+  id             String   @id @default(uuid())
+  name           String
+  slug           String   @unique
+  description    String?
+  basePrice      Decimal  @map("base_price") @db.Decimal(10, 2)
+  territoryLimit Int      @default(1) @map("territory_limit")
+  userLimit      Int      @default(3) @map("user_limit")
+  features       Json?
+  isActive       Boolean  @default(true) @map("is_active")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  contracts Contract[]
+  proposals Proposal[]
+
+  @@map("plans")
+}
+
+model Contract {
+  id                String         @id @default(uuid())
+  organizationId    String         @map("organization_id")
+  planId            String         @map("plan_id")
+  contractNumber    String         @unique @map("contract_number")
+  status            ContractStatus
+  termMonths        Int            @default(12) @map("term_months")
+  startDate         DateTime       @map("start_date") @db.Date
+  endDate           DateTime       @map("end_date") @db.Date
+  monthlyCommitment Decimal        @map("monthly_commitment") @db.Decimal(10, 2)
+  annualValue       Decimal?       @map("annual_value") @db.Decimal(10, 2)
+  autoRenew         Boolean        @default(true) @map("auto_renew")
+  renewalTerms      Json?          @map("renewal_terms")
+  signedAt          DateTime?      @map("signed_at")
+  signedBy          String?        @map("signed_by")
+  cancelledAt       DateTime?      @map("cancelled_at")
+  cancellationReason String?       @map("cancellation_reason")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+  signedByUser User?        @relation("ContractSigner", fields: [signedBy], references: [id])
+  invoices     Invoice[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("contracts")
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  organizationId  String        @map("organization_id")
+  contractId      String?       @map("contract_id")
+  invoiceNumber   String        @unique @map("invoice_number")
+  status          InvoiceStatus @default(pending)
+  issueDate       DateTime      @map("issue_date") @db.Date
+  dueDate         DateTime      @map("due_date") @db.Date
+  subtotal        Decimal       @db.Decimal(10, 2)
+  taxAmount       Decimal       @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+  paidAmount      Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  paidAt          DateTime?     @map("paid_at")
+  paymentMethodId String?       @map("payment_method_id")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contract      Contract?         @relation(fields: [contractId], references: [id])
+  paymentMethod PaymentMethod?    @relation(fields: [paymentMethodId], references: [id])
+  lineItems     InvoiceLineItem[]
+  payments      Payment[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id            String              @id @default(uuid())
+  invoiceId     String              @map("invoice_id")
+  description   String
+  quantity      Decimal             @default(1) @db.Decimal(10, 2)
+  unitPrice     Decimal             @map("unit_price") @db.Decimal(10, 2)
+  amount        Decimal             @db.Decimal(10, 2)
+  itemType      InvoiceLineItemType @map("item_type")
+  referenceId   String?             @map("reference_id")
+  referenceType String?             @map("reference_type")
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_line_items")
+}
+
+model PaymentMethod {
+  id                      String            @id @default(uuid())
+  organizationId          String            @map("organization_id")
+  type                    PaymentMethodType
+  provider                String
+  providerPaymentMethodId String            @map("provider_payment_method_id")
+  lastFour                String?           @map("last_four")
+  brand                   String?
+  expMonth                Int?              @map("exp_month")
+  expYear                 Int?              @map("exp_year")
+  isDefault               Boolean           @default(false) @map("is_default")
+  billingEmail            String?           @map("billing_email")
+  createdAt               DateTime          @default(now()) @map("created_at")
+  updatedAt               DateTime          @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+  payments     Payment[]
+
+  @@map("payment_methods")
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  invoiceId             String        @map("invoice_id")
+  paymentMethodId       String?       @map("payment_method_id")
+  amount                Decimal       @db.Decimal(10, 2)
+  status                PaymentStatus
+  providerTransactionId String?       @map("provider_transaction_id")
+  processedAt           DateTime?     @map("processed_at")
+  failureReason         String?       @map("failure_reason")
+  createdAt             DateTime      @default(now()) @map("created_at")
+
+  invoice       Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@map("payments")
+}
+
+model AddOn {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?
+  addonType   AddOnType @map("addon_type")
+  price       Decimal   @db.Decimal(10, 2)
+  features    Json?
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  organizationAddons OrganizationAddon[]
+
+  @@map("addons")
+}
+
+model OrganizationAddon {
+  id             String                  @id @default(uuid())
+  organizationId String                  @map("organization_id")
+  addonId        String                  @map("addon_id")
+  status         OrganizationAddonStatus @default(active)
+  priceOverride  Decimal?                @map("price_override") @db.Decimal(10, 2)
+  configuration  Json?
+  startedAt      DateTime                @map("started_at")
+  cancelledAt    DateTime?               @map("cancelled_at")
+  expiresAt      DateTime?               @map("expires_at")
+  notes          String?
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  addon        AddOn        @relation(fields: [addonId], references: [id])
+
+  @@index([organizationId])
+  @@index([addonId])
+  @@index([status])
+  @@map("organization_addons")
+}
+
+// ============================================================================
+// 5. CAMPAIGNS (7 tables)
+// ============================================================================
+
+model Campaign {
+  id                 String           @id @default(uuid())
+  organizationId     String           @map("organization_id")
+  territoryId        String?          @map("territory_id")
+  name               String
+  platform           CampaignPlatform
+  campaignType       CampaignType     @map("campaign_type")
+  status             CampaignStatus   @default(draft)
+  startDate          DateTime?        @map("start_date") @db.Date
+  endDate            DateTime?        @map("end_date") @db.Date
+  dailyBudget        Decimal?         @map("daily_budget") @db.Decimal(10, 2)
+  monthlyBudget      Decimal?         @map("monthly_budget") @db.Decimal(10, 2)
+  totalBudget        Decimal?         @map("total_budget") @db.Decimal(10, 2)
+  objective          String?
+  targetAudience     Json?            @map("target_audience")
+  externalCampaignId String?          @map("external_campaign_id")
+  createdBy          String?          @map("created_by")
+  approvedBy         String?          @map("approved_by")
+  approvedAt         DateTime?        @map("approved_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  territory        Territory?               @relation(fields: [territoryId], references: [id])
+  createdByUser    User?                    @relation("CampaignCreator", fields: [createdBy], references: [id])
+  approvedByUser   User?                    @relation("CampaignApprover", fields: [approvedBy], references: [id])
+  creatives        CampaignCreative[]
+  metrics          CampaignMetric[]
+  optimizationLogs CampaignOptimizationLog[]
+  leads            Lead[]
+  landingPages     LandingPage[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([platform])
+  @@index([startDate, endDate])
+  @@map("campaigns")
+}
+
+model CampaignCreative {
+  id                 String         @id @default(uuid())
+  campaignId         String         @map("campaign_id")
+  creativeType       CreativeType   @map("creative_type")
+  headline           String?
+  body               String?
+  ctaText            String?        @map("cta_text")
+  ctaUrl             String?        @map("cta_url")
+  mediaUrls          Json?          @map("media_urls")
+  status             CreativeStatus @default(draft)
+  aiGenerated        Boolean        @default(false) @map("ai_generated")
+  voiceProfileId     String?        @map("voice_profile_id")
+  performanceScore   Decimal?       @map("performance_score") @db.Decimal(5, 2)
+  externalCreativeId String?        @map("external_creative_id")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  campaign     Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  voiceProfile VoiceProfile? @relation(fields: [voiceProfileId], references: [id])
+
+  @@map("campaign_creatives")
+}
+
+model CampaignMetric {
+  id          String   @id @default(uuid())
+  campaignId  String   @map("campaign_id")
+  date        DateTime @db.Date
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  ctr         Decimal? @db.Decimal(5, 4)
+  spend       Decimal  @default(0) @db.Decimal(10, 2)
+  leads       Int      @default(0)
+  cpl         Decimal? @db.Decimal(10, 2)
+  conversions Int      @default(0)
+  cpa         Decimal? @db.Decimal(10, 2)
+  roas        Decimal? @db.Decimal(10, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, date])
+  @@index([date])
+  @@map("campaign_metrics")
+}
+
+model CampaignOptimizationLog {
+  id               String             @id @default(uuid())
+  campaignId       String             @map("campaign_id")
+  optimizationType OptimizationType   @map("optimization_type")
+  title            String
+  description      String?
+  previousValue    Json?              @map("previous_value")
+  newValue         Json?              @map("new_value")
+  impact           OptimizationImpact?
+  impactMetric     String?            @map("impact_metric")
+  impactValue      Decimal?           @map("impact_value") @db.Decimal(10, 2)
+  aiConfidence     Decimal?           @map("ai_confidence") @db.Decimal(3, 2)
+  appliedAt        DateTime           @map("applied_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([optimizationType])
+  @@index([appliedAt])
+  @@map("campaign_optimization_log")
+}
+
+model LandingPageTemplate {
+  id             String              @id @default(uuid())
+  name           String
+  slug           String              @unique
+  description    String?
+  category       LandingPageCategory
+  thumbnailUrl   String?             @map("thumbnail_url")
+  htmlTemplate   String              @map("html_template")
+  cssTemplate    String?             @map("css_template")
+  configSchema   Json?               @map("config_schema")
+  defaultConfig  Json?               @map("default_config")
+  isActive       Boolean             @default(true) @map("is_active")
+  usageCount     Int                 @default(0) @map("usage_count")
+  conversionRateAvg Decimal?         @map("conversion_rate_avg") @db.Decimal(5, 2)
+  createdBy      String?             @map("created_by")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  createdByUser User?         @relation(fields: [createdBy], references: [id])
+  landingPages  LandingPage[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("landing_page_templates")
+}
+
+model LandingPage {
+  id              String            @id @default(uuid())
+  organizationId  String            @map("organization_id")
+  campaignId      String?           @map("campaign_id")
+  templateId      String?           @map("template_id")
+  name            String
+  slug            String
+  url             String?
+  status          LandingPageStatus @default(draft)
+  config          Json?
+  customHtml      String?           @map("custom_html")
+  customCss       String?           @map("custom_css")
+  metaTitle       String?           @map("meta_title")
+  metaDescription String?           @map("meta_description")
+  trackingPixels  Json?             @map("tracking_pixels")
+  viewCount       Int               @default(0) @map("view_count")
+  submissionCount Int               @default(0) @map("submission_count")
+  conversionRate  Decimal?          @map("conversion_rate") @db.Decimal(5, 2)
+  publishedAt     DateTime?         @map("published_at")
+  createdBy       String?           @map("created_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign     Campaign?            @relation(fields: [campaignId], references: [id])
+  template     LandingPageTemplate? @relation(fields: [templateId], references: [id])
+  createdByUser User?               @relation(fields: [createdBy], references: [id])
+
+  @@index([organizationId])
+  @@index([campaignId])
+  @@index([status])
+  @@map("landing_pages")
+}
+
+model CreativeAsset {
+  id              String    @id @default(uuid())
+  organizationId  String?   @map("organization_id")
+  name            String
+  assetType       AssetType @map("asset_type")
+  fileUrl         String    @map("file_url")
+  thumbnailUrl    String?   @map("thumbnail_url")
+  fileSize        Int?      @map("file_size")
+  mimeType        String?   @map("mime_type")
+  dimensions      Json?
+  durationSeconds Int?      @map("duration_seconds")
+  altText         String?   @map("alt_text")
+  tags            Json?
+  usageCount      Int       @default(0) @map("usage_count")
+  isTemplate      Boolean   @default(false) @map("is_template")
+  uploadedBy      String?   @map("uploaded_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedByUser User?       @relation(fields: [uploadedBy], references: [id])
+
+  @@index([organizationId])
+  @@index([assetType])
+  @@map("creative_assets")
+}
+
+// ============================================================================
+// 6. LEADS (3 tables)
+// ============================================================================
+
+model Lead {
+  id                String           @id @default(uuid())
+  organizationId    String           @map("organization_id")
+  campaignId        String?          @map("campaign_id")
+  territoryId       String?          @map("territory_id")
+  firstName         String?          @map("first_name")
+  lastName          String?          @map("last_name")
+  email             String?
+  phone             String?
+  source            LeadSource
+  sourceDetail      String?          @map("source_detail")
+  status            LeadStatus       @default(new)
+  temperature       LeadTemperature  @default(warm)
+  score             Int?
+  interestLevel     String?          @map("interest_level")
+  procedureInterest String?          @map("procedure_interest")
+  insuranceStatus   InsuranceStatus? @map("insurance_status")
+  insuranceDetails  String?          @map("insurance_details")
+  estimatedRevenue  Decimal?         @map("estimated_revenue") @db.Decimal(10, 2)
+  notes             String?
+  assignedTo        String?          @map("assigned_to")
+  convertedAt       DateTime?        @map("converted_at")
+  conversionValue   Decimal?         @map("conversion_value") @db.Decimal(10, 2)
+  lostReason        String?          @map("lost_reason")
+  utmSource         String?          @map("utm_source")
+  utmMedium         String?          @map("utm_medium")
+  utmCampaign       String?          @map("utm_campaign")
+  utmContent        String?          @map("utm_content")
+  ipAddress         String?          @map("ip_address")
+  userAgent         String?          @map("user_agent")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign        Campaign?         @relation(fields: [campaignId], references: [id])
+  territory       Territory?        @relation(fields: [territoryId], references: [id])
+  assignedToUser  User?             @relation("AssignedTo", fields: [assignedTo], references: [id])
+  activities      LeadActivity[]
+  scoreFactors    LeadScoreFactor[]
+
+  @@index([organizationId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([temperature])
+  @@index([createdAt])
+  @@index([assignedTo])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id              String             @id @default(uuid())
+  leadId          String             @map("lead_id")
+  activityType    ActivityType       @map("activity_type")
+  direction       ActivityDirection?
+  subject         String?
+  body            String?
+  outcome         String?
+  durationSeconds Int?               @map("duration_seconds")
+  scheduledAt     DateTime?          @map("scheduled_at")
+  completedAt     DateTime?          @map("completed_at")
+  performedBy     String?            @map("performed_by")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  lead          Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  performedByUser User? @relation("PerformedBy", fields: [performedBy], references: [id])
+
+  @@index([leadId])
+  @@index([activityType])
+  @@index([createdAt])
+  @@map("lead_activities")
+}
+
+model LeadScoreFactor {
+  id            String   @id @default(uuid())
+  leadId        String   @map("lead_id")
+  factorName    String   @map("factor_name")
+  factorValue   Decimal  @map("factor_value") @db.Decimal(5, 2)
+  weight        Decimal  @db.Decimal(3, 2)
+  weightedScore Decimal  @map("weighted_score") @db.Decimal(5, 2)
+  calculatedAt  DateTime @map("calculated_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_score_factors")
+}
+
+// ============================================================================
+// 7. VOICE AI (2 tables)
+// ============================================================================
+
+model VoiceProfile {
+  id                  String             @id @default(uuid())
+  organizationId      String             @map("organization_id")
+  name                String             @default("Primary")
+  status              VoiceProfileStatus @default(pending)
+  analysisStartedAt   DateTime?          @map("analysis_started_at")
+  analysisCompletedAt DateTime?          @map("analysis_completed_at")
+  qualityScore        Decimal?           @map("quality_score") @db.Decimal(5, 2)
+  tone                String?
+  personality         String?
+  formalityLevel      FormalityLevel?    @map("formality_level")
+  targetAudience      String?            @map("target_audience")
+  keyDifferentiators  Json?              @map("key_differentiators")
+  avoidTerms          Json?              @map("avoid_terms")
+  preferredTerms      Json?              @map("preferred_terms")
+  sampleHeadlines     Json?              @map("sample_headlines")
+  sampleAdCopy        Json?              @map("sample_ad_copy")
+  sampleCtas          Json?              @map("sample_ctas")
+  approvedBy          String?            @map("approved_by")
+  approvedAt          DateTime?          @map("approved_at")
+  rejectionReason     String?            @map("rejection_reason")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvedByUser User?                  @relation("VoiceApprover", fields: [approvedBy], references: [id])
+  sources        VoiceProfileSource[]
+  creatives      CampaignCreative[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("voice_profiles")
+}
+
+model VoiceProfileSource {
+  id               String          @id @default(uuid())
+  voiceProfileId   String          @map("voice_profile_id")
+  sourceType       VoiceSourceType @map("source_type")
+  sourceUrl        String?         @map("source_url")
+  filePath         String?         @map("file_path")
+  fileName         String?         @map("file_name")
+  fileSize         Int?            @map("file_size")
+  contentExtracted String?         @map("content_extracted")
+  analysisNotes    String?         @map("analysis_notes")
+  processedAt      DateTime?       @map("processed_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  voiceProfile VoiceProfile @relation(fields: [voiceProfileId], references: [id], onDelete: Cascade)
+
+  @@map("voice_profile_sources")
+}
+
+// ============================================================================
+// 8. SUPPORT (4 tables)
+// ============================================================================
+
+model SupportTicket {
+  id                 String         @id @default(uuid())
+  ticketNumber       String         @unique @map("ticket_number")
+  organizationId     String         @map("organization_id")
+  submittedBy        String         @map("submitted_by")
+  assignedTo         String?        @map("assigned_to")
+  category           TicketCategory
+  priority           TicketPriority @default(medium)
+  status             TicketStatus   @default(open)
+  subject            String
+  description        String
+  resolution         String?
+  firstResponseAt    DateTime?      @map("first_response_at")
+  resolvedAt         DateTime?      @map("resolved_at")
+  closedAt           DateTime?      @map("closed_at")
+  satisfactionRating Int?           @map("satisfaction_rating")
+  satisfactionFeedback String?      @map("satisfaction_feedback")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submittedByUser User           @relation("TicketSubmitter", fields: [submittedBy], references: [id])
+  assignedToUser User?           @relation("TicketAssignee", fields: [assignedTo], references: [id])
+  messages       TicketMessage[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedTo])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id          String   @id @default(uuid())
+  ticketId    String   @map("ticket_id")
+  senderId    String   @map("sender_id")
+  message     String
+  isInternal  Boolean  @default(false) @map("is_internal")
+  attachments Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User          @relation(fields: [senderId], references: [id])
+
+  @@map("ticket_messages")
+}
+
+model KnowledgeBaseArticle {
+  id              String            @id @default(uuid())
+  title           String
+  slug            String            @unique
+  category        String
+  content         String
+  excerpt         String?
+  status          ArticleStatus     @default(draft)
+  visibility      ArticleVisibility @default(public)
+  viewCount       Int               @default(0) @map("view_count")
+  helpfulCount    Int               @default(0) @map("helpful_count")
+  notHelpfulCount Int               @default(0) @map("not_helpful_count")
+  authorId        String?           @map("author_id")
+  publishedAt     DateTime?         @map("published_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  author User? @relation(fields: [authorId], references: [id])
+
+  @@map("knowledge_base_articles")
+}
+
+model ClientHealthAlert {
+  id              String        @id @default(uuid())
+  organizationId  String        @map("organization_id")
+  alertType       AlertType     @map("alert_type")
+  severity        AlertSeverity
+  title           String
+  description     String
+  metricName      String?       @map("metric_name")
+  metricValue     Decimal?      @map("metric_value") @db.Decimal(10, 2)
+  thresholdValue  Decimal?      @map("threshold_value") @db.Decimal(10, 2)
+  acknowledgedBy  String?       @map("acknowledged_by")
+  acknowledgedAt  DateTime?     @map("acknowledged_at")
+  resolvedAt      DateTime?     @map("resolved_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledgedByUser User?      @relation(fields: [acknowledgedBy], references: [id])
+
+  @@index([organizationId])
+  @@index([alertType])
+  @@index([severity])
+  @@map("client_health_alerts")
+}
+
+// ============================================================================
+// 9. SALES (4 tables)
+// ============================================================================
+
+model Prospect {
+  id                  String         @id @default(uuid())
+  practiceName        String         @map("practice_name")
+  contactFirstName    String         @map("contact_first_name")
+  contactLastName     String         @map("contact_last_name")
+  contactEmail        String         @map("contact_email")
+  contactPhone        String?        @map("contact_phone")
+  website             String?
+  address             String?
+  city                String?
+  state               String?
+  desiredTerritoryId  String?        @map("desired_territory_id")
+  source              ProspectSource
+  sourceDetail        String?        @map("source_detail")
+  stage               ProspectStage  @default(new)
+  monthlyValue        Decimal?       @map("monthly_value") @db.Decimal(10, 2)
+  probability         Int?
+  expectedCloseDate   DateTime?      @map("expected_close_date") @db.Date
+  assignedTo          String?        @map("assigned_to")
+  lossReason          String?        @map("loss_reason")
+  notes               String?
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+  closedAt            DateTime?      @map("closed_at")
+
+  assignedToUser       User?                  @relation("ProspectAssignee", fields: [assignedTo], references: [id])
+  activities           ProspectActivity[]
+  proposals            Proposal[]
+  waitlistEntries      TerritoryWaitlist[]
+  territoryReservations TerritoryReservation[]
+
+  @@index([stage])
+  @@index([assignedTo])
+  @@index([desiredTerritoryId])
+  @@map("prospects")
+}
+
+model ProspectActivity {
+  id              String            @id @default(uuid())
+  prospectId      String            @map("prospect_id")
+  activityType    SalesActivityType @map("activity_type")
+  subject         String?
+  description     String?
+  outcome         String?
+  scheduledAt     DateTime?         @map("scheduled_at")
+  completedAt     DateTime?         @map("completed_at")
+  durationMinutes Int?              @map("duration_minutes")
+  performedBy     String            @map("performed_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  prospect      Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  performedByUser User   @relation(fields: [performedBy], references: [id])
+
+  @@map("prospect_activities")
+}
+
+model Proposal {
+  id                 String         @id @default(uuid())
+  proposalNumber     String         @unique @map("proposal_number")
+  prospectId         String         @map("prospect_id")
+  territoryId        String         @map("territory_id")
+  status             ProposalStatus @default(draft)
+  planId             String         @map("plan_id")
+  monthlyValue       Decimal        @map("monthly_value") @db.Decimal(10, 2)
+  termMonths         Int            @default(12) @map("term_months")
+  territoryData      Json?          @map("territory_data")
+  marketAnalysis     Json?          @map("market_analysis")
+  customTerms        String?        @map("custom_terms")
+  discountPercentage Decimal?       @map("discount_percentage") @db.Decimal(5, 2)
+  discountReason     String?        @map("discount_reason")
+  validUntil         DateTime       @map("valid_until") @db.Date
+  sentAt             DateTime?      @map("sent_at")
+  viewedAt           DateTime?      @map("viewed_at")
+  respondedAt        DateTime?      @map("responded_at")
+  declineReason      String?        @map("decline_reason")
+  pdfUrl             String?        @map("pdf_url")
+  createdBy          String         @map("created_by")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  prospect      Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  territory     Territory @relation(fields: [territoryId], references: [id])
+  plan          Plan      @relation(fields: [planId], references: [id])
+  createdByUser User      @relation("ProposalCreator", fields: [createdBy], references: [id])
+
+  @@index([prospectId])
+  @@index([status])
+  @@index([territoryId])
+  @@map("proposals")
+}
+
+model CompetitorReport {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  territoryId     String   @map("territory_id")
+  reportMonth     DateTime @map("report_month") @db.Date
+  competitors     Json
+  marketTrends    Json?    @map("market_trends")
+  adActivity      Json?    @map("ad_activity")
+  recommendations String?
+  generatedAt     DateTime @map("generated_at")
+  viewedAt        DateTime? @map("viewed_at")
+  pdfUrl          String?  @map("pdf_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  territory    Territory    @relation(fields: [territoryId], references: [id])
+
+  @@index([organizationId])
+  @@index([reportMonth])
+  @@map("competitor_reports")
+}
+
+// ============================================================================
+// 10. ONBOARDING (2 tables)
+// ============================================================================
+
+model ClientOnboarding {
+  id                  String      @id @default(uuid())
+  organizationId      String      @unique @map("organization_id")
+  assignedTo          String?     @map("assigned_to")
+  currentPhase        Int         @default(1) @map("current_phase")
+  phase1Status        PhaseStatus @default(pending) @map("phase_1_status")
+  phase1CompletedAt   DateTime?   @map("phase_1_completed_at")
+  phase2Status        PhaseStatus @default(pending) @map("phase_2_status")
+  phase2CompletedAt   DateTime?   @map("phase_2_completed_at")
+  phase3Status        PhaseStatus @default(pending) @map("phase_3_status")
+  phase3CompletedAt   DateTime?   @map("phase_3_completed_at")
+  phase4Status        PhaseStatus @default(pending) @map("phase_4_status")
+  phase4CompletedAt   DateTime?   @map("phase_4_completed_at")
+  overallProgress     Int         @default(0) @map("overall_progress")
+  notes               String?
+  startedAt           DateTime    @map("started_at")
+  completedAt         DateTime?   @map("completed_at")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedToUser User?            @relation("OnboardingAssignee", fields: [assignedTo], references: [id])
+  tasks          OnboardingTask[]
+
+  @@map("client_onboarding")
+}
+
+model OnboardingTask {
+  id            String      @id @default(uuid())
+  onboardingId  String      @map("onboarding_id")
+  phase         Int
+  taskOrder     Int         @map("task_order")
+  title         String
+  description   String?
+  isRequired    Boolean     @default(true) @map("is_required")
+  status        PhaseStatus @default(pending)
+  completedBy   String?     @map("completed_by")
+  completedAt   DateTime?   @map("completed_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  onboarding    ClientOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  completedByUser User?          @relation(fields: [completedBy], references: [id])
+
+  @@map("onboarding_tasks")
+}
+
+// ============================================================================
+// 11. COMMUNICATION (3 tables)
+// ============================================================================
+
+model CommunicationLog {
+  id             String                 @id @default(uuid())
+  organizationId String                 @map("organization_id")
+  entryType      CommunicationEntryType @map("entry_type")
+  title          String
+  body           String?
+  direction      CommunicationDirection?
+  participants   Json?
+  attachments    Json?
+  createdBy      String                 @map("created_by")
+  createdAt      DateTime               @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser User        @relation(fields: [createdBy], references: [id])
+
+  @@index([organizationId])
+  @@index([entryType])
+  @@index([createdAt])
+  @@map("communication_log")
+}
+
+model MonthlyReview {
+  id              String       @id @default(uuid())
+  organizationId  String       @map("organization_id")
+  reviewType      ReviewType   @map("review_type")
+  scheduledDate   DateTime     @map("scheduled_date") @db.Date
+  scheduledTime   DateTime?    @map("scheduled_time") @db.Time()
+  durationMinutes Int          @default(30) @map("duration_minutes")
+  status          ReviewStatus @default(scheduled)
+  meetingLink     String?      @map("meeting_link")
+  attendees       Json?
+  agenda          String?
+  notes           String?
+  actionItems     Json?        @map("action_items")
+  conductedBy     String?      @map("conducted_by")
+  completedAt     DateTime?    @map("completed_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conductedByUser User?      @relation(fields: [conductedBy], references: [id])
+
+  @@map("monthly_reviews")
+}
+
+model ClientFeedback {
+  id             String         @id @default(uuid())
+  organizationId String         @map("organization_id")
+  submittedBy    String         @map("submitted_by")
+  feedbackType   FeedbackType   @map("feedback_type")
+  category       String?
+  subject        String
+  message        String
+  rating         Int?
+  status         FeedbackStatus @default(new)
+  response       String?
+  respondedBy    String?        @map("responded_by")
+  respondedAt    DateTime?      @map("responded_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  respondedByUser User?       @relation("FeedbackResponder", fields: [respondedBy], references: [id])
+
+  @@map("client_feedback")
+}
+
+// ============================================================================
+// 12. AI OPERATIONS (3 tables)
+// ============================================================================
+
+model AiAnomaly {
+  id                  String        @id @default(uuid())
+  organizationId      String?       @map("organization_id")
+  campaignId          String?       @map("campaign_id")
+  anomalyType         AnomalyType   @map("anomaly_type")
+  severity            AlertSeverity
+  title               String
+  description         String
+  metricName          String?       @map("metric_name")
+  expectedValue       Decimal?      @map("expected_value") @db.Decimal(10, 2)
+  actualValue         Decimal?      @map("actual_value") @db.Decimal(10, 2)
+  deviationPercentage Decimal?      @map("deviation_percentage") @db.Decimal(5, 2)
+  detectedAt          DateTime      @map("detected_at")
+  acknowledgedBy      String?       @map("acknowledged_by")
+  acknowledgedAt      DateTime?     @map("acknowledged_at")
+  resolvedBy          String?       @map("resolved_by")
+  resolvedAt          DateTime?     @map("resolved_at")
+  resolutionNotes     String?       @map("resolution_notes")
+  createdAt           DateTime      @default(now()) @map("created_at")
+
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledgedByUser User?       @relation("AnomalyAcknowledger", fields: [acknowledgedBy], references: [id])
+  resolvedByUser   User?         @relation("AnomalyResolver", fields: [resolvedBy], references: [id])
+
+  @@map("ai_anomalies")
+}
+
+model AiModel {
+  id         String      @id @default(uuid())
+  name       String
+  modelType  ModelType   @map("model_type")
+  version    String
+  accuracy   Decimal?    @db.Decimal(5, 2)
+  status     ModelStatus @default(active)
+  config     Json?
+  metrics    Json?
+  trainedAt  DateTime?   @map("trained_at")
+  deployedAt DateTime?   @map("deployed_at")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  trainingLogs AiTrainingLog[]
+
+  @@map("ai_models")
+}
+
+model AiTrainingLog {
+  id        String   @id @default(uuid())
+  modelId   String   @map("model_id")
+  logLevel  LogLevel @map("log_level")
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  model AiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@map("ai_training_logs")
+}
+
+// ============================================================================
+// 13. SYSTEM & AUDIT (3 tables)
+// ============================================================================
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  userId         String?  @map("user_id")
+  organizationId String?  @map("organization_id")
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id")
+  oldValues      Json?    @map("old_values")
+  newValues      Json?    @map("new_values")
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedByUser User? @relation(fields: [updatedBy], references: [id])
+
+  @@map("system_settings")
+}
+
+model Notification {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  organizationId String?   @map("organization_id")
+  type           String
+  title          String
+  message        String
+  link           String?
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@map("notifications")
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "flowbite-svelte": {
+      "command": "node",
+      "args": ["/Users/tonyshaw/Documents/Little Big Planet/SqueezMedia/tools/flowbite-svelte-mcp/build/server.js"]
+    }
+  }
+}
