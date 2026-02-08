@@ -30,20 +30,20 @@
     MapPinOutline,
     PhoneOutline,
     EnvelopeOutline,
-    GlobeAltOutline,
-    CalendarOutline,
+    GlobeOutline,
+    CalendarMonthOutline,
     CashOutline,
     ChartOutline,
     UsersGroupOutline,
     RocketOutline,
     TicketOutline,
-    DocumentTextOutline,
+    FileLinesOutline,
     PauseOutline,
     PlayOutline,
     ClockOutline,
     PlusOutline,
     EditOutline,
-    ChatBubbleLeftRightOutline,
+    MessagesOutline,
     ExclamationCircleOutline
   } from 'flowbite-svelte-icons';
   import { HealthScoreBadge, OrgStatusBadge, ContractStatusBadge } from '$lib/components/internal';
@@ -141,7 +141,7 @@
             {/if}
             {#if data.organization.clientSince}
               <span class="flex items-center gap-1">
-                <CalendarOutline class="h-4 w-4" />
+                <CalendarMonthOutline class="h-4 w-4" />
                 Client since {formatDate(data.organization.clientSince, 'medium')}
               </span>
             {/if}
@@ -151,11 +151,11 @@
     </div>
     <div class="flex flex-wrap gap-2">
       <Button color="light" size="sm" onclick={() => showScheduleReviewModal = true}>
-        <CalendarOutline class="mr-2 h-4 w-4" />
+        <CalendarMonthOutline class="mr-2 h-4 w-4" />
         Schedule Review
       </Button>
       <Button color="light" size="sm" onclick={() => showAddNoteModal = true}>
-        <ChatBubbleLeftRightOutline class="mr-2 h-4 w-4" />
+        <MessagesOutline class="mr-2 h-4 w-4" />
         Add Note
       </Button>
       {#if data.campaigns.filter(c => c.status === 'active').length > 0}
@@ -308,10 +308,10 @@
                     </div>
                   </TableBodyCell>
                   <TableBodyCell>
-                    <Badge color="dark">{campaign.platform}</Badge>
+                    <Badge color="gray">{campaign.platform}</Badge>
                   </TableBodyCell>
                   <TableBodyCell>
-                    <Badge color={campaign.status === 'active' ? 'green' : campaign.status === 'paused' ? 'yellow' : 'dark'}>
+                    <Badge color={campaign.status === 'active' ? 'green' : campaign.status === 'paused' ? 'yellow' : 'gray'}>
                       {campaign.status}
                     </Badge>
                   </TableBodyCell>
@@ -369,7 +369,7 @@
                     <LeadStatusBadge status={lead.status} size="xs" />
                   </TableBodyCell>
                   <TableBodyCell>
-                    <Badge color="dark">{lead.source}</Badge>
+                    <Badge color="gray">{lead.source}</Badge>
                   </TableBodyCell>
                   <TableBodyCell>
                     <span class="text-sm text-gray-500">{formatDate(lead.createdAt, 'short')}</span>
@@ -397,14 +397,14 @@
           <Timeline>
             {#each data.communicationLog as entry}
               <TimelineItem title={entry.title} date={formatDate(entry.createdAt, 'datetime')}>
-                {#snippet icon()}
+                {#snippet orientationSlot()}
                   <div class="flex h-3 w-3 items-center justify-center rounded-full bg-primary-200 ring-8 ring-white dark:bg-primary-900 dark:ring-gray-900">
                   </div>
                 {/snippet}
                 <div class="flex items-center gap-2 mb-1">
-                  <Badge color="dark">{entry.type}</Badge>
+                  <Badge color="gray">{entry.type}</Badge>
                   {#if entry.direction}
-                    <Badge color={entry.direction === 'inbound' ? 'blue' : entry.direction === 'outbound' ? 'green' : 'dark'}>
+                    <Badge color={entry.direction === 'inbound' ? 'blue' : entry.direction === 'outbound' ? 'green' : 'gray'}>
                       {entry.direction}
                     </Badge>
                   {/if}
@@ -456,7 +456,7 @@
             {/if}
             <div class="flex items-center justify-between text-sm">
               <span class="text-gray-500">Auto-renew</span>
-              <Badge color={data.contract.autoRenew ? 'green' : 'dark'}>
+              <Badge color={data.contract.autoRenew ? 'green' : 'gray'}>
                 {data.contract.autoRenew ? 'Yes' : 'No'}
               </Badge>
             </div>
@@ -485,7 +485,7 @@
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-500">Type</span>
-              <Badge color="dark">{data.territory.type}</Badge>
+              <Badge color="gray">{data.territory.type}</Badge>
             </div>
             {#if data.territory.population}
               <div class="flex items-center justify-between">
@@ -553,7 +553,7 @@
                     <p class="text-sm text-gray-500">{formatPhone(contact.phone)}</p>
                   {/if}
                 </div>
-                <Badge color="dark">{contact.type}</Badge>
+                <Badge color="gray">{contact.type}</Badge>
               </div>
             {/each}
           </div>
@@ -606,7 +606,7 @@
                 {#if member.lastLoginAt}
                   <span class="text-xs text-gray-500">{formatDate(member.lastLoginAt, 'relative')}</span>
                 {:else}
-                  <Badge color="dark">Never</Badge>
+                  <Badge color="gray">Never</Badge>
                 {/if}
               </div>
             {/each}

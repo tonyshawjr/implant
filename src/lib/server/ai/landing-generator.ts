@@ -11,9 +11,9 @@ import type {
   LandingPageSection,
   FaqItem,
   BrandVoiceProfile,
-  AIModelConfig,
-  DEFAULT_AI_CONFIG
+  AIModelConfig
 } from './types';
+import { DEFAULT_AI_CONFIG } from './types';
 
 // ============================================================================
 // Landing Page Content Generator Class

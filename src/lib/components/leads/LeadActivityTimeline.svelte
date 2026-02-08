@@ -72,16 +72,16 @@
   }
 
   // Get badge color for activity type
-  function getActivityColor(type: string): 'blue' | 'green' | 'yellow' | 'purple' | 'red' | 'dark' {
-    const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'red' | 'dark'> = {
+  function getActivityColor(type: string): 'blue' | 'green' | 'yellow' | 'purple' | 'red' | 'gray' {
+    const colors: Record<string, 'blue' | 'green' | 'yellow' | 'purple' | 'red' | 'gray'> = {
       call: 'blue',
       email: 'green',
       sms: 'yellow',
       appointment: 'purple',
-      note: 'dark',
+      note: 'gray',
       status_change: 'red'
     };
-    return colors[type] ?? 'dark';
+    return colors[type] ?? 'gray';
   }
 
   // Get direction label
@@ -107,7 +107,7 @@
           title={activity.subject ?? getActivityLabel(activity.activityType)}
           date={formatDate(activity.createdAt, 'datetime')}
         >
-          {#snippet icon()}
+          {#snippet orientationSlot()}
             <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 ring-8 ring-white dark:bg-primary-900 dark:ring-gray-800">
               <Icon class="h-3 w-3 text-primary-600 dark:text-primary-300" />
             </span>
@@ -119,7 +119,7 @@
                 {getActivityLabel(activity.activityType)}
               </Badge>
               {#if activity.direction}
-                <Badge color="dark" class="text-xs">
+                <Badge color="gray" class="text-xs">
                   {getDirectionLabel(activity.direction)}
                 </Badge>
               {/if}

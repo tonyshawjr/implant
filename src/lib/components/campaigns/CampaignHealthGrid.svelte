@@ -54,7 +54,7 @@
       case 'pending_review':
         return 'yellow' as const;
       default:
-        return 'dark' as const;
+        return 'gray' as const;
     }
   }
 

@@ -28,14 +28,14 @@
     PlayOutline,
     PauseOutline,
     EyeOutline,
-    SparklesOutline,
+    StarOutline,
     LightbulbOutline,
-    BeakerOutline,
-    ChartBarOutline,
-    ClipboardDocumentListOutline,
+    AtomOutline,
+    ChartOutline,
+    ClipboardListOutline,
     CheckCircleOutline,
-    ExclamationTriangleOutline,
-    ArrowPathOutline
+    ExclamationCircleOutline,
+    RefreshOutline
   } from 'flowbite-svelte-icons';
   import type { PageData, ActionData } from './$types';
   import { formatCurrency, formatCompactNumber, formatDate, formatPercent } from '$lib/utils';
@@ -268,7 +268,7 @@
     </div>
     <div class="flex gap-2">
       <Button size="sm" color="purple" onclick={() => (showAIGenerateModal = true)}>
-        <SparklesOutline class="mr-2 h-4 w-4" />
+        <StarOutline class="mr-2 h-4 w-4" />
         AI Generate Campaign
       </Button>
       <Button size="sm" onclick={() => (showRequestModal = true)}>
@@ -345,7 +345,7 @@
   <Card class="p-4">
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
-        <SparklesOutline class="h-5 w-5 text-purple-500" />
+        <StarOutline class="h-5 w-5 text-purple-500" />
         <h3 class="font-semibold text-gray-900 dark:text-white">AI Tools</h3>
       </div>
       <Badge color="purple">Beta</Badge>
@@ -369,7 +369,7 @@
         class="flex items-center gap-3 rounded-lg border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
       >
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-          <BeakerOutline class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <AtomOutline class="h-5 w-5 text-blue-600 dark:text-blue-400" />
         </div>
         <div>
           <p class="font-medium text-gray-900 dark:text-white">A/B Variants</p>
@@ -439,7 +439,7 @@
         {#if optimizationResults.topIssues?.length > 0}
           <div>
             <h4 class="mb-2 flex items-center gap-2 font-medium text-gray-900 dark:text-white">
-              <ExclamationTriangleOutline class="h-4 w-4 text-yellow-500" />
+              <ExclamationCircleOutline class="h-4 w-4 text-yellow-500" />
               Top Issues
             </h4>
             <ul class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
@@ -777,7 +777,7 @@
   {#if !generatedBlueprint}
     <div class="space-y-4">
       <Alert color="purple" class="mb-4">
-        <SparklesOutline slot="icon" class="h-5 w-5" />
+        {#snippet icon()}<StarOutline class="h-5 w-5" />{/snippet}
         <span class="font-medium">AI-Powered Campaign Creation</span>
         <p class="mt-1 text-sm">
           Our AI will generate a complete campaign blueprint including ad copy, targeting suggestions, and landing page content tailored to your brand voice.
@@ -829,7 +829,7 @@
 
       {#if generationError}
         <Alert color="red">
-          <ExclamationTriangleOutline slot="icon" class="h-5 w-5" />
+          {#snippet icon()}<ExclamationCircleOutline class="h-5 w-5" />{/snippet}
           {generationError}
         </Alert>
       {/if}
@@ -842,7 +842,7 @@
           <Spinner size="4" class="mr-2" />
           Generating...
         {:else}
-          <SparklesOutline class="mr-2 h-4 w-4" />
+          <StarOutline class="mr-2 h-4 w-4" />
           Generate Campaign
         {/if}
       </Button>
@@ -865,14 +865,14 @@
           </div>
         </div>
         <Button size="sm" color="light" onclick={() => (generatedBlueprint = null)}>
-          <ArrowPathOutline class="mr-2 h-4 w-4" />
+          <RefreshOutline class="mr-2 h-4 w-4" />
           Regenerate
         </Button>
       </div>
 
       {#if generatedBlueprint.blockers?.length > 0}
         <Alert color="red">
-          <ExclamationTriangleOutline slot="icon" class="h-5 w-5" />
+          {#snippet icon()}<ExclamationCircleOutline class="h-5 w-5" />{/snippet}
           <span class="font-medium">Blockers</span>
           <ul class="mt-1 list-disc pl-4 text-sm">
             {#each generatedBlueprint.blockers as blocker}
@@ -884,7 +884,7 @@
 
       {#if generatedBlueprint.warnings?.length > 0}
         <Alert color="yellow">
-          <ExclamationTriangleOutline slot="icon" class="h-5 w-5" />
+          {#snippet icon()}<ExclamationCircleOutline class="h-5 w-5" />{/snippet}
           <span class="font-medium">Warnings</span>
           <ul class="mt-1 list-disc pl-4 text-sm">
             {#each generatedBlueprint.warnings as warning}
@@ -985,7 +985,7 @@
       <!-- Launch Checklist -->
       <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
         <h4 class="mb-3 flex items-center gap-2 font-medium text-gray-900 dark:text-white">
-          <ClipboardDocumentListOutline class="h-5 w-5" />
+          <ClipboardListOutline class="h-5 w-5" />
           Launch Checklist
         </h4>
         <div class="space-y-2 max-h-40 overflow-y-auto">
@@ -1013,7 +1013,7 @@
 <Modal title="A/B Test Variant Generator" bind:open={showVariantViewer} size="lg" outsideclose>
   <div class="space-y-4">
     <Alert color="blue" class="mb-4">
-      <BeakerOutline slot="icon" class="h-5 w-5" />
+      {#snippet icon()}<AtomOutline class="h-5 w-5" />{/snippet}
       <span class="font-medium">Generate Test Variants</span>
       <p class="mt-1 text-sm">
         Enter your existing content and we'll generate optimized variants for A/B testing with predicted performance scores.
@@ -1049,7 +1049,7 @@
         <Spinner size="4" class="mr-2" />
         Generating Variants...
       {:else}
-        <BeakerOutline class="mr-2 h-4 w-4" />
+        <AtomOutline class="mr-2 h-4 w-4" />
         Generate Variants
       {/if}
     </Button>
@@ -1085,7 +1085,7 @@
               {#if variant.tags?.length > 0}
                 <div class="mt-2 flex flex-wrap gap-1">
                   {#each variant.tags.slice(0, 4) as tag}
-                    <Badge color="dark" class="text-xs">{tag}</Badge>
+                    <Badge color="gray" class="text-xs">{tag}</Badge>
                   {/each}
                 </div>
               {/if}

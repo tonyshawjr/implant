@@ -144,7 +144,7 @@
     <LeadTable
       leads={data.leads}
       sortBy={data.filters.sortBy}
-      sortOrder={data.filters.sortOrder}
+      sortOrder={data.filters.sortOrder as 'asc' | 'desc' | undefined}
       selectedIds={selectedLeadIds}
       onSelectionChange={handleSelectionChange}
     />

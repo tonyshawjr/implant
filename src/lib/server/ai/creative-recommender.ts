@@ -10,9 +10,9 @@ import type {
   BrandVoiceProfile,
   AdPlatform,
   CampaignObjective,
-  AIModelConfig,
-  DEFAULT_AI_CONFIG
+  AIModelConfig
 } from './types';
+import { DEFAULT_AI_CONFIG } from './types';
 
 // ============================================================================
 // Constants
@@ -253,7 +253,7 @@ export class CreativeRecommender {
       ]
     };
 
-    return templates[tone] || templates.professional;
+    return templates[tone as keyof typeof templates] || templates.professional;
   }
 
   // ============================================================================
@@ -264,7 +264,7 @@ export class CreativeRecommender {
     const { assetType, campaignType, platform, voiceProfile } = request;
     const recommendations: CreativeRecommendation[] = [];
     const tone = voiceProfile.tone || 'professional';
-    const colorPalette = COLOR_PALETTES[tone] || COLOR_PALETTES.professional;
+    const colorPalette = COLOR_PALETTES[tone as keyof typeof COLOR_PALETTES] || COLOR_PALETTES.professional;
 
     if (assetType === 'image') {
       recommendations.push(...this.generateImageRecommendations(campaignType, platform, colorPalette, tone));

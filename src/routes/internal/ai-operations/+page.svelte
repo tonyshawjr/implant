@@ -9,8 +9,6 @@
     Select,
     Textarea,
     Label,
-    Tabs,
-    TabItem,
     Spinner,
     Progressbar,
     Timeline,
@@ -21,7 +19,7 @@
   import {
     MicrophoneOutline,
     RocketOutline,
-    DocumentTextOutline,
+    FileLinesOutline,
     ExclamationCircleOutline,
     CheckCircleOutline,
     CloseCircleOutline,
@@ -30,14 +28,14 @@
     ClockOutline,
     ChartPieOutline,
     CogOutline,
-    ArrowPathOutline,
+    RefreshOutline,
     LightbulbOutline,
-    ChartBarOutline,
-    BoltOutline,
+    ChartOutline,
+    LightbulbSolid,
     AdjustmentsHorizontalOutline,
-    SparklesOutline,
-    BeakerOutline,
-    PhotoOutline
+    StarOutline,
+    AtomOutline,
+    FileImageOutline
   } from 'flowbite-svelte-icons';
   import type { PageData, ActionData } from './$types';
   import { formatCurrency, formatCompactNumber, formatDate, formatPercent } from '$lib/utils';
@@ -192,7 +190,7 @@
     </div>
     <div class="flex gap-2">
       <Button size="sm" color="purple" onclick={() => (showBulkGeneratorModal = true)}>
-        <SparklesOutline class="mr-2 h-4 w-4" />
+        <StarOutline class="mr-2 h-4 w-4" />
         Bulk AI Generator
       </Button>
     </div>
@@ -241,7 +239,7 @@
           <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{data.stats.pendingCreatives}</p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-          <DocumentTextOutline class="h-6 w-6 text-green-600 dark:text-green-400" />
+          <FileLinesOutline class="h-6 w-6 text-green-600 dark:text-green-400" />
         </div>
       </div>
       <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Ad copies awaiting QA</p>
@@ -269,7 +267,7 @@
   <Card class="p-4">
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
-        <SparklesOutline class="h-5 w-5 text-purple-500" />
+        <StarOutline class="h-5 w-5 text-purple-500" />
         <h3 class="font-semibold text-gray-900 dark:text-white">AI Campaign Factory Tools</h3>
       </div>
       <Badge color="purple">Phase 8B</Badge>
@@ -287,7 +285,7 @@
 
       <div class="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-          <DocumentTextOutline class="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <FileLinesOutline class="h-5 w-5 text-blue-600 dark:text-blue-400" />
         </div>
         <div>
           <p class="font-medium text-gray-900 dark:text-white">Ad Copy Generator</p>
@@ -297,7 +295,7 @@
 
       <div class="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-          <BeakerOutline class="h-5 w-5 text-green-600 dark:text-green-400" />
+          <AtomOutline class="h-5 w-5 text-green-600 dark:text-green-400" />
         </div>
         <div>
           <p class="font-medium text-gray-900 dark:text-white">A/B Variant Generator</p>
@@ -341,54 +339,60 @@
 
   <!-- Tabbed Interface -->
   <Card class="p-0">
-    <Tabs style="underline" class="p-4 pb-0">
-      <TabItem open={data.activeTab === 'voice-queue'} on:click={() => handleTabChange('voice-queue')}>
-        {#snippet title()}
-          <div class="flex items-center gap-2">
+    <div class="border-b border-gray-200 p-4 pb-0 dark:border-gray-700">
+      <ul class="-mb-px flex flex-wrap text-center text-sm font-medium">
+        <li class="mr-2">
+          <button
+            onclick={() => handleTabChange('voice-queue')}
+            class="inline-flex items-center gap-2 rounded-t-lg border-b-2 p-4 {data.activeTab === 'voice-queue' ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'}"
+          >
             <MicrophoneOutline class="h-4 w-4" />
             <span>Brand Voice Queue</span>
             {#if data.voiceProfileQueue.length > 0}
               <Badge color="purple" class="ml-1">{data.voiceProfileQueue.length}</Badge>
             {/if}
-          </div>
-        {/snippet}
-      </TabItem>
-      <TabItem open={data.activeTab === 'campaign-factory'} on:click={() => handleTabChange('campaign-factory')}>
-        {#snippet title()}
-          <div class="flex items-center gap-2">
+          </button>
+        </li>
+        <li class="mr-2">
+          <button
+            onclick={() => handleTabChange('campaign-factory')}
+            class="inline-flex items-center gap-2 rounded-t-lg border-b-2 p-4 {data.activeTab === 'campaign-factory' ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'}"
+          >
             <RocketOutline class="h-4 w-4" />
             <span>Campaign Factory</span>
             {#if data.campaignQueue.length > 0}
               <Badge color="blue" class="ml-1">{data.campaignQueue.length}</Badge>
             {/if}
-          </div>
-        {/snippet}
-      </TabItem>
-      <TabItem open={data.activeTab === 'content-review'} on:click={() => handleTabChange('content-review')}>
-        {#snippet title()}
-          <div class="flex items-center gap-2">
-            <DocumentTextOutline class="h-4 w-4" />
+          </button>
+        </li>
+        <li class="mr-2">
+          <button
+            onclick={() => handleTabChange('content-review')}
+            class="inline-flex items-center gap-2 rounded-t-lg border-b-2 p-4 {data.activeTab === 'content-review' ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'}"
+          >
+            <FileLinesOutline class="h-4 w-4" />
             <span>Content Review</span>
             {#if data.adCopyReviewQueue.length > 0}
               <Badge color="green" class="ml-1">{data.adCopyReviewQueue.length}</Badge>
             {/if}
-          </div>
-        {/snippet}
-      </TabItem>
-      <TabItem open={data.activeTab === 'performance'} on:click={() => handleTabChange('performance')}>
-        {#snippet title()}
-          <div class="flex items-center gap-2">
-            <ChartBarOutline class="h-4 w-4" />
+          </button>
+        </li>
+        <li class="mr-2">
+          <button
+            onclick={() => handleTabChange('performance')}
+            class="inline-flex items-center gap-2 rounded-t-lg border-b-2 p-4 {data.activeTab === 'performance' ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'}"
+          >
+            <ChartOutline class="h-4 w-4" />
             <span>Performance Monitor</span>
             {#if data.anomalyAlerts.length > 0}
               <Badge color={data.stats.criticalAnomalies > 0 ? 'red' : 'yellow'} class="ml-1">
                 {data.anomalyAlerts.length}
               </Badge>
             {/if}
-          </div>
-        {/snippet}
-      </TabItem>
-    </Tabs>
+          </button>
+        </li>
+      </ul>
+    </div>
 
     <div class="p-4">
       <!-- Tab 1: Brand Voice Queue -->
@@ -428,7 +432,7 @@
                       <p class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Sources</p>
                       <div class="flex flex-wrap gap-2">
                         {#each profile.sources as source}
-                          <Badge color="dark">
+                          <Badge color="gray">
                             {source.sourceType}: {source.fileName || source.sourceUrl?.slice(0, 30) || 'N/A'}
                           </Badge>
                         {/each}
@@ -598,7 +602,7 @@
                   <!-- Creatives Count -->
                   {#if campaign.creatives.length > 0}
                     <div class="mb-4">
-                      <Badge color="dark">{campaign.creatives.length} creatives pending</Badge>
+                      <Badge color="gray">{campaign.creatives.length} creatives pending</Badge>
                     </div>
                   {/if}
 
@@ -666,7 +670,7 @@
             <Select
               class="w-64"
               value={data.clientFilter}
-              on:change={handleClientFilter}
+              onchange={handleClientFilter}
             >
               <option value="">All Clients</option>
               {#each data.organizations as org}
@@ -677,7 +681,7 @@
 
           {#if data.adCopyReviewQueue.length === 0}
             <div class="py-12 text-center">
-              <DocumentTextOutline class="mx-auto h-12 w-12 text-gray-400" />
+              <FileLinesOutline class="mx-auto h-12 w-12 text-gray-400" />
               <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No content pending review</h3>
               <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 All ad copy has been reviewed
@@ -700,7 +704,7 @@
                       {#if creative.aiGenerated}
                         <Badge color="purple">AI Generated</Badge>
                       {/if}
-                      <Badge color="dark" class="capitalize">{creative.creativeType}</Badge>
+                      <Badge color="gray" class="capitalize">{creative.creativeType}</Badge>
                     </div>
                   </div>
 
@@ -824,7 +828,7 @@
                           </span>
                         </div>
                         {#if anomaly.acknowledgedAt}
-                          <Badge color="dark">Acknowledged</Badge>
+                          <Badge color="gray">Acknowledged</Badge>
                         {/if}
                       </div>
 
@@ -874,7 +878,7 @@
             <!-- Recent Optimizations -->
             <div>
               <h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-                <BoltOutline class="h-5 w-5 text-blue-500" />
+                <LightbulbSolid class="h-5 w-5 text-blue-500" />
                 Recent Optimizations
               </h3>
 
@@ -1032,7 +1036,7 @@
           class="flex flex-col items-center rounded-lg border-2 p-4 transition-all {bulkGenerationType === 'ads' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'}"
           onclick={() => (bulkGenerationType = 'ads')}
         >
-          <DocumentTextOutline class="mb-2 h-8 w-8 text-primary-500" />
+          <FileLinesOutline class="mb-2 h-8 w-8 text-primary-500" />
           <span class="font-medium">Ad Copy</span>
           <span class="text-xs text-gray-500">Generate ad variations</span>
         </button>
@@ -1050,7 +1054,7 @@
           class="flex flex-col items-center rounded-lg border-2 p-4 transition-all {bulkGenerationType === 'variants' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'}"
           onclick={() => (bulkGenerationType = 'variants')}
         >
-          <BeakerOutline class="mb-2 h-8 w-8 text-purple-500" />
+          <AtomOutline class="mb-2 h-8 w-8 text-purple-500" />
           <span class="font-medium">A/B Variants</span>
           <span class="text-xs text-gray-500">Test variations</span>
         </button>
@@ -1159,7 +1163,7 @@
         <Spinner size="4" class="mr-2" />
         Generating...
       {:else}
-        <SparklesOutline class="mr-2 h-4 w-4" />
+        <StarOutline class="mr-2 h-4 w-4" />
         Generate
       {/if}
     </Button>

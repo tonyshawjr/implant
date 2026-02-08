@@ -119,8 +119,8 @@ function createThemeStore() {
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handleChange);
     } else {
-      // @ts-expect-error - older API
-      mediaQuery.addListener(handleChange);
+      // Fallback for older browsers - addListener is deprecated but still works
+      (mediaQuery as MediaQueryList & { addListener: typeof mediaQuery.addEventListener }).addListener(handleChange);
     }
   }
 

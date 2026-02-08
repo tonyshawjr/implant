@@ -16,7 +16,7 @@
     status === 'active' ? 'green' as const :
     status === 'suspended' ? 'yellow' as const :
     status === 'churned' ? 'red' as const :
-    'dark' as const
+    'gray' as const
   );
 
   // Map status to indicator color

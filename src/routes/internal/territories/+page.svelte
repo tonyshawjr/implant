@@ -31,17 +31,17 @@
     PlusOutline,
     FilterOutline,
     MapPinOutline,
-    GlobeAltOutline,
+    GlobeOutline,
     UsersGroupOutline,
     CashOutline,
     ExclamationCircleOutline,
     ClockOutline,
     CheckCircleOutline,
-    XCircleOutline,
+    CloseCircleOutline,
     EyeOutline,
-    UserPlusOutline,
+    UserAddOutline,
     TrashBinOutline,
-    MapOutline,
+    MapPinAltOutline,
     TableColumnOutline,
     AdjustmentsHorizontalOutline
   } from 'flowbite-svelte-icons';
@@ -252,7 +252,7 @@
       value={data.stats.total.toString()}
     >
       {#snippet icon()}
-        <GlobeAltOutline class="h-6 w-6 text-primary-600 dark:text-primary-400" />
+        <GlobeOutline class="h-6 w-6 text-primary-600 dark:text-primary-400" />
       {/snippet}
     </StatCard>
 
@@ -291,7 +291,7 @@
   <Card class="p-0 overflow-hidden">
     <div class="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
       <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-        <GlobeAltOutline class="h-5 w-5 text-primary-600" />
+        <GlobeOutline class="h-5 w-5 text-primary-600" />
         Territory Map
       </h2>
       <div class="flex items-center gap-2">
@@ -300,7 +300,7 @@
           color={viewMode === 'map' ? 'primary' : 'light'}
           onclick={() => viewMode = 'map'}
         >
-          <MapOutline class="mr-1 h-4 w-4" />
+          <MapPinAltOutline class="mr-1 h-4 w-4" />
           Map
         </Button>
         <Button
@@ -391,7 +391,7 @@
             <TableBodyRow>
               <TableBodyCell colspan={8} class="text-center py-8">
                 <div class="flex flex-col items-center gap-2">
-                  <GlobeAltOutline class="h-12 w-12 text-gray-400" />
+                  <GlobeOutline class="h-12 w-12 text-gray-400" />
                   <p class="text-gray-500 dark:text-gray-400">No territories found</p>
                   {#if hasActiveFilters}
                     <Button color="light" size="sm" onclick={clearFilters}>
@@ -411,7 +411,7 @@
                   <div>
                     <p class="font-medium text-gray-900 dark:text-white">{territory.name}</p>
                     <div class="flex items-center gap-1 mt-1">
-                      <Badge color="dark">{territory.type}</Badge>
+                      <Badge color="gray">{territory.type}</Badge>
                       <span class="text-xs text-gray-500">{territory.radiusMiles} mi</span>
                     </div>
                   </div>
@@ -479,11 +479,11 @@
                       <EyeOutline class="h-3 w-3" />
                     </Button>
                     <Button size="xs" color="light" onclick={(e: Event) => { e.stopPropagation(); zoomToTerritory(territory.id); }}>
-                      <MapOutline class="h-3 w-3" />
+                      <MapPinAltOutline class="h-3 w-3" />
                     </Button>
                     {#if territory.status !== 'locked'}
                       <Button size="xs" color="light" onclick={(e: Event) => { e.stopPropagation(); openAddToWaitlist(territory); }}>
-                        <UserPlusOutline class="h-3 w-3" />
+                        <UserAddOutline class="h-3 w-3" />
                       </Button>
                     {/if}
                   </div>
@@ -568,7 +568,7 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <TerritoryStatusBadge status={selectedTerritory.status} />
-          <Badge color="dark">{selectedTerritory.type}</Badge>
+          <Badge color="gray">{selectedTerritory.type}</Badge>
         </div>
         <span class="text-sm text-gray-500">{selectedTerritory.radiusMiles} mile radius</span>
       </div>
@@ -677,7 +677,7 @@
               <div class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div>
                   <div class="flex items-center gap-2">
-                    <Badge color="dark">#{entry.position}</Badge>
+                    <Badge color="gray">#{entry.position}</Badge>
                     <span class="font-medium text-gray-900 dark:text-white">{entry.contactName}</span>
                   </div>
                   {#if entry.practiceName}
@@ -724,12 +724,12 @@
     <Button color="light" onclick={() => showTerritoryDetail = false}>Close</Button>
     {#if selectedTerritory}
       <Button color="light" onclick={() => zoomToTerritory(selectedTerritory!.id)}>
-        <MapOutline class="mr-2 h-4 w-4" />
+        <MapPinAltOutline class="mr-2 h-4 w-4" />
         View on Map
       </Button>
       {#if selectedTerritory.status !== 'locked'}
         <Button onclick={() => { showTerritoryDetail = false; openAddToWaitlist(selectedTerritory!); }}>
-          <UserPlusOutline class="mr-2 h-4 w-4" />
+          <UserAddOutline class="mr-2 h-4 w-4" />
           Add to Waitlist
         </Button>
       {/if}
@@ -778,7 +778,7 @@
       <div class="mt-6 flex justify-end gap-2">
         <Button color="light" onclick={() => showAddToWaitlist = false}>Cancel</Button>
         <Button type="submit">
-          <UserPlusOutline class="mr-2 h-4 w-4" />
+          <UserAddOutline class="mr-2 h-4 w-4" />
           Add to Waitlist
         </Button>
       </div>

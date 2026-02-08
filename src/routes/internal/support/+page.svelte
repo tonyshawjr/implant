@@ -7,16 +7,16 @@
   import {
     TicketOutline,
     ClockOutline,
-    ChatBubbleLeftRightOutline,
+    MessagesOutline,
     StarOutline,
     ExclamationCircleOutline,
     CheckCircleOutline,
     SearchOutline,
     FilterOutline,
-    XMarkOutline,
-    PaperAirplaneOutline,
+    CloseOutline,
+    PaperPlaneOutline,
     CalendarMonthOutline,
-    ArrowTopRightOnSquareOutline,
+    ArrowUpRightFromSquareOutline,
     FlagOutline,
     UserOutline,
     BuildingOutline
@@ -268,7 +268,7 @@
           </div>
           {#if statusFilter || priorityFilter || categoryFilter}
             <Button color="light" size="sm" onclick={clearFilters}>
-              <XMarkOutline class="mr-1 h-4 w-4" />
+              <CloseOutline class="mr-1 h-4 w-4" />
               Clear Filters
             </Button>
           {/if}
@@ -307,7 +307,7 @@
                   </div>
                 </TableBodyCell>
                 <TableBodyCell>
-                  <Badge color="dark">{categoryLabels[ticket.category]}</Badge>
+                  <Badge color="gray">{categoryLabels[ticket.category]}</Badge>
                 </TableBodyCell>
                 <TableBodyCell>
                   <Badge color={getPriorityBadgeColor(ticket.priority)}>
@@ -499,7 +499,7 @@
                     </div>
                     {#if review.meetingLink}
                       <Button size="xs" color="light" href={review.meetingLink} target="_blank">
-                        <ArrowTopRightOnSquareOutline class="h-3 w-3" />
+                        <ArrowUpRightFromSquareOutline class="h-3 w-3" />
                       </Button>
                     {/if}
                   </div>
@@ -543,7 +543,7 @@
           </h2>
         </div>
         <Button color="light" size="sm" onclick={() => showTicketDrawer = false}>
-          <XMarkOutline class="h-5 w-5" />
+          <CloseOutline class="h-5 w-5" />
         </Button>
       </div>
 
@@ -706,7 +706,7 @@
               </label>
 
               <Button type="submit" disabled={isSubmitting || !replyMessage.trim()}>
-                <PaperAirplaneOutline class="mr-1 h-4 w-4" />
+                <PaperPlaneOutline class="mr-1 h-4 w-4" />
                 {isSubmitting ? 'Sending...' : 'Send Reply'}
               </Button>
             </div>

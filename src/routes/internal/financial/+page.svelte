@@ -14,18 +14,18 @@
     Progressbar
   } from 'flowbite-svelte';
   import {
-    CurrencyDollarOutline,
+    DollarOutline,
     ChartPieOutline,
     UsersOutline,
-    ArrowTrendingUpOutline,
-    ArrowTrendingDownOutline,
-    ExclamationTriangleOutline,
-    DocumentTextOutline,
-    GlobeAmericasOutline,
-    ChartBarOutline,
+    ChartLineUpOutline,
+    ChartLineDownOutline,
+    ExclamationCircleOutline,
+    FileLinesOutline,
+    GlobeOutline,
+    ChartOutline,
     ClockOutline,
     EyeOutline,
-    CalendarOutline
+    CalendarMonthOutline
   } from 'flowbite-svelte-icons';
   import type { PageData } from './$types';
   import { formatCurrency, formatCompactCurrency, formatDate, formatPercent, formatNumber } from '$lib/utils';
@@ -93,11 +93,11 @@
       </p>
     </div>
     <div class="flex items-center gap-3">
-      <CalendarOutline class="h-5 w-5 text-gray-500" />
+      <CalendarMonthOutline class="h-5 w-5 text-gray-500" />
       <Select
         class="w-40"
         value={data.dateRange.toString()}
-        on:change={handleDateRangeChange}
+        onchange={handleDateRangeChange}
       >
         <option value="7">Last 7 days</option>
         <option value="30">Last 30 days</option>
@@ -119,18 +119,18 @@
           </p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-          <CurrencyDollarOutline class="h-6 w-6 text-green-600 dark:text-green-400" />
+          <DollarOutline class="h-6 w-6 text-green-600 dark:text-green-400" />
         </div>
       </div>
       <div class="mt-3 flex items-center text-sm">
         {#if data.summary.mrrGrowth >= 0}
           <Badge color="green" class="mr-2">
-            <ArrowTrendingUpOutline class="mr-1 h-3 w-3" />
+            <ChartLineUpOutline class="mr-1 h-3 w-3" />
             {formatPercent(data.summary.mrrGrowth)}
           </Badge>
         {:else}
           <Badge color="red" class="mr-2">
-            <ArrowTrendingDownOutline class="mr-1 h-3 w-3" />
+            <ChartLineDownOutline class="mr-1 h-3 w-3" />
             {formatPercent(Math.abs(data.summary.mrrGrowth))}
           </Badge>
         {/if}
@@ -148,7 +148,7 @@
           </p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-          <ChartBarOutline class="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <ChartOutline class="h-6 w-6 text-blue-600 dark:text-blue-400" />
         </div>
       </div>
       <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
@@ -184,7 +184,7 @@
           </p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg {data.summary.churnRate > 5 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'}">
-          <ArrowTrendingDownOutline class="h-6 w-6 {data.summary.churnRate > 5 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}" />
+          <ChartLineDownOutline class="h-6 w-6 {data.summary.churnRate > 5 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}" />
         </div>
       </div>
       <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
@@ -214,7 +214,7 @@
               <div class="mb-2 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-gray-900 dark:text-white">{tier.tierName}</span>
-                  <Badge color="dark">{tier.count} clients</Badge>
+                  <Badge color="gray">{tier.count} clients</Badge>
                 </div>
                 <span class="font-semibold text-gray-900 dark:text-white">
                   {formatCurrency(tier.mrr, { showCents: false })}
@@ -252,7 +252,7 @@
     <!-- MRR Trend (Simple Bar Chart) -->
     <Card class="p-5">
       <h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-        <ArrowTrendingUpOutline class="h-5 w-5 text-primary-600" />
+        <ChartLineUpOutline class="h-5 w-5 text-primary-600" />
         MRR Trend (6 Months)
       </h3>
 
@@ -306,7 +306,7 @@
     <!-- Ad Spend Under Management -->
     <Card class="p-5">
       <h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-        <ChartBarOutline class="h-5 w-5 text-primary-600" />
+        <ChartOutline class="h-5 w-5 text-primary-600" />
         Ad Spend Under Management
       </h3>
 
@@ -320,12 +320,12 @@
         <div class="flex items-center gap-2">
           {#if data.summary.adSpendGrowth >= 0}
             <Badge color="green">
-              <ArrowTrendingUpOutline class="mr-1 h-3 w-3" />
+              <ChartLineUpOutline class="mr-1 h-3 w-3" />
               {formatPercent(data.summary.adSpendGrowth)}
             </Badge>
           {:else}
             <Badge color="red">
-              <ArrowTrendingDownOutline class="mr-1 h-3 w-3" />
+              <ChartLineDownOutline class="mr-1 h-3 w-3" />
               {formatPercent(Math.abs(data.summary.adSpendGrowth))}
             </Badge>
           {/if}
@@ -417,7 +417,7 @@
   <!-- Row 4: Revenue by Territory -->
   <Card class="p-5">
     <h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-      <GlobeAmericasOutline class="h-5 w-5 text-primary-600" />
+      <GlobeOutline class="h-5 w-5 text-primary-600" />
       Top Territories by Revenue
     </h3>
 
@@ -463,7 +463,7 @@
     <!-- Churn Risk Table -->
     <Card class="p-5">
       <h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-        <ExclamationTriangleOutline class="h-5 w-5 text-yellow-500" />
+        <ExclamationCircleOutline class="h-5 w-5 text-yellow-500" />
         Churn Risk Clients
       </h3>
 
@@ -524,7 +524,7 @@
     <Card class="p-5">
       <div class="mb-4 flex items-center justify-between">
         <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
-          <DocumentTextOutline class="h-5 w-5 text-primary-600" />
+          <FileLinesOutline class="h-5 w-5 text-primary-600" />
           Invoice Tracking
         </h3>
         <Button size="xs" color="light" href="/internal/billing">View All</Button>

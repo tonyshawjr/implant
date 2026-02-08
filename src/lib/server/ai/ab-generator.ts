@@ -8,9 +8,9 @@ import type {
   ABTestVariant,
   ABTestResult,
   BrandVoiceProfile,
-  AIModelConfig,
-  DEFAULT_AI_CONFIG
+  AIModelConfig
 } from './types';
+import { DEFAULT_AI_CONFIG } from './types';
 
 // ============================================================================
 // Constants
@@ -188,10 +188,10 @@ export class ABTestVariantGenerator {
     original: string,
     voiceProfile: BrandVoiceProfile,
     focusAreas?: string[]
-  ): Omit<ABTestVariant, 'id' | 'tags'>[] {
+  ): Omit<ABTestVariant, 'id'>[] {
     const tone = voiceProfile.tone || 'professional';
 
-    const variants: Omit<ABTestVariant, 'id' | 'tags'>[] = [
+    const variants: Omit<ABTestVariant, 'id'>[] = [
       {
         content: 'Get Your Smile Back in Just One Visit',
         hypothesis: 'Speed/convenience messaging will increase click-through rate',
@@ -255,7 +255,7 @@ export class ABTestVariantGenerator {
     original: string,
     voiceProfile: BrandVoiceProfile,
     focusAreas?: string[]
-  ): Omit<ABTestVariant, 'id' | 'tags'>[] {
+  ): Omit<ABTestVariant, 'id'>[] {
     return [
       {
         content: 'Get My Free Consultation',
@@ -309,7 +309,7 @@ export class ABTestVariantGenerator {
     original: string,
     voiceProfile: BrandVoiceProfile,
     focusAreas?: string[]
-  ): Omit<ABTestVariant, 'id' | 'tags'>[] {
+  ): Omit<ABTestVariant, 'id'>[] {
     return [
       {
         content: 'Imagine biting into an apple with confidence. Laughing without covering your mouth. That\'s what dental implants can give you. Our specialists have helped 500+ patients just like you rediscover their smiles. Ready to be next?',
@@ -345,7 +345,7 @@ export class ABTestVariantGenerator {
     original: string,
     voiceProfile: BrandVoiceProfile,
     focusAreas?: string[]
-  ): Omit<ABTestVariant, 'id' | 'tags'>[] {
+  ): Omit<ABTestVariant, 'id'>[] {
     return [
       {
         content: 'Natural-looking results. Experienced specialists. Free consultations available.',

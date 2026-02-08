@@ -158,11 +158,15 @@
     <TableBody>
       {#each leads as lead (lead.id)}
         <TableBodyRow class="cursor-pointer" onclick={() => goto(`/leads/${lead.id}`)}>
-          <TableBodyCell class="w-12 p-4" onclick={(e: MouseEvent) => e.stopPropagation()}>
-            <Checkbox
-              checked={localSelectedIds.includes(lead.id)}
-              onclick={() => toggleSelection(lead.id)}
-            />
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <TableBodyCell class="w-12 p-4">
+            <div onclick={(e: MouseEvent) => e.stopPropagation()}>
+              <Checkbox
+                checked={localSelectedIds.includes(lead.id)}
+                onclick={() => toggleSelection(lead.id)}
+              />
+            </div>
           </TableBodyCell>
           <TableBodyCell class="font-medium text-gray-900 dark:text-white">
             {formatFullName(lead.firstName, lead.lastName)}

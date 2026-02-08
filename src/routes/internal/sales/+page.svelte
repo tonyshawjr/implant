@@ -2,21 +2,21 @@
   import { Card, Badge, Button, Modal, Input, Textarea, Select, Label, Progressbar, Avatar, Drawer, Timeline, TimelineItem } from 'flowbite-svelte';
   import {
     PlusOutline,
-    CurrencyDollarOutline,
+    DollarOutline,
     ChartPieOutline,
-    TrophyOutline,
+    AwardOutline,
     UserOutline,
     PhoneOutline,
     EnvelopeOutline,
     MapPinOutline,
     CalendarMonthOutline,
     ClockOutline,
-    DocumentTextOutline,
+    FileLinesOutline,
     ArrowRightOutline,
     ChevronDownOutline,
     BuildingOutline,
-    GlobeAltOutline,
-    XMarkOutline
+    GlobeOutline,
+    CloseOutline
   } from 'flowbite-svelte-icons';
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
@@ -164,7 +164,7 @@
     <Card class="p-4">
       <div class="flex items-center gap-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900">
-          <CurrencyDollarOutline class="h-5 w-5 text-primary-600 dark:text-primary-300" />
+          <DollarOutline class="h-5 w-5 text-primary-600 dark:text-primary-300" />
         </div>
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400">Pipeline Value</p>
@@ -192,7 +192,7 @@
     <Card class="p-4">
       <div class="flex items-center gap-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900">
-          <TrophyOutline class="h-5 w-5 text-green-600 dark:text-green-300" />
+          <AwardOutline class="h-5 w-5 text-green-600 dark:text-green-300" />
         </div>
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400">Conversion Rate</p>
@@ -206,7 +206,7 @@
     <Card class="p-4">
       <div class="flex items-center gap-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900">
-          <CurrencyDollarOutline class="h-5 w-5 text-purple-600 dark:text-purple-300" />
+          <DollarOutline class="h-5 w-5 text-purple-600 dark:text-purple-300" />
         </div>
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400">Avg Deal Size</p>
@@ -220,7 +220,7 @@
     <Card class="p-4">
       <div class="flex items-center gap-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900">
-          <TrophyOutline class="h-5 w-5 text-cyan-600 dark:text-cyan-300" />
+          <AwardOutline class="h-5 w-5 text-cyan-600 dark:text-cyan-300" />
         </div>
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400">Won This Month</p>
@@ -249,7 +249,7 @@
               <h3 class="font-semibold text-gray-900 dark:text-white">
                 {stageLabels[stage]}
               </h3>
-              <Badge color="dark" class="text-xs">
+              <Badge color="gray" class="text-xs">
                 {stageData.count}
               </Badge>
             </div>
@@ -284,7 +284,7 @@
                       {prospect.practiceName}
                     </h4>
                     {#if prospect.probability}
-                      <Badge color="dark" class="text-xs">
+                      <Badge color="gray" class="text-xs">
                         {prospect.probability}%
                       </Badge>
                     {/if}
@@ -306,7 +306,7 @@
                   <!-- Value -->
                   {#if prospect.monthlyValue}
                     <div class="mb-2 flex items-center gap-1 text-sm font-semibold text-green-600 dark:text-green-400">
-                      <CurrencyDollarOutline class="h-4 w-4" />
+                      <DollarOutline class="h-4 w-4" />
                       {formatCurrency(prospect.monthlyValue)}/mo
                     </div>
                   {/if}
@@ -480,7 +480,7 @@
           </Badge>
         </div>
         <Button color="light" size="sm" onclick={() => showProspectDetailDrawer = false}>
-          <XMarkOutline class="h-5 w-5" />
+          <CloseOutline class="h-5 w-5" />
         </Button>
       </div>
 
@@ -518,7 +518,7 @@
             {/if}
             {#if selectedProspect.website}
               <div class="flex items-center gap-2 text-sm">
-                <GlobeAltOutline class="h-4 w-4 text-gray-400" />
+                <GlobeOutline class="h-4 w-4 text-gray-400" />
                 <a href={selectedProspect.website} target="_blank" class="text-primary-600 hover:underline">
                   {selectedProspect.website}
                 </a>
@@ -578,7 +578,7 @@
         {#if selectedProspect.latestProposal}
           <div class="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
             <h3 class="mb-2 flex items-center gap-2 font-medium text-gray-900 dark:text-white">
-              <DocumentTextOutline class="h-5 w-5" />
+              <FileLinesOutline class="h-5 w-5" />
               Latest Proposal
             </h3>
             <div class="space-y-1 text-sm">
@@ -645,7 +645,7 @@
           {/if}
           {#if selectedProspect.stage !== 'closed_won' && selectedProspect.stage !== 'closed_lost'}
             <Button size="sm" color="light" onclick={() => { showProspectDetailDrawer = false; showProposalModal = true; }}>
-              <DocumentTextOutline class="mr-1 h-4 w-4" />
+              <FileLinesOutline class="mr-1 h-4 w-4" />
               Create Proposal
             </Button>
           {/if}

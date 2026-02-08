@@ -16,7 +16,7 @@
     status === 'locked' ? 'red' as const :
     status === 'available' ? 'green' as const :
     status === 'waitlist' ? 'yellow' as const :
-    'dark' as const
+    'gray' as const
   );
 
   // Map status to indicator color

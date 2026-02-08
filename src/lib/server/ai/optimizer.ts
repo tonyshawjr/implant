@@ -9,9 +9,9 @@ import type {
   OptimizationRecommendation,
   OptimizationType,
   OptimizationPriority,
-  AIModelConfig,
-  DEFAULT_AI_CONFIG
+  AIModelConfig
 } from './types';
+import { DEFAULT_AI_CONFIG } from './types';
 
 // ============================================================================
 // Constants

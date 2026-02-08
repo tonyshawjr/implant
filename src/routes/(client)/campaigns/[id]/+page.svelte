@@ -486,7 +486,7 @@
               {@const typeConfig = optimizationTypeConfig[log.type] || { label: log.type, icon: CogOutline, color: 'text-gray-500' }}
               {@const TypeIcon = typeConfig.icon}
               <TimelineItem title={log.title} date={formatDate(log.appliedAt, 'datetime')}>
-                {#snippet icon()}
+                {#snippet orientationSlot()}
                   <span class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 ring-4 ring-white dark:bg-gray-700 dark:ring-gray-800">
                     <TypeIcon class={`h-4 w-4 ${typeConfig.color}`} />
                   </span>

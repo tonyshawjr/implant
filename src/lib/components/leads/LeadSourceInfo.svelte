@@ -56,16 +56,16 @@
   }
 
   // Get source badge color
-  function getSourceColor(src: string): 'red' | 'blue' | 'purple' | 'green' | 'yellow' | 'dark' {
-    const colors: Record<string, 'red' | 'blue' | 'purple' | 'green' | 'yellow' | 'dark'> = {
+  function getSourceColor(src: string): 'red' | 'blue' | 'purple' | 'green' | 'yellow' | 'gray' {
+    const colors: Record<string, 'red' | 'blue' | 'purple' | 'green' | 'yellow' | 'gray'> = {
       google: 'blue',
       facebook: 'blue',
       instagram: 'purple',
       website: 'green',
       referral: 'yellow',
-      manual: 'dark'
+      manual: 'gray'
     };
-    return colors[src] ?? 'dark';
+    return colors[src] ?? 'gray';
   }
 
   // Check if we have UTM parameters

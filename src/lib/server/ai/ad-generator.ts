@@ -11,9 +11,9 @@ import type {
   GoogleAdCopy,
   BrandVoiceProfile,
   AdPlatform,
-  AIModelConfig,
-  DEFAULT_AI_CONFIG
+  AIModelConfig
 } from './types';
+import { DEFAULT_AI_CONFIG } from './types';
 
 // ============================================================================
 // Constants

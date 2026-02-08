@@ -14,14 +14,14 @@
 
   // Map status to Flowbite badge color
   let badgeColor = $derived(
-    status === 'new' ? 'dark' as const :
+    status === 'new' ? 'gray' as const :
     status === 'contacted' ? 'blue' as const :
     status === 'qualified' ? 'indigo' as const :
     status === 'appointment_set' ? 'purple' as const :
     status === 'consultation_completed' ? 'primary' as const :
     status === 'converted' ? 'green' as const :
     status === 'lost' ? 'red' as const :
-    'dark' as const
+    'gray' as const
   );
 </script>
 

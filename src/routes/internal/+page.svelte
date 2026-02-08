@@ -23,12 +23,12 @@
     PlusOutline,
     FilterOutline,
     ExclamationCircleOutline,
-    CalendarOutline,
+    CalendarMonthOutline,
     ArrowRightOutline,
     UsersGroupOutline,
     ChartPieOutline,
     CashOutline,
-    ArrowTrendingUpOutline
+    ChartLineUpOutline
   } from 'flowbite-svelte-icons';
   import { HealthScoreBadge, OrgStatusBadge, ContractStatusBadge } from '$lib/components/internal';
   import { StatCard } from '$lib/components/ui';
@@ -353,7 +353,7 @@
       <!-- Upcoming Renewals -->
       <Card class="p-4">
         <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-          <CalendarOutline class="h-5 w-5 text-yellow-500" />
+          <CalendarMonthOutline class="h-5 w-5 text-yellow-500" />
           Upcoming Renewals
         </h3>
         {#if data.upcomingRenewals.length === 0}
@@ -384,7 +384,7 @@
       <!-- Quick Stats -->
       <Card class="p-4">
         <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-          <ArrowTrendingUpOutline class="h-5 w-5 text-blue-500" />
+          <ChartLineUpOutline class="h-5 w-5 text-blue-500" />
           This Month
         </h3>
         <div class="space-y-3">

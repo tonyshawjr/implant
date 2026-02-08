@@ -7,15 +7,15 @@
     UsersGroupOutline,
     ClockOutline,
     CheckCircleOutline,
-    ExclamationTriangleOutline,
+    ExclamationCircleOutline,
     ChevronRightOutline,
     BuildingOutline,
     UserOutline,
     EnvelopeOutline,
     PhoneOutline,
     FlagOutline,
-    XMarkOutline,
-    DocumentCheckOutline
+    CloseOutline,
+    FileCheckOutline
   } from 'flowbite-svelte-icons';
   import { enhance } from '$app/forms';
   import { formatDate, getRelativeTime } from '$lib/utils';
@@ -148,7 +148,7 @@
     <Card class="p-4">
       <div class="flex items-center gap-3">
         <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900">
-          <ExclamationTriangleOutline class="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
+          <ExclamationCircleOutline class="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
         </div>
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400">Delayed</p>
@@ -173,8 +173,8 @@
   <!-- Onboarding Pipeline -->
   <div class="grid gap-4 lg:grid-cols-4">
     {#each data.phaseDefinitions as phaseDef}
-      {@const phaseOnboardings = data.onboardingsByPhase[phaseDef.phase] || []}
-      {@const phaseCount = data.stats.byPhase[phaseDef.phase] || 0}
+      {@const phaseOnboardings = data.onboardingsByPhase[phaseDef.phase as keyof typeof data.onboardingsByPhase] || []}
+      {@const phaseCount = data.stats.byPhase[phaseDef.phase as keyof typeof data.stats.byPhase] || 0}
 
       <div class="space-y-3">
         <!-- Phase Header -->
@@ -188,7 +188,7 @@
                 {phaseDef.name}
               </h3>
             </div>
-            <Badge color="dark">{phaseCount}</Badge>
+            <Badge color="gray">{phaseCount}</Badge>
           </div>
           <p class="mt-1 text-xs {phaseColors[phaseDef.phase].text} opacity-80">
             {phaseDef.description}
@@ -291,7 +291,7 @@
           </p>
         </div>
         <Button color="light" size="sm" onclick={() => showOnboardingDrawer = false}>
-          <XMarkOutline class="h-5 w-5" />
+          <CloseOutline class="h-5 w-5" />
         </Button>
       </div>
 
@@ -518,7 +518,7 @@
 
           {#if canCompleteOnboarding(selectedOnboarding)}
             <Button size="sm" color="green" onclick={() => showCompleteModal = true}>
-              <DocumentCheckOutline class="mr-1 h-4 w-4" />
+              <FileCheckOutline class="mr-1 h-4 w-4" />
               Complete Onboarding
             </Button>
           {/if}

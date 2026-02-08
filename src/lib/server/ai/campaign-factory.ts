@@ -15,9 +15,9 @@ import type {
   TerritoryInfo,
   AdPlatform,
   CampaignObjective,
-  AIModelConfig,
-  DEFAULT_AI_CONFIG
+  AIModelConfig
 } from './types';
+import { DEFAULT_AI_CONFIG } from './types';
 
 import { AdCopyGenerator } from './ad-generator';
 import { LandingPageGenerator } from './landing-generator';
@@ -286,10 +286,10 @@ export class CampaignFactory {
     }
 
     // Secondary audience ad set
-    if (templates.secondary) {
+    if ('secondary' in templates && templates.secondary) {
       adSets.push({
         name: `${territory.city} - ${(templates.secondary as TargetAudience & { name: string }).name || 'Secondary'}`,
-        targetAudience: templates.secondary,
+        targetAudience: templates.secondary as TargetAudience,
         budgetPercent: 30,
         objective: campaignType === 'lead_gen' ? 'Conversions' : 'Reach',
         placement: platformConfig.defaultPlacements
@@ -297,10 +297,10 @@ export class CampaignFactory {
     }
 
     // Broad audience for awareness/testing
-    if (templates.broad && campaignType !== 'retargeting') {
+    if ('broad' in templates && templates.broad && campaignType !== 'retargeting') {
       adSets.push({
         name: `${territory.city} - ${(templates.broad as TargetAudience & { name: string }).name || 'Broad'}`,
-        targetAudience: templates.broad,
+        targetAudience: templates.broad as TargetAudience,
         budgetPercent: 20,
         objective: 'Traffic',
         placement: platformConfig.defaultPlacements

@@ -111,3 +111,40 @@ export {
   type LearningAnalysisResult,
   type ProfileRefinementResult
 } from './voice-learner';
+
+// Ad Copy Generator
+export { AdCopyGenerator } from './ad-generator';
+
+// Landing Page Generator
+export { LandingPageGenerator } from './landing-generator';
+
+// Campaign Factory
+export { CampaignFactory } from './campaign-factory';
+
+// A/B Test Variant Generator
+export { ABTestVariantGenerator } from './ab-generator';
+
+// Performance Optimizer
+export { PerformanceOptimizer } from './optimizer';
+
+// Re-export types from types.ts
+export type {
+  AdPlatform,
+  CampaignObjective,
+  BrandVoiceProfile,
+  AdCopyRequest,
+  AdGenerationResult,
+  GeneratedAdVariant,
+  LandingPageRequest,
+  LandingPageGenerationResult,
+  CampaignFactoryRequest,
+  CampaignFactoryResult,
+  ABTestVariantRequest,
+  ABTestResult,
+  ABTestVariant,
+  TargetAudience,
+  TerritoryInfo,
+  CampaignPerformanceData,
+  PerformanceAnalysis,
+  OptimizationRecommendation
+} from './types';

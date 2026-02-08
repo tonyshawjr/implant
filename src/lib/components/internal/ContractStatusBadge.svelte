@@ -16,8 +16,8 @@
     status === 'active' ? 'green' as const :
     status === 'pending' ? 'yellow' as const :
     status === 'expired' ? 'red' as const :
-    status === 'cancelled' ? 'dark' as const :
-    'dark' as const
+    status === 'cancelled' ? 'gray' as const :
+    'gray' as const
   );
 
   // Map status to indicator color

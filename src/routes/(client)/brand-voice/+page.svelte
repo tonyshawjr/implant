@@ -30,7 +30,7 @@
     PlusOutline,
     TrashBinOutline,
     PenOutline,
-    SparklesOutline,
+    StarOutline,
     ChartMixedOutline,
     ThumbsUpOutline,
     ThumbsDownOutline
@@ -117,9 +117,10 @@
   let formality = $derived(data.voiceProfile?.formalityLevel ? formalityLabels[data.voiceProfile.formalityLevel] : null);
   let canGenerateContent = $derived(data.voiceProfile && data.voiceProfile.tone && data.voiceProfile.personality);
   let hasNoSampleContent = $derived(
-    data.sampleContent.headlines.length === 0 &&
+    !data.sampleContent ||
+    (data.sampleContent.headlines.length === 0 &&
     data.sampleContent.adCopy.length === 0 &&
-    data.sampleContent.ctas.length === 0
+    data.sampleContent.ctas.length === 0)
   );
 
   // Handle sample approval with learning
@@ -229,7 +230,7 @@
     <div class="flex gap-2">
       {#if !data.voiceProfile}
         <Button color="primary" onclick={() => showAnalyzeModal = true}>
-          <SparklesOutline class="mr-2 h-4 w-4" />
+          <StarOutline class="mr-2 h-4 w-4" />
           Analyze Brand
         </Button>
       {:else}
@@ -242,7 +243,7 @@
         </Button>
         {#if canGenerateContent && hasNoSampleContent}
           <Button color="primary" size="sm" onclick={() => showGenerateModal = true}>
-            <SparklesOutline class="mr-2 h-4 w-4" />
+            <StarOutline class="mr-2 h-4 w-4" />
             Generate Content
           </Button>
         {/if}
@@ -276,7 +277,7 @@
   {#if !data.voiceProfile}
     <!-- No Voice Profile State -->
     <Card class="p-8 text-center">
-      <SparklesOutline class="mx-auto h-16 w-16 text-primary-500" />
+      <StarOutline class="mx-auto h-16 w-16 text-primary-500" />
       <h2 class="mt-4 text-xl font-semibold text-gray-900 dark:text-white">Create Your Brand Voice Profile</h2>
       <p class="mt-2 max-w-md mx-auto text-gray-500 dark:text-gray-400">
         Let our AI analyze your website, social media, and Google Business profile to capture your unique brand voice.
@@ -284,7 +285,7 @@
       </p>
       <div class="mt-6">
         <Button color="primary" size="lg" onclick={() => showAnalyzeModal = true}>
-          <SparklesOutline class="mr-2 h-5 w-5" />
+          <StarOutline class="mr-2 h-5 w-5" />
           Start Brand Analysis
         </Button>
       </div>
@@ -475,7 +476,7 @@
         <!-- Generate Content CTA -->
         {#if canGenerateContent && hasNoSampleContent}
           <div class="mt-6 rounded-lg border-2 border-dashed border-primary-200 bg-primary-50 p-6 text-center dark:border-primary-800 dark:bg-primary-900/20">
-            <SparklesOutline class="mx-auto h-10 w-10 text-primary-500" />
+            <StarOutline class="mx-auto h-10 w-10 text-primary-500" />
             <h3 class="mt-3 text-lg font-semibold text-gray-900 dark:text-white">Ready to Generate Content</h3>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Your brand voice has been analyzed. Generate sample content to review and approve.
@@ -493,7 +494,7 @@
                   <Spinner size="4" class="mr-2" />
                   Generating...
                 {:else}
-                  <SparklesOutline class="mr-2 h-4 w-4" />
+                  <StarOutline class="mr-2 h-4 w-4" />
                   Generate Sample Content
                 {/if}
               </Button>
@@ -510,7 +511,7 @@
         <div class="mt-4 space-y-6">
           {#if hasNoSampleContent}
             <Card class="p-8 text-center">
-              <SparklesOutline class="mx-auto h-12 w-12 text-gray-400" />
+              <StarOutline class="mx-auto h-12 w-12 text-gray-400" />
               <p class="mt-4 text-gray-500 dark:text-gray-400">
                 No sample content generated yet. Click "Generate Sample Content" above to create AI-generated samples.
               </p>
@@ -853,7 +854,7 @@
           <Spinner size="4" class="mr-2" />
           Analyzing...
         {:else}
-          <SparklesOutline class="mr-2 h-4 w-4" />
+          <StarOutline class="mr-2 h-4 w-4" />
           Start Analysis
         {/if}
       </Button>
