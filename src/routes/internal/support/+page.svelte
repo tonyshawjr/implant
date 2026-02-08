@@ -520,10 +520,9 @@
 
 <!-- Ticket Detail Drawer -->
 <Drawer
-  bind:hidden={!showTicketDrawer}
+  bind:open={showTicketDrawer}
   placement="right"
-  width="w-full sm:w-[560px]"
-  class="p-0"
+  class="w-full p-0 sm:w-[560px]"
 >
   {#if selectedTicket}
     <div class="flex h-full flex-col">

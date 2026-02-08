@@ -413,7 +413,7 @@
 </div>
 
 <!-- Advanced Filters Drawer -->
-<Drawer bind:hidden={!isFilterDrawerOpen} placement="right" width="w-96">
+<Drawer bind:open={isFilterDrawerOpen} placement="right" class="w-96">
   <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
     <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Advanced Filters</h5>
     <CloseButton onclick={() => isFilterDrawerOpen = false} />

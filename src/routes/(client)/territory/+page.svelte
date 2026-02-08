@@ -20,7 +20,7 @@
   let { data }: { data: PageData } = $props();
 
   // Reference to the map component for programmatic control
-  let territoryMapRef: TerritoryMap;
+  let territoryMapRef: any;
 
   // Territory type label mapping
   const territoryTypeLabels: Record<string, string> = {

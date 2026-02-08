@@ -269,10 +269,9 @@
 
 <!-- Onboarding Detail Drawer -->
 <Drawer
-  bind:hidden={!showOnboardingDrawer}
+  bind:open={showOnboardingDrawer}
   placement="right"
-  width="w-full sm:w-[560px]"
-  class="p-0"
+  class="w-full p-0 sm:w-[560px]"
 >
   {#if selectedOnboarding}
     <div class="flex h-full flex-col">

@@ -463,10 +463,9 @@
 
 <!-- Prospect Detail Drawer -->
 <Drawer
-  bind:hidden={!showProspectDetailDrawer}
+  bind:open={showProspectDetailDrawer}
   placement="right"
-  width="w-full sm:w-[480px]"
-  class="p-0"
+  class="w-full p-0 sm:w-[480px]"
 >
   {#if selectedProspect}
     <div class="flex h-full flex-col">
