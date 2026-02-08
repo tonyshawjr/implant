@@ -71,7 +71,7 @@
   let selectedTerritory = $state<typeof data.territories[0] | null>(null);
 
   // Map reference
-  let masterMapRef: MasterTerritoryMap;
+  let masterMapRef: any;
 
   // Waitlist form state
   let waitlistContactName = $state('');
