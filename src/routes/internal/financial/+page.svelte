@@ -404,9 +404,7 @@
                   {formatCurrency(data.marginAnalysis.reduce((sum, t) => sum + t.estimatedCost, 0), { showCents: false })}
                 </td>
                 <td class="pt-3 text-right text-green-600 dark:text-green-400">
-                  {@const totalRev = data.marginAnalysis.reduce((sum, t) => sum + t.revenue, 0)}
-                  {@const totalMargin = data.marginAnalysis.reduce((sum, t) => sum + t.margin, 0)}
-                  {totalRev > 0 ? formatPercent((totalMargin / totalRev) * 100) : '0%'}
+                  {formatPercent((data.marginAnalysis.reduce((sum, t) => sum + t.margin, 0) / Math.max(data.marginAnalysis.reduce((sum, t) => sum + t.revenue, 0), 1)) * 100)}
                 </td>
               </tr>
             </tfoot>
