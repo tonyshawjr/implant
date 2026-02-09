@@ -1,8 +1,9 @@
 <script lang="ts">
-  import AppShell from '$lib/components/layout/AppShell.svelte';
+  import { AppShell } from '$lib/components/layout';
   import type { LayoutData } from './$types';
+  import type { Snippet } from 'svelte';
 
-  let { data, children } = $props<{ data: LayoutData; children: any }>();
+  let { data, children }: { data: LayoutData; children: Snippet } = $props();
 </script>
 
 <svelte:head>
@@ -11,8 +12,9 @@
 
 <AppShell
   variant="internal"
+  title="Client Overview"
+  breadcrumbs={[{ label: 'Dashboard' }, { label: 'Clients' }]}
   user={data.user}
-  organization={null}
 >
   {@render children()}
 </AppShell>
