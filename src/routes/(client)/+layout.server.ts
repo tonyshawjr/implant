@@ -14,7 +14,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   const clientRoles = ['client_owner', 'client_admin', 'client_staff'];
   if (!clientRoles.includes(user.role)) {
     // Internal users should go to internal dashboard
-    throw redirect(302, '/internal/clients');
+    throw redirect(302, '/internal');
   }
 
   // Get organization data if user belongs to one
