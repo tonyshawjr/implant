@@ -73,15 +73,23 @@ export const actions: Actions = {
         }
       });
 
+      // Redirect based on role
+      const internalRoles = ['super_admin', 'admin', 'support'];
+      if (internalRoles.includes(user.role)) {
+        throw redirect(302, '/internal');
+      }
+      throw redirect(302, '/dashboard');
+
     } catch (e) {
+      // If it's a redirect, rethrow it
+      if (e && typeof e === 'object' && 'status' in e) {
+        throw e;
+      }
       console.error('Login error:', e);
       return fail(500, {
         error: 'An error occurred during login',
         email
       });
     }
-
-    // Redirect after successful login
-    throw redirect(302, '/');
   }
 };
