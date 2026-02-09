@@ -76,7 +76,7 @@
 
   // Brand name and link based on variant
   let brandName = $derived(variant === 'client' ? (organization?.name ?? 'Dashboard') : 'SqueezMedia');
-  let brandHref = $derived(variant === 'client' ? '/dashboard' : '/internal/clients');
+  let brandHref = $derived(variant === 'client' ? '/dashboard' : '/internal');
 </script>
 
 <Navbar
