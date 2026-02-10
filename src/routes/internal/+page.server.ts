@@ -296,5 +296,88 @@ export const actions: Actions = {
       console.error('Failed to update organization status:', error);
       return fail(500, { error: 'Failed to update status' });
     }
+  },
+
+  addClient: async ({ request }) => {
+    const formData = await request.formData();
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
+    const city = formData.get('city') as string;
+    const state = formData.get('state') as string;
+    const zip = formData.get('zip') as string;
+    const website = formData.get('website') as string;
+    const plan = formData.get('plan') as string;
+
+    if (!name || !email || !city || !state) {
+      return fail(400, { error: 'Name, email, city, and state are required' });
+    }
+
+    try {
+      // Generate a slug from the name
+      const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      // Create the organization
+      const organization = await prisma.organization.create({
+        data: {
+          name,
+          slug,
+          email,
+          phone: phone || null,
+          city,
+          state,
+          zip: zip || null,
+          website: website || null,
+          status: 'onboarding',
+          healthScore: 75, // Default starting health score
+        }
+      });
+
+      // Create a default contract based on the plan
+      const planPrices: Record<string, number> = {
+        starter: 1500,
+        growth: 2500,
+        enterprise: 4000
+      };
+
+      const monthlyCommitment = planPrices[plan] || 2500;
+
+      // Find or create the plan
+      let planRecord = await prisma.plan.findFirst({
+        where: { name: plan.charAt(0).toUpperCase() + plan.slice(1) }
+      });
+
+      if (!planRecord) {
+        planRecord = await prisma.plan.create({
+          data: {
+            name: plan.charAt(0).toUpperCase() + plan.slice(1),
+            basePrice: monthlyCommitment,
+            features: ['Lead generation', 'Territory exclusivity', 'AI brand voice'],
+            isActive: true
+          }
+        });
+      }
+
+      // Create the contract
+      await prisma.contract.create({
+        data: {
+          organizationId: organization.id,
+          planId: planRecord.id,
+          status: 'pending',
+          monthlyCommitment,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+          autoRenew: true
+        }
+      });
+
+      return { success: true, organizationId: organization.id };
+    } catch (error) {
+      console.error('Failed to create client:', error);
+      return fail(500, { error: 'Failed to create client' });
+    }
   }
 };

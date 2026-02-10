@@ -1,7 +1,12 @@
 <script lang="ts">
+  import { enhance } from '$app/forms';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
+
+  // Modal state
+  let showAddClientModal = $state(false);
+  let isSubmitting = $state(false);
 
   // Helper functions
   function formatCurrency(value: number): string {
@@ -144,7 +149,7 @@
   </div>
   <div class="filter-group" style="margin-left: auto;">
     <label class="filter-label">&nbsp;</label>
-    <button class="btn btn-primary">
+    <button class="btn btn-primary" onclick={() => showAddClientModal = true}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
@@ -231,7 +236,7 @@
                 </div>
                 <h3 class="empty-state-title">No clients yet</h3>
                 <p class="empty-state-description">Get started by adding your first client.</p>
-                <button class="btn btn-primary">Add First Client</button>
+                <button class="btn btn-primary" onclick={() => showAddClientModal = true}>Add First Client</button>
               </div>
             </td>
           </tr>
@@ -240,6 +245,94 @@
     </table>
   </div>
 </div>
+
+<!-- Add Client Modal -->
+{#if showAddClientModal}
+<div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (showAddClientModal = false)}>
+  <div class="modal" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Add New Client</h2>
+      <button class="modal-close" onclick={() => showAddClientModal = false}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form
+      method="POST"
+      action="?/addClient"
+      use:enhance={() => {
+        isSubmitting = true;
+        return async ({ result, update }) => {
+          isSubmitting = false;
+          if (result.type === 'success') {
+            showAddClientModal = false;
+          }
+          await update();
+        };
+      }}
+    >
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="name" class="form-label">Practice Name *</label>
+          <input type="text" id="name" name="name" class="form-input" placeholder="e.g., Smile Dental Care" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-4);">
+          <div class="form-group">
+            <label for="email" class="form-label">Contact Email *</label>
+            <input type="email" id="email" name="email" class="form-input" placeholder="contact@practice.com" required />
+          </div>
+          <div class="form-group">
+            <label for="phone" class="form-label">Phone</label>
+            <input type="tel" id="phone" name="phone" class="form-input" placeholder="(555) 123-4567" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--spacing-4);">
+          <div class="form-group">
+            <label for="city" class="form-label">City *</label>
+            <input type="text" id="city" name="city" class="form-input" placeholder="City" required />
+          </div>
+          <div class="form-group">
+            <label for="state" class="form-label">State *</label>
+            <input type="text" id="state" name="state" class="form-input" placeholder="CA" maxlength="2" required />
+          </div>
+          <div class="form-group">
+            <label for="zip" class="form-label">ZIP</label>
+            <input type="text" id="zip" name="zip" class="form-input" placeholder="90210" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="website" class="form-label">Website</label>
+          <input type="url" id="website" name="website" class="form-input" placeholder="https://practice.com" />
+        </div>
+
+        <div class="form-group">
+          <label for="plan" class="form-label">Plan Tier</label>
+          <select id="plan" name="plan" class="form-input form-select">
+            <option value="starter">Starter - $1,500/mo</option>
+            <option value="growth" selected>Growth - $2,500/mo</option>
+            <option value="enterprise">Enterprise - $4,000+/mo</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick={() => showAddClientModal = false}>Cancel</button>
+        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+          {#if isSubmitting}
+            Creating...
+          {:else}
+            Create Client
+          {/if}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{/if}
 
 <style>
   .stats-row {
