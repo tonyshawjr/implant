@@ -7,6 +7,7 @@
   // Modal state
   let showAddClientModal = $state(false);
   let isSubmitting = $state(false);
+  let formError = $state('');
 
   // Helper functions
   function formatCurrency(value: number): string {
@@ -240,16 +241,27 @@
       action="?/addClient"
       use:enhance={() => {
         isSubmitting = true;
+        formError = '';
         return async ({ result, update }) => {
           isSubmitting = false;
           if (result.type === 'success') {
             showAddClientModal = false;
+            formError = '';
+          } else if (result.type === 'failure') {
+            formError = (result.data as { error?: string })?.error || 'Failed to create client';
+          } else if (result.type === 'error') {
+            formError = 'An unexpected error occurred';
           }
           await update();
         };
       }}
     >
       <div class="modal-body">
+        {#if formError}
+          <div class="form-error" style="background: var(--danger-100); color: var(--danger-700); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            {formError}
+          </div>
+        {/if}
         <div class="form-group">
           <label for="name" class="form-label">Practice Name *</label>
           <input type="text" id="name" name="name" class="form-input" placeholder="e.g., Smile Dental Care" required />

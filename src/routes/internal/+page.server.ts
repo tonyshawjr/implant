@@ -329,10 +329,11 @@ export const actions: Actions = {
           phone: phone || null,
           city,
           state,
-          zip: zip || null,
+          postalCode: zip || null,
           website: website || null,
-          status: 'onboarding',
-          healthScore: 75, // Default starting health score
+          status: 'active',
+          healthScore: 75,
+          clientSince: new Date()
         }
       });
 
@@ -346,14 +347,18 @@ export const actions: Actions = {
       const monthlyCommitment = planPrices[plan] || 2500;
 
       // Find or create the plan
+      const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
+      const planSlug = plan.toLowerCase();
+
       let planRecord = await prisma.plan.findFirst({
-        where: { name: plan.charAt(0).toUpperCase() + plan.slice(1) }
+        where: { slug: planSlug }
       });
 
       if (!planRecord) {
         planRecord = await prisma.plan.create({
           data: {
-            name: plan.charAt(0).toUpperCase() + plan.slice(1),
+            name: planName,
+            slug: planSlug,
             basePrice: monthlyCommitment,
             features: ['Lead generation', 'Territory exclusivity', 'AI brand voice'],
             isActive: true
@@ -361,12 +366,16 @@ export const actions: Actions = {
         });
       }
 
+      // Generate unique contract number
+      const contractNumber = `CNT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
       // Create the contract
       await prisma.contract.create({
         data: {
           organizationId: organization.id,
           planId: planRecord.id,
-          status: 'pending',
+          contractNumber,
+          status: 'active',
           monthlyCommitment,
           startDate: new Date(),
           endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
