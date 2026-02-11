@@ -50,12 +50,6 @@
     </div>
     <div class="stat-card-label">Active Clients</div>
     <div class="stat-card-value">{data.stats?.activeClients ?? 0}</div>
-    <div class="stat-card-change positive">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-      </svg>
-      +3 this month
-    </div>
   </div>
 
   <div class="stat-card">
@@ -68,13 +62,7 @@
       </div>
     </div>
     <div class="stat-card-label">Monthly Revenue</div>
-    <div class="stat-card-value">$47,500</div>
-    <div class="stat-card-change positive">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-      </svg>
-      +12% vs last month
-    </div>
+    <div class="stat-card-value">{formatCurrency(data.stats?.mrr ?? 0)}</div>
   </div>
 
   <div class="stat-card">
@@ -87,12 +75,6 @@
     </div>
     <div class="stat-card-label">Leads This Month</div>
     <div class="stat-card-value">{data.stats?.totalLeadsThisMonth ?? 0}</div>
-    <div class="stat-card-change positive">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-      </svg>
-      +8% vs last month
-    </div>
   </div>
 
   <div class="stat-card">
@@ -105,14 +87,8 @@
         </svg>
       </div>
     </div>
-    <div class="stat-card-label">Open Tickets</div>
-    <div class="stat-card-value">{data.stats?.pendingTickets ?? 0}</div>
-    <div class="stat-card-change negative">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
-      </svg>
-      +2 from yesterday
-    </div>
+    <div class="stat-card-label">Clients at Risk</div>
+    <div class="stat-card-value">{data.stats?.clientsAtRisk ?? 0}</div>
   </div>
 </div>
 
