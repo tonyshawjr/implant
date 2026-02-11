@@ -521,24 +521,24 @@ a:hover {
   color: var(--danger-600);
 }
 
-/* Grid System */
-.grid {
+/* Custom Grid System - prefixed to avoid Tailwind conflicts */
+.custom-grid {
   display: grid;
   gap: var(--spacing-6);
 }
 
-.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+.custom-grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.custom-grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.custom-grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
 
 @media (max-width: 1200px) {
-  .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+  .custom-grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
-  .grid-cols-2,
-  .grid-cols-3,
-  .grid-cols-4 { grid-template-columns: 1fr; }
+  .custom-grid-cols-2,
+  .custom-grid-cols-3,
+  .custom-grid-cols-4 { grid-template-columns: 1fr; }
 }
 
 /* Tables */
@@ -1095,49 +1095,10 @@ a:hover {
   color: var(--gray-500);
 }
 
-/* Utility Classes */
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.gap-1 { gap: var(--spacing-1); }
-.gap-2 { gap: var(--spacing-2); }
-.gap-3 { gap: var(--spacing-3); }
-.gap-4 { gap: var(--spacing-4); }
-.gap-6 { gap: var(--spacing-6); }
-
-.mt-1 { margin-top: var(--spacing-1); }
-.mt-2 { margin-top: var(--spacing-2); }
-.mt-4 { margin-top: var(--spacing-4); }
-.mt-6 { margin-top: var(--spacing-6); }
-.mb-2 { margin-bottom: var(--spacing-2); }
-.mb-4 { margin-bottom: var(--spacing-4); }
-.mb-6 { margin-bottom: var(--spacing-6); }
-
-.text-sm { font-size: 0.875rem; }
-.text-xs { font-size: 0.75rem; }
-.text-lg { font-size: 1.125rem; }
-.text-xl { font-size: 1.25rem; }
-.text-2xl { font-size: 1.5rem; }
-.font-medium { font-weight: 500; }
-.font-semibold { font-weight: 600; }
-.font-bold { font-weight: 700; }
-.text-gray-500 { color: var(--gray-500); }
-.text-gray-600 { color: var(--gray-600); }
-.text-gray-900 { color: var(--gray-900); }
-.text-primary { color: var(--primary-600); }
-.text-success { color: var(--success-600); }
-.text-danger { color: var(--danger-500); }
-
-.w-full { width: 100%; }
-.h-full { height: 100%; }
-
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/*
+ * NOTE: Utility classes removed to avoid conflicts with Tailwind CSS.
+ * Use Tailwind utility classes directly instead (flex, items-center, gap-4, etc.)
+ */
 
 /* Responsive */
 @media (max-width: 1024px) {
