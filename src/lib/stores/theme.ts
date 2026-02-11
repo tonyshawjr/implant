@@ -31,17 +31,17 @@ interface ThemeState {
 const STORAGE_KEY = 'squeez-theme';
 
 /**
- * Get the initial theme from localStorage or default to system
+ * Get the initial theme from localStorage or default to light
  */
 function getInitialTheme(): ThemeMode {
-  if (!browser) return 'system';
+  if (!browser) return 'light';
 
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored;
   }
 
-  return 'system';
+  return 'light';
 }
 
 /**
