@@ -38,9 +38,11 @@
     stateFips?: string;
     state: string;
     zipCodes: ZipCodeEntry[];
-    // Center coordinates for map display
+    // Center coordinates for map display (fallback)
     centerLat?: number;
     centerLng?: number;
+    // GeoJSON boundary for precise map display
+    boundary?: any; // GeoJSON Feature
   }
 
   interface GeoOption {
@@ -91,7 +93,11 @@
   let mapContainer: HTMLDivElement;
   let map: any = null;
   let L: any = null;
-  let circles: any[] = [];
+  let mapLayers: any[] = []; // GeoJSON layers and circles
+
+  // Market score for auto-pricing
+  let marketScore = $state(0);
+  let priceAutoCalculated = $state(true);
 
   // State FIPS mapping
   const STATE_FIPS: Record<string, string> = {
@@ -153,62 +159,161 @@
 
   function updateMapMarkers() {
     if (!map || !L) return;
-    circles.forEach(c => map.removeLayer(c));
-    circles = [];
 
-    const allCoords: [number, number][] = [];
+    // Clear existing layers
+    mapLayers.forEach(layer => map.removeLayer(layer));
+    mapLayers = [];
+
+    const allBounds: any[] = [];
 
     // Draw markers for all selected areas
     selectedAreas.forEach(area => {
-      if (area.type === 'zipcode' && area.zipCodes.length > 0) {
-        // Zip codes - small circles
+      const color = getAreaColor(area.type);
+
+      if (area.boundary) {
+        // Draw actual GeoJSON boundary
+        const geoLayer = L.geoJSON(area.boundary, {
+          style: {
+            fillColor: color,
+            fillOpacity: 0.25,
+            color: color,
+            weight: 2
+          }
+        }).addTo(map);
+
+        geoLayer.bindPopup(`<strong>${area.displayName}</strong><br>${getAreaTypeLabel(area.type)}`);
+        mapLayers.push(geoLayer);
+        allBounds.push(geoLayer.getBounds());
+      } else if (area.type === 'zipcode' && area.zipCodes.length > 0) {
+        // Zip codes without boundary - use circles
         area.zipCodes.forEach(zip => {
           const circle = L.circle([zip.lat, zip.lng], {
-            radius: 8046.72, // 5 miles in meters
-            fillColor: '#3b82f6',
+            radius: 4000, // ~2.5 miles
+            fillColor: color,
             fillOpacity: 0.3,
-            color: '#3b82f6',
+            color: color,
             weight: 2
           }).addTo(map);
           circle.bindPopup(`<strong>${zip.zipCode}</strong><br>${zip.city}, ${zip.state}`);
-          circles.push(circle);
-          allCoords.push([zip.lat, zip.lng]);
+          mapLayers.push(circle);
+          allBounds.push(circle.getBounds());
         });
       } else if (area.centerLat && area.centerLng) {
-        // Metros, counties, cities - different sized circles based on type
-        let radius = 16093.4; // 10 miles default
-        let color = '#3b82f6';
-
-        if (area.type === 'metro') {
-          radius = 48280.3; // 30 miles for metros
-          color = '#8b5cf6'; // purple
-        } else if (area.type === 'county') {
-          radius = 32186.9; // 20 miles for counties
-          color = '#10b981'; // green
-        } else if (area.type === 'city') {
-          radius = 16093.4; // 10 miles for cities
-          color = '#f59e0b'; // orange
-        }
-
+        // Fallback to circle for areas without boundary data
+        const radius = area.type === 'metro' ? 40000 : area.type === 'county' ? 25000 : 10000;
         const circle = L.circle([area.centerLat, area.centerLng], {
           radius,
           fillColor: color,
           fillOpacity: 0.2,
           color: color,
-          weight: 2
+          weight: 2,
+          dashArray: '5, 5' // Dashed to indicate approximate
         }).addTo(map);
-
-        circle.bindPopup(`<strong>${area.displayName}</strong><br>${area.type.charAt(0).toUpperCase() + area.type.slice(1)}`);
-        circles.push(circle);
-        allCoords.push([area.centerLat, area.centerLng]);
+        circle.bindPopup(`<strong>${area.displayName}</strong><br>${getAreaTypeLabel(area.type)} (approximate)`);
+        mapLayers.push(circle);
+        allBounds.push(circle.getBounds());
       }
     });
 
-    // Fit map to show all markers
-    if (allCoords.length > 0) {
-      const bounds = L.latLngBounds(allCoords);
-      map.fitBounds(bounds, { padding: [50, 50] });
+    // Fit map to show all areas
+    if (allBounds.length > 0) {
+      let combinedBounds = allBounds[0];
+      for (let i = 1; i < allBounds.length; i++) {
+        combinedBounds = combinedBounds.extend(allBounds[i]);
+      }
+      map.fitBounds(combinedBounds, { padding: [30, 30] });
     }
+  }
+
+  function getAreaColor(type: string): string {
+    switch (type) {
+      case 'metro': return '#8b5cf6'; // purple
+      case 'county': return '#10b981'; // green
+      case 'city': return '#f59e0b'; // orange
+      case 'zipcode': return '#3b82f6'; // blue
+      default: return '#6b7280'; // gray
+    }
+  }
+
+  // Fetch GeoJSON boundary from Census TIGERweb API
+  async function fetchBoundary(type: string, geoid: string): Promise<any> {
+    try {
+      // TIGERweb layer IDs:
+      // 82 = States, 84 = Counties, 86 = Places (cities), 2 = ZCTAs, 88 = CBSAs (metros)
+      let layerId: number;
+      let whereField = 'GEOID';
+
+      if (type === 'metro') {
+        layerId = 88; // Combined Statistical Areas / CBSAs
+        whereField = 'CBSAFP';
+      } else if (type === 'county') {
+        layerId = 84;
+      } else if (type === 'city') {
+        layerId = 86;
+      } else {
+        layerId = 2; // ZCTAs
+        whereField = 'ZCTA5CE20';
+      }
+
+      const url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${whereField}='${geoid}'&f=geojson&outSR=4326`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        return data.features[0];
+      }
+    } catch (e) {
+      console.error('Error fetching boundary:', e);
+    }
+    return null;
+  }
+
+  // Calculate market score and recommended price
+  function calculateMarketScore(demo: Demographics): { score: number; price: number } {
+    let score = 0;
+
+    // 65+ Population % (0-30 points) - primary implant demographic
+    const seniorPct = demo.population65PlusPercent;
+    if (seniorPct >= 20) score += 30;
+    else if (seniorPct >= 15) score += 25;
+    else if (seniorPct >= 12) score += 20;
+    else if (seniorPct >= 8) score += 15;
+    else score += 10;
+
+    // Median Household Income (0-25 points)
+    const income = demo.medianIncome;
+    if (income >= 100000) score += 25;
+    else if (income >= 75000) score += 20;
+    else if (income >= 55000) score += 15;
+    else if (income >= 40000) score += 10;
+    else score += 5;
+
+    // Population Size (0-25 points) - market size
+    const pop = demo.population;
+    if (pop >= 500000) score += 25;
+    else if (pop >= 250000) score += 20;
+    else if (pop >= 100000) score += 15;
+    else if (pop >= 50000) score += 10;
+    else score += 5;
+
+    // Median Home Value (0-20 points) - wealth indicator
+    const homeValue = demo.medianHomeValue;
+    if (homeValue >= 500000) score += 20;
+    else if (homeValue >= 350000) score += 16;
+    else if (homeValue >= 250000) score += 12;
+    else if (homeValue >= 150000) score += 8;
+    else score += 4;
+
+    // Calculate price based on score (0-100)
+    let price: number;
+    if (score >= 80) price = 3500;      // Premium
+    else if (score >= 65) price = 2750; // High
+    else if (score >= 50) price = 2000; // Standard
+    else if (score >= 35) price = 1500; // Moderate
+    else price = 1000;                   // Entry
+
+    return { score, price };
   }
 
   // Handle state change - load options based on add mode
@@ -350,8 +455,14 @@
     errorMessage = '';
 
     try {
-      // Geocode the metro area to get coordinates for the map
-      const coords = await geocodeLocation(`${metro.name} metropolitan area, USA`);
+      // Fetch the actual boundary from Census TIGERweb
+      const boundary = await fetchBoundary('metro', selectedOption);
+
+      // Fallback to geocoding if boundary not found
+      let coords = null;
+      if (!boundary) {
+        coords = await geocodeLocation(`${metro.name} metropolitan area, USA`);
+      }
 
       const newArea: SelectedArea = {
         id: `metro-${selectedOption}`,
@@ -362,7 +473,8 @@
         state: selectedState,
         zipCodes: [],
         centerLat: coords?.lat,
-        centerLng: coords?.lng
+        centerLng: coords?.lng,
+        boundary
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -374,7 +486,7 @@
       }
 
       await updateAggregateDemographics();
-      updateMapMarkers(); // Update map after adding
+      updateMapMarkers();
     } catch (error) {
       console.error('Error adding metro area:', error);
       errorMessage = 'Failed to add metro area.';
@@ -401,9 +513,16 @@
     errorMessage = '';
 
     try {
-      // Get state name for geocoding
-      const stateName = US_STATES.find(s => s.code === selectedState)?.name || selectedState;
-      const coords = await geocodeLocation(`${county.name} County, ${stateName}, USA`);
+      // County GEOID is state FIPS + county FIPS (e.g., "37129" for New Hanover, NC)
+      const countyGeoid = `${selectedStateFips}${selectedOption}`;
+      const boundary = await fetchBoundary('county', countyGeoid);
+
+      // Fallback to geocoding if boundary not found
+      let coords = null;
+      if (!boundary) {
+        const stateName = US_STATES.find(s => s.code === selectedState)?.name || selectedState;
+        coords = await geocodeLocation(`${county.name} County, ${stateName}, USA`);
+      }
 
       const newArea: SelectedArea = {
         id: areaId,
@@ -415,7 +534,8 @@
         state: selectedState,
         zipCodes: [],
         centerLat: coords?.lat,
-        centerLng: coords?.lng
+        centerLng: coords?.lng,
+        boundary
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -453,9 +573,16 @@
     errorMessage = '';
 
     try {
-      // Get state name for geocoding
-      const stateName = US_STATES.find(s => s.code === selectedState)?.name || selectedState;
-      const coords = await geocodeLocation(`${city.name}, ${stateName}, USA`);
+      // Place GEOID is state FIPS + place FIPS (e.g., "3774440" for Wilmington, NC)
+      const placeGeoid = `${selectedStateFips}${selectedOption}`;
+      const boundary = await fetchBoundary('city', placeGeoid);
+
+      // Fallback to geocoding if boundary not found
+      let coords = null;
+      if (!boundary) {
+        const stateName = US_STATES.find(s => s.code === selectedState)?.name || selectedState;
+        coords = await geocodeLocation(`${city.name}, ${stateName}, USA`);
+      }
 
       const newArea: SelectedArea = {
         id: areaId,
@@ -467,7 +594,8 @@
         state: selectedState,
         zipCodes: [],
         centerLat: coords?.lat,
-        centerLng: coords?.lng
+        centerLng: coords?.lng,
+        boundary
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -535,13 +663,17 @@
         lng: parseFloat(result.lon)
       };
 
+      // Try to fetch ZIP code boundary
+      const boundary = await fetchBoundary('zipcode', zip);
+
       const newArea: SelectedArea = {
         id: `zip-${zip}`,
         type: 'zipcode',
         name: zip,
         displayName: `${zip} - ${city}, ${stateCode || state}`,
         state: stateCode || state,
-        zipCodes: [zipEntry]
+        zipCodes: [zipEntry],
+        boundary
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -651,11 +783,25 @@
         veteransCount: totalVeterans,
         ownerOccupiedPercent: totalOccupied > 0 ? Math.round((totalOwnerOccupied / totalOccupied) * 1000) / 10 : 0
       };
+
+      // Calculate market score and auto-set price
+      const { score, price } = calculateMarketScore(demographics);
+      marketScore = score;
+
+      // Only auto-update price if user hasn't manually changed it
+      if (priceAutoCalculated) {
+        monthlyBasePrice = price;
+      }
     } catch (error) {
       console.error('Error updating demographics:', error);
     } finally {
       isLoadingDemographics = false;
     }
+  }
+
+  // Track when user manually changes price
+  function handlePriceChange() {
+    priceAutoCalculated = false;
   }
 
   // Helper functions
@@ -895,18 +1041,36 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Monthly Base Price</label>
+          <label class="form-label">
+            Monthly Base Price
+            {#if priceAutoCalculated && demographics}
+              <span class="price-auto-badge">Auto</span>
+            {/if}
+          </label>
           <div class="input-with-prefix">
             <span class="input-prefix">$</span>
             <input
               type="number"
               class="form-input"
               bind:value={monthlyBasePrice}
+              oninput={handlePriceChange}
               min="0"
               step="100"
               autocomplete="off"
             />
           </div>
+          {#if demographics}
+            <div class="price-info">
+              <span class="market-score-badge" class:score-high={marketScore >= 65} class:score-medium={marketScore >= 40 && marketScore < 65} class:score-low={marketScore < 40}>
+                Market Score: {marketScore}/100
+              </span>
+              {#if !priceAutoCalculated}
+                <button type="button" class="reset-price-btn" onclick={() => { priceAutoCalculated = true; const { price } = calculateMarketScore(demographics); monthlyBasePrice = price; }}>
+                  Reset to suggested
+                </button>
+              {/if}
+            </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -1315,6 +1479,62 @@
     color: var(--danger-700);
     border-radius: var(--radius-md);
     font-size: 0.875rem;
+  }
+
+  /* Pricing Auto Badge */
+  .price-auto-badge {
+    display: inline-flex;
+    padding: 2px 6px;
+    background: var(--primary-100);
+    color: var(--primary-700);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: var(--radius-full);
+    margin-left: var(--spacing-2);
+  }
+
+  .price-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-2);
+  }
+
+  .market-score-badge {
+    display: inline-flex;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+  }
+
+  .market-score-badge.score-high {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+
+  .market-score-badge.score-medium {
+    background: var(--warning-100);
+    color: var(--warning-700);
+  }
+
+  .market-score-badge.score-low {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  .reset-price-btn {
+    background: none;
+    border: none;
+    color: var(--primary-600);
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .reset-price-btn:hover {
+    color: var(--primary-700);
   }
 
   /* Buttons */
