@@ -85,13 +85,12 @@
         newTerritory.state = result.address.state || newTerritory.state;
       }
 
-      // Auto-generate name if empty
-      if (!newTerritory.name && newTerritory.city) {
-        newTerritory.name = `${newTerritory.city} ${newTerritory.territoryType === 'metro' ? 'Metro' : newTerritory.territoryType === 'county' ? 'County' : ''}`.trim();
+      // Auto-generate name based on new city
+      if (newTerritory.city) {
+        const suffix = newTerritory.territoryType === 'metro' ? ' Metro' :
+                       newTerritory.territoryType === 'county' ? ' County' : '';
+        newTerritory.name = `${newTerritory.city}${suffix}`;
       }
-
-      // Try to get population estimate from Census API (US only)
-      await lookupPopulation();
 
     } catch (error) {
       console.error('Geocoding error:', error);
@@ -99,17 +98,6 @@
     } finally {
       isLookingUp = false;
     }
-  }
-
-  async function lookupPopulation() {
-    // Simple population estimate based on territory type
-    // In production, you'd use Census API
-    const estimates: Record<string, number> = {
-      'city': 50000,
-      'county': 150000,
-      'metro': 500000
-    };
-    newTerritory.population = estimates[newTerritory.territoryType] || 50000;
   }
 
   function openEditModal(territory: typeof data.territories[0]) {
