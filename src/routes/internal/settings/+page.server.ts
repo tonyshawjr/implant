@@ -106,11 +106,6 @@ export const load: PageServerLoad = async ({ url }) => {
     }
   ];
 
-  // Territory pricing configuration
-  const pricingConfigSetting = await prisma.systemSetting.findUnique({
-    where: { key: 'territory_pricing' }
-  });
-
   // Default pricing configuration
   const defaultPricingConfig = {
     // Score thresholds for each factor
@@ -130,7 +125,19 @@ export const load: PageServerLoad = async ({ url }) => {
     ]
   };
 
-  const pricingConfig = pricingConfigSetting?.value || defaultPricingConfig;
+  // Territory pricing configuration - wrapped in try/catch for robustness
+  let pricingConfig = defaultPricingConfig;
+  try {
+    const pricingConfigSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'territory_pricing' }
+    });
+    if (pricingConfigSetting?.value) {
+      pricingConfig = pricingConfigSetting.value as typeof defaultPricingConfig;
+    }
+  } catch (error) {
+    console.error('Failed to load pricing config from database:', error);
+    // Continue with default config
+  }
 
   return {
     activeTab,

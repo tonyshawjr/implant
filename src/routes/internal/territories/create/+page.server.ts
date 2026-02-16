@@ -63,16 +63,32 @@ const DEFAULT_PRICING_CONFIG = {
 // =============================================================================
 
 export const load: PageServerLoad = async () => {
+	// Default return value
+	const defaultReturn = {
+		states: [] as GeoEntity[],
+		metros: [] as MetroArea[],
+		counties: [] as GeoEntity[],
+		cities: [] as GeoEntity[],
+		pricingConfig: DEFAULT_PRICING_CONFIG
+	};
+
 	try {
 		// Fetch list of states from Census API
 		const states = await getStates();
 
-		// Fetch pricing config from database
-		const pricingConfigSetting = await prisma.systemSetting.findUnique({
-			where: { key: 'territory_pricing' }
-		});
-
-		const pricingConfig = pricingConfigSetting?.value || DEFAULT_PRICING_CONFIG;
+		// Fetch pricing config from database - wrapped in its own try/catch
+		let pricingConfig = DEFAULT_PRICING_CONFIG;
+		try {
+			const pricingConfigSetting = await prisma.systemSetting.findUnique({
+				where: { key: 'territory_pricing' }
+			});
+			if (pricingConfigSetting?.value) {
+				pricingConfig = pricingConfigSetting.value as typeof DEFAULT_PRICING_CONFIG;
+			}
+		} catch (dbError) {
+			console.error('Failed to load pricing config from database:', dbError);
+			// Continue with default config
+		}
 
 		return {
 			states,
@@ -84,14 +100,8 @@ export const load: PageServerLoad = async () => {
 	} catch (error) {
 		console.error('Failed to load initial data:', error);
 
-		// Return empty arrays if Census API fails
-		return {
-			states: [] as GeoEntity[],
-			metros: [] as MetroArea[],
-			counties: [] as GeoEntity[],
-			cities: [] as GeoEntity[],
-			pricingConfig: DEFAULT_PRICING_CONFIG
-		};
+		// Return defaults if Census API fails
+		return defaultReturn;
 	}
 };
 
