@@ -488,6 +488,106 @@ If you have any questions, please reach out to your account manager or contact o
   return result;
 }
 
+/**
+ * Send a team member invitation email with login credentials
+ */
+export async function sendTeamInviteEmail(
+  email: string,
+  firstName: string,
+  lastName: string,
+  role: string,
+  tempPassword: string,
+  loginUrl: string
+): Promise<EmailResult> {
+  const subject = 'You\'ve Been Invited to SqueezMedia';
+  const roleDisplay = role === 'super_admin' ? 'Super Admin' : role === 'admin' ? 'Admin' : 'Support';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 12px 12px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to the Team!</h1>
+    <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0 0;">You've been added to SqueezMedia</p>
+  </div>
+
+  <div style="background: white; border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 12px 12px;">
+    <p style="margin: 0 0 20px 0;">Hi ${firstName},</p>
+
+    <p style="margin: 0 0 20px 0;">You've been invited to join the SqueezMedia internal team as a <strong>${roleDisplay}</strong>.</p>
+
+    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 0 0 12px 0; font-weight: 600;">Your Login Credentials:</p>
+      <table style="width: 100%;">
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Email:</td>
+          <td style="padding: 6px 0; font-weight: 500;">${email}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #6b7280;">Temporary Password:</td>
+          <td style="padding: 6px 0; font-family: monospace; font-weight: 600; color: #2563eb;">${tempPassword}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin: 0 0 20px 0; color: #dc2626; font-size: 14px;"><strong>Important:</strong> Please change your password after your first login.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">Log In Now</a>
+    </div>
+
+    <p style="margin: 0; color: #6b7280; font-size: 14px;">If you have any questions, reach out to your team administrator.</p>
+  </div>
+
+  <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 20px;">
+    This is an automated email from SqueezMedia. Please do not reply.
+  </p>
+</body>
+</html>
+`;
+
+  const textContent = `
+Welcome to the Team!
+
+Hi ${firstName},
+
+You've been invited to join the SqueezMedia internal team as a ${roleDisplay}.
+
+Your Login Credentials:
+Email: ${email}
+Temporary Password: ${tempPassword}
+
+IMPORTANT: Please change your password after your first login.
+
+Log in now: ${loginUrl}
+
+If you have any questions, reach out to your team administrator.
+`;
+
+  const result = await sendEmail(email, subject, htmlContent, textContent.trim());
+
+  // Log the notification
+  try {
+    await logNotification({
+      type: 'email',
+      category: 'team_invite',
+      recipient: email,
+      success: result.success,
+      messageId: result.messageId,
+      error: result.error,
+      metadata: { role, firstName, lastName }
+    });
+  } catch (err) {
+    console.error('Failed to log email notification:', err);
+  }
+
+  return result;
+}
+
 interface NotificationLogEntry {
   type: 'sms' | 'email';
   category: string;
