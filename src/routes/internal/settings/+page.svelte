@@ -979,7 +979,7 @@
           <div class="pricing-preview">
             <h4 class="preview-title">Preview</h4>
             <div class="preview-tiers">
-              {#each priceTiers.sort((a, b) => b.minScore - a.minScore) as tier}
+              {#each [...priceTiers].sort((a, b) => b.minScore - a.minScore) as tier}
                 <div class="preview-tier">
                   <span class="preview-score">Score {tier.minScore}+</span>
                   <span class="preview-label">{tier.label}</span>
