@@ -22,19 +22,144 @@
   let map: any = null;
   let L: any = null;
 
-  // Form state for Add Territory
+  // Form state for Add/Edit Territory
   let newTerritory = $state({
     name: '',
     city: '',
     state: '',
+    zipCode: '',
     territoryType: 'city',
     radiusMiles: 15,
-    centerLat: 33.4484, // Default to Phoenix
-    centerLng: -112.0740,
+    centerLat: 0,
+    centerLng: 0,
     monthlyBasePrice: 1500,
     population: 0
   });
   let isSubmitting = $state(false);
+  let isLookingUp = $state(false);
+  let lookupError = $state('');
+
+  // Edit mode
+  let editingTerritory = $state<typeof data.territories[0] | null>(null);
+  let showEditModal = $state(false);
+  let showDeleteConfirm = $state(false);
+  let territoryToDelete = $state<typeof data.territories[0] | null>(null);
+
+  // Geocoding lookup using Nominatim (free, no API key)
+  async function lookupLocation() {
+    if (!newTerritory.zipCode && !newTerritory.city) {
+      lookupError = 'Enter a zip code or city name';
+      return;
+    }
+
+    isLookingUp = true;
+    lookupError = '';
+
+    try {
+      // Build search query
+      const query = newTerritory.zipCode
+        ? `${newTerritory.zipCode}, USA`
+        : `${newTerritory.city}, ${newTerritory.state}, USA`;
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
+        { headers: { 'User-Agent': 'SqueezMedia-Platform' } }
+      );
+
+      const results = await response.json();
+
+      if (results.length === 0) {
+        lookupError = 'Location not found. Try a different zip code or city.';
+        return;
+      }
+
+      const result = results[0];
+
+      // Update coordinates
+      newTerritory.centerLat = parseFloat(result.lat);
+      newTerritory.centerLng = parseFloat(result.lon);
+
+      // Update city/state from result if we searched by zip
+      if (newTerritory.zipCode && result.address) {
+        newTerritory.city = result.address.city || result.address.town || result.address.village || newTerritory.city;
+        newTerritory.state = result.address.state || newTerritory.state;
+      }
+
+      // Auto-generate name if empty
+      if (!newTerritory.name && newTerritory.city) {
+        newTerritory.name = `${newTerritory.city} ${newTerritory.territoryType === 'metro' ? 'Metro' : newTerritory.territoryType === 'county' ? 'County' : ''}`.trim();
+      }
+
+      // Try to get population estimate from Census API (US only)
+      await lookupPopulation();
+
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      lookupError = 'Failed to lookup location. Please try again.';
+    } finally {
+      isLookingUp = false;
+    }
+  }
+
+  async function lookupPopulation() {
+    // Simple population estimate based on territory type
+    // In production, you'd use Census API
+    const estimates: Record<string, number> = {
+      'city': 50000,
+      'county': 150000,
+      'metro': 500000
+    };
+    newTerritory.population = estimates[newTerritory.territoryType] || 50000;
+  }
+
+  function openEditModal(territory: typeof data.territories[0]) {
+    editingTerritory = territory;
+    newTerritory = {
+      name: territory.name,
+      city: territory.city,
+      state: territory.state,
+      zipCode: '',
+      territoryType: territory.type || 'city',
+      radiusMiles: territory.radiusMiles,
+      centerLat: territory.centerLat,
+      centerLng: territory.centerLng,
+      monthlyBasePrice: territory.monthlyBasePrice || 1500,
+      population: territory.population || 0
+    };
+    showEditModal = true;
+  }
+
+  function closeEditModal() {
+    showEditModal = false;
+    editingTerritory = null;
+    resetForm();
+  }
+
+  function confirmDelete(territory: typeof data.territories[0]) {
+    territoryToDelete = territory;
+    showDeleteConfirm = true;
+  }
+
+  function cancelDelete() {
+    showDeleteConfirm = false;
+    territoryToDelete = null;
+  }
+
+  function resetForm() {
+    newTerritory = {
+      name: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      territoryType: 'city',
+      radiusMiles: 15,
+      centerLat: 0,
+      centerLng: 0,
+      monthlyBasePrice: 1500,
+      population: 0
+    };
+    lookupError = '';
+  }
 
   // Initialize Leaflet map
   onMount(async () => {
@@ -97,18 +222,7 @@
 
   function closeAddModal() {
     showAddModal = false;
-    // Reset form
-    newTerritory = {
-      name: '',
-      city: '',
-      state: '',
-      territoryType: 'city',
-      radiusMiles: 15,
-      centerLat: 33.4484,
-      centerLng: -112.0740,
-      monthlyBasePrice: 1500,
-      population: 0
-    };
+    resetForm();
   }
 
   // Helper functions
@@ -507,17 +621,16 @@
                       <circle cx="12" cy="12" r="3"/>
                     </svg>
                   </button>
-                  <button class="action-btn primary" title="Edit Territory">
+                  <button class="action-btn primary" title="Edit Territory" onclick={() => openEditModal(territory)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                   </button>
-                  <button class="action-btn" title="View on Map">
+                  <button class="action-btn danger" title="Delete Territory" onclick={() => confirmDelete(territory)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
-                      <line x1="8" y1="2" x2="8" y2="18"/>
-                      <line x1="16" y1="6" x2="16" y2="22"/>
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
                   </button>
                 </div>
@@ -726,7 +839,7 @@
     </div>
     <div class="detail-footer">
       <button class="btn btn-outline" onclick={closeDetailPanel}>Close</button>
-      <a href="/internal/territories/{selectedTerritory.id}" class="btn btn-primary">View Full Details</a>
+      <button class="btn btn-primary" onclick={() => { closeDetailPanel(); openEditModal(selectedTerritory); }}>Edit Territory</button>
     </div>
   </div>
 {/if}
@@ -759,6 +872,65 @@
       }}
     >
       <div class="modal-body">
+        <!-- Location Lookup Section -->
+        <div class="lookup-section">
+          <h4 class="section-title">Step 1: Find Location</h4>
+          <p class="section-description">Enter a zip code or city to auto-fill coordinates and details.</p>
+
+          <div class="lookup-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label">Zip Code</label>
+              <input
+                type="text"
+                class="form-input"
+                placeholder="28401"
+                maxlength="5"
+                bind:value={newTerritory.zipCode}
+              />
+            </div>
+            <span class="lookup-or">or</span>
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label">City, State</label>
+              <div class="input-row">
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="Wilmington"
+                  bind:value={newTerritory.city}
+                />
+                <input
+                  type="text"
+                  class="form-input"
+                  placeholder="NC"
+                  maxlength="2"
+                  style="width: 80px;"
+                  bind:value={newTerritory.state}
+                />
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary lookup-btn" onclick={lookupLocation} disabled={isLookingUp}>
+              {#if isLookingUp}
+                Looking up...
+              {:else}
+                Lookup
+              {/if}
+            </button>
+          </div>
+
+          {#if lookupError}
+            <p class="lookup-error">{lookupError}</p>
+          {/if}
+
+          {#if newTerritory.centerLat !== 0}
+            <p class="lookup-success">Location found: {newTerritory.centerLat.toFixed(4)}, {newTerritory.centerLng.toFixed(4)}</p>
+          {/if}
+        </div>
+
+        <hr class="section-divider" />
+
+        <!-- Territory Details Section -->
+        <h4 class="section-title">Step 2: Territory Details</h4>
+
         <div class="form-grid">
           <div class="form-group full-width">
             <label class="form-label">Territory Name *</label>
@@ -766,36 +938,15 @@
               type="text"
               name="name"
               class="form-input"
-              placeholder="e.g., Phoenix Metro, Austin North"
+              placeholder="e.g., Wilmington Metro, Austin North"
               bind:value={newTerritory.name}
               required
             />
           </div>
 
-          <div class="form-group">
-            <label class="form-label">City *</label>
-            <input
-              type="text"
-              name="city"
-              class="form-input"
-              placeholder="Phoenix"
-              bind:value={newTerritory.city}
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">State *</label>
-            <input
-              type="text"
-              name="state"
-              class="form-input"
-              placeholder="AZ"
-              maxlength="2"
-              bind:value={newTerritory.state}
-              required
-            />
-          </div>
+          <!-- Hidden fields for city/state (already filled from lookup) -->
+          <input type="hidden" name="city" value={newTerritory.city} />
+          <input type="hidden" name="state" value={newTerritory.state} />
 
           <div class="form-group">
             <label class="form-label">Territory Type</label>
@@ -820,30 +971,18 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Center Latitude *</label>
-            <input
-              type="number"
-              name="centerLat"
-              class="form-input"
-              step="0.0001"
-              placeholder="33.4484"
-              bind:value={newTerritory.centerLat}
-              required
-            />
-            <span class="form-help">Use Google Maps to find coordinates</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Center Longitude *</label>
-            <input
-              type="number"
-              name="centerLng"
-              class="form-input"
-              step="0.0001"
-              placeholder="-112.0740"
-              bind:value={newTerritory.centerLng}
-              required
-            />
+            <label class="form-label">Coordinates (auto-filled)</label>
+            <div class="coordinates-display">
+              <input type="hidden" name="centerLat" value={newTerritory.centerLat} />
+              <input type="hidden" name="centerLng" value={newTerritory.centerLng} />
+              <span class="coord-value">
+                {#if newTerritory.centerLat !== 0}
+                  {newTerritory.centerLat.toFixed(4)}, {newTerritory.centerLng.toFixed(4)}
+                {:else}
+                  Use lookup above
+                {/if}
+              </span>
+            </div>
           </div>
 
           <div class="form-group">
@@ -872,11 +1011,185 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" onclick={closeAddModal}>Cancel</button>
-        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+        <button type="submit" class="btn btn-primary" disabled={isSubmitting || newTerritory.centerLat === 0}>
           {#if isSubmitting}
             Creating...
           {:else}
             Create Territory
+          {/if}
+        </button>
+      </div>
+    </form>
+  </div>
+{/if}
+
+<!-- Edit Territory Modal -->
+{#if showEditModal && editingTerritory}
+  <div class="modal-overlay" onclick={closeEditModal}></div>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit Territory</h2>
+      <button class="close-btn" onclick={closeEditModal}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form
+      method="POST"
+      action="?/updateTerritory"
+      use:enhance={() => {
+        isSubmitting = true;
+        return async ({ result, update }) => {
+          isSubmitting = false;
+          if (result.type === 'success') {
+            closeEditModal();
+            await update();
+          }
+        };
+      }}
+    >
+      <input type="hidden" name="territoryId" value={editingTerritory.id} />
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">Territory Name *</label>
+            <input
+              type="text"
+              name="name"
+              class="form-input"
+              bind:value={newTerritory.name}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input
+              type="text"
+              name="city"
+              class="form-input"
+              bind:value={newTerritory.city}
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input
+              type="text"
+              name="state"
+              class="form-input"
+              maxlength="2"
+              bind:value={newTerritory.state}
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Territory Type</label>
+            <select name="territoryType" class="form-input form-select" bind:value={newTerritory.territoryType}>
+              <option value="city">City</option>
+              <option value="county">County</option>
+              <option value="metro">Metro Area</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Radius (miles)</label>
+            <input
+              type="number"
+              name="radiusMiles"
+              class="form-input"
+              min="5"
+              max="100"
+              bind:value={newTerritory.radiusMiles}
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Monthly Base Price ($)</label>
+            <input
+              type="number"
+              name="monthlyBasePrice"
+              class="form-input"
+              min="0"
+              step="100"
+              bind:value={newTerritory.monthlyBasePrice}
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Population</label>
+            <input
+              type="number"
+              name="population"
+              class="form-input"
+              min="0"
+              bind:value={newTerritory.population}
+            />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick={closeEditModal}>Cancel</button>
+        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+          {#if isSubmitting}
+            Saving...
+          {:else}
+            Save Changes
+          {/if}
+        </button>
+      </div>
+    </form>
+  </div>
+{/if}
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteConfirm && territoryToDelete}
+  <div class="modal-overlay" onclick={cancelDelete}></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-title">Delete Territory</h2>
+      <button class="close-btn" onclick={cancelDelete}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form
+      method="POST"
+      action="?/deleteTerritory"
+      use:enhance={() => {
+        isSubmitting = true;
+        return async ({ result, update }) => {
+          isSubmitting = false;
+          if (result.type === 'success') {
+            cancelDelete();
+            await update();
+          }
+        };
+      }}
+    >
+      <input type="hidden" name="territoryId" value={territoryToDelete.id} />
+      <div class="modal-body">
+        <div class="delete-warning">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <p>Are you sure you want to delete <strong>{territoryToDelete.name}</strong>?</p>
+          <p class="delete-subtext">This action cannot be undone. All associated data will be permanently removed.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick={cancelDelete}>Cancel</button>
+        <button type="submit" class="btn btn-danger" disabled={isSubmitting}>
+          {#if isSubmitting}
+            Deleting...
+          {:else}
+            Delete Territory
           {/if}
         </button>
       </div>
@@ -1811,5 +2124,140 @@
     font-size: 0.75rem;
     color: var(--gray-500);
     margin-top: var(--spacing-1);
+  }
+
+  /* Lookup Section Styles */
+  .lookup-section {
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-4);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 var(--spacing-1) 0;
+  }
+
+  .section-description {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin: 0 0 var(--spacing-3) 0;
+  }
+
+  .lookup-row {
+    display: flex;
+    gap: var(--spacing-3);
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .lookup-or {
+    font-size: 0.8125rem;
+    color: var(--gray-400);
+    padding-bottom: var(--spacing-2);
+  }
+
+  .input-row {
+    display: flex;
+    gap: var(--spacing-2);
+  }
+
+  .lookup-btn {
+    flex-shrink: 0;
+  }
+
+  .lookup-error {
+    color: var(--danger-600);
+    font-size: 0.8125rem;
+    margin-top: var(--spacing-2);
+  }
+
+  .lookup-success {
+    color: var(--success-600);
+    font-size: 0.8125rem;
+    margin-top: var(--spacing-2);
+  }
+
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--gray-200);
+    margin: var(--spacing-4) 0;
+  }
+
+  .coordinates-display {
+    padding: var(--spacing-2) var(--spacing-3);
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+    font-family: monospace;
+  }
+
+  .coord-value {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+  }
+
+  /* Delete Modal Styles */
+  .modal-sm {
+    max-width: 400px;
+  }
+
+  .delete-warning {
+    text-align: center;
+    padding: var(--spacing-4);
+  }
+
+  .delete-warning svg {
+    color: var(--danger-500);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .delete-warning p {
+    margin: 0 0 var(--spacing-2) 0;
+    color: var(--gray-700);
+  }
+
+  .delete-subtext {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+  }
+
+  .btn-danger {
+    background: var(--danger-600);
+    color: white;
+    border: none;
+  }
+
+  .btn-danger:hover {
+    background: var(--danger-700);
+  }
+
+  /* Action button danger state */
+  .action-btn.danger:hover {
+    background: var(--danger-50);
+    color: var(--danger-600);
+    border-color: var(--danger-200);
+  }
+
+  @media (max-width: 640px) {
+    .lookup-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .lookup-or {
+      text-align: center;
+      padding: var(--spacing-1) 0;
+    }
+
+    .input-row {
+      flex-direction: column;
+    }
+
+    .input-row input {
+      width: 100% !important;
+    }
   }
 </style>

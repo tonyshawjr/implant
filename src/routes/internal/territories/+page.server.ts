@@ -408,5 +408,81 @@ export const actions: Actions = {
       console.error('Failed to create territory:', error);
       return fail(500, { error: 'Failed to create territory' });
     }
+  },
+
+  updateTerritory: async ({ request }) => {
+    const formData = await request.formData();
+
+    const territoryId = formData.get('territoryId') as string;
+    const name = formData.get('name') as string;
+    const city = formData.get('city') as string;
+    const state = formData.get('state') as string;
+    const territoryType = formData.get('territoryType') as string;
+    const radiusMiles = parseInt(formData.get('radiusMiles') as string);
+    const monthlyBasePrice = parseFloat(formData.get('monthlyBasePrice') as string) || null;
+    const population = parseInt(formData.get('population') as string) || null;
+
+    if (!territoryId) {
+      return fail(400, { error: 'Territory ID is required' });
+    }
+
+    try {
+      await prisma.territory.update({
+        where: { id: territoryId },
+        data: {
+          name,
+          city,
+          state,
+          territoryType: territoryType || 'city',
+          radiusMiles,
+          monthlyBasePrice,
+          population
+        }
+      });
+
+      return { success: true, message: 'Territory updated successfully' };
+    } catch (error) {
+      console.error('Failed to update territory:', error);
+      return fail(500, { error: 'Failed to update territory' });
+    }
+  },
+
+  deleteTerritory: async ({ request }) => {
+    const formData = await request.formData();
+    const territoryId = formData.get('territoryId') as string;
+
+    if (!territoryId) {
+      return fail(400, { error: 'Territory ID is required' });
+    }
+
+    try {
+      // Check if territory has active assignments
+      const activeAssignment = await prisma.territoryAssignment.findFirst({
+        where: { territoryId, status: 'active' }
+      });
+
+      if (activeAssignment) {
+        return fail(400, { error: 'Cannot delete territory with active client assignment' });
+      }
+
+      // Delete related records first
+      await prisma.territoryWaitlist.deleteMany({
+        where: { territoryId }
+      });
+
+      await prisma.territoryAssignment.deleteMany({
+        where: { territoryId }
+      });
+
+      // Delete the territory
+      await prisma.territory.delete({
+        where: { id: territoryId }
+      });
+
+      return { success: true, message: 'Territory deleted successfully' };
+    } catch (error) {
+      console.error('Failed to delete territory:', error);
+      return fail(500, { error: 'Failed to delete territory' });
+    }
   }
 };
