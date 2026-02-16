@@ -59,6 +59,40 @@
   let selectedOption = $state(''); // generic for metro/county/city selection
   let zipCodeInput = $state('');
 
+  // Search/filter state for dropdowns
+  let stateSearch = $state('');
+  let optionSearch = $state('');
+  let showStateDropdown = $state(false);
+  let showOptionDropdown = $state(false);
+
+  // Filtered lists based on search
+  let filteredStates = $derived(
+    stateSearch.length > 0
+      ? US_STATES.filter(s =>
+          s.name.toLowerCase().includes(stateSearch.toLowerCase()) ||
+          s.code.toLowerCase().includes(stateSearch.toLowerCase())
+        )
+      : US_STATES
+  );
+
+  let filteredOptions = $derived.by(() => {
+    const search = optionSearch.toLowerCase();
+    if (addMode === 'metro') {
+      return search.length > 0
+        ? metroOptions.filter(o => o.name.toLowerCase().includes(search))
+        : metroOptions;
+    } else if (addMode === 'county') {
+      return search.length > 0
+        ? countyOptions.filter(o => o.name.toLowerCase().includes(search))
+        : countyOptions;
+    } else if (addMode === 'city') {
+      return search.length > 0
+        ? cityOptions.filter(o => o.name.toLowerCase().includes(search))
+        : cityOptions;
+    }
+    return [];
+  });
+
   // Selected areas - the main collection
   let selectedAreas = $state<SelectedArea[]>([]);
 
@@ -1098,18 +1132,51 @@
             </div>
           </div>
         {:else}
-          <!-- State Selection -->
+          <!-- State Selection - Searchable -->
           <div class="form-group">
             <label class="form-label">Select State</label>
-            <select class="form-input form-select" bind:value={selectedState} onchange={handleStateChange} autocomplete="off">
-              <option value="">Choose a state...</option>
-              {#each US_STATES as state}
-                <option value={state.code}>{state.name}</option>
-              {/each}
-            </select>
+            <div class="searchable-select">
+              <input
+                type="text"
+                class="form-input"
+                placeholder="Type to search states..."
+                bind:value={stateSearch}
+                onfocus={() => showStateDropdown = true}
+                onblur={() => setTimeout(() => showStateDropdown = false, 200)}
+                autocomplete="off"
+              />
+              {#if selectedState && !showStateDropdown}
+                <div class="selected-value">
+                  {US_STATES.find(s => s.code === selectedState)?.name || selectedState}
+                  <button type="button" class="clear-btn" onclick={() => { selectedState = ''; stateSearch = ''; selectedOption = ''; optionSearch = ''; }}>×</button>
+                </div>
+              {/if}
+              {#if showStateDropdown && filteredStates.length > 0}
+                <div class="dropdown-list">
+                  {#each filteredStates.slice(0, 10) as state}
+                    <button
+                      type="button"
+                      class="dropdown-item"
+                      class:selected={selectedState === state.code}
+                      onmousedown={() => {
+                        selectedState = state.code;
+                        stateSearch = '';
+                        showStateDropdown = false;
+                        handleStateChange();
+                      }}
+                    >
+                      {state.name}
+                    </button>
+                  {/each}
+                  {#if filteredStates.length > 10}
+                    <div class="dropdown-hint">{filteredStates.length - 10} more - keep typing to filter</div>
+                  {/if}
+                </div>
+              {/if}
+            </div>
           </div>
 
-          <!-- Metro/County/City Selection -->
+          <!-- Metro/County/City Selection - Searchable -->
           {#if selectedState}
             <div class="form-group">
               <label class="form-label">
@@ -1122,22 +1189,50 @@
                 </div>
               {:else}
                 <div class="input-with-button">
-                  <select class="form-input form-select" bind:value={selectedOption} autocomplete="off">
-                    <option value="">Choose...</option>
-                    {#if addMode === 'metro'}
-                      {#each metroOptions as opt}
-                        <option value={opt.fips}>{opt.name}</option>
-                      {/each}
-                    {:else if addMode === 'county'}
-                      {#each countyOptions as opt}
-                        <option value={opt.fips}>{opt.name}</option>
-                      {/each}
-                    {:else if addMode === 'city'}
-                      {#each cityOptions as opt}
-                        <option value={opt.fips}>{opt.name}</option>
-                      {/each}
+                  <div class="searchable-select flex-1">
+                    <input
+                      type="text"
+                      class="form-input"
+                      placeholder="Type to search..."
+                      bind:value={optionSearch}
+                      onfocus={() => showOptionDropdown = true}
+                      onblur={() => setTimeout(() => showOptionDropdown = false, 200)}
+                      autocomplete="off"
+                    />
+                    {#if selectedOption && !showOptionDropdown}
+                      <div class="selected-value">
+                        {#if addMode === 'metro'}
+                          {metroOptions.find(o => o.fips === selectedOption)?.name || selectedOption}
+                        {:else if addMode === 'county'}
+                          {countyOptions.find(o => o.fips === selectedOption)?.name || selectedOption}
+                        {:else}
+                          {cityOptions.find(o => o.fips === selectedOption)?.name || selectedOption}
+                        {/if}
+                        <button type="button" class="clear-btn" onclick={() => { selectedOption = ''; optionSearch = ''; }}>×</button>
+                      </div>
                     {/if}
-                  </select>
+                    {#if showOptionDropdown && filteredOptions.length > 0}
+                      <div class="dropdown-list">
+                        {#each filteredOptions.slice(0, 15) as opt}
+                          <button
+                            type="button"
+                            class="dropdown-item"
+                            class:selected={selectedOption === opt.fips}
+                            onmousedown={() => {
+                              selectedOption = opt.fips;
+                              optionSearch = '';
+                              showOptionDropdown = false;
+                            }}
+                          >
+                            {opt.name}
+                          </button>
+                        {/each}
+                        {#if filteredOptions.length > 15}
+                          <div class="dropdown-hint">{filteredOptions.length - 15} more - keep typing to filter</div>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
                   <button
                     class="btn btn-primary"
                     onclick={() => {
@@ -1651,6 +1746,98 @@
     gap: var(--spacing-2);
     color: var(--gray-500);
     font-size: 0.875rem;
+  }
+
+  /* Searchable Select Dropdown */
+  .searchable-select {
+    position: relative;
+  }
+
+  .searchable-select .form-input {
+    width: 100%;
+  }
+
+  .searchable-select .selected-value {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-2) var(--spacing-3);
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .searchable-select .clear-btn {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0 4px;
+  }
+
+  .searchable-select .clear-btn:hover {
+    color: var(--gray-600);
+  }
+
+  .searchable-select .dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+    margin-top: 4px;
+  }
+
+  .searchable-select .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+  }
+
+  .searchable-select .dropdown-item:hover {
+    background: var(--gray-100);
+  }
+
+  .searchable-select .dropdown-item.selected {
+    background: var(--blue-50);
+    color: var(--blue-700);
+  }
+
+  .searchable-select .dropdown-hint {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+  }
+
+  .input-with-button .searchable-select {
+    flex: 1;
+  }
+
+  .input-with-button .searchable-select.flex-1 {
+    min-width: 0;
   }
 
   .error-message {
