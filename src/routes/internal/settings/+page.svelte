@@ -1,10 +1,29 @@
 <script lang="ts">
-  import type { PageData } from './$types';
+  import type { PageData, ActionData } from './$types';
+  import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
 
-  let { data }: { data: PageData } = $props();
+  let { data, form }: { data: PageData; form: ActionData } = $props();
 
   let activeTab = $state(data.activeTab || 'general');
   let showInviteModal = $state(false);
+  let showEditModal = $state(false);
+  let editingMember = $state<any>(null);
+  let isSubmitting = $state(false);
+  let feedbackMessage = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Watch for form results
+  $effect(() => {
+    if (form?.success) {
+      feedbackMessage = { type: 'success', text: form.message || 'Operation successful' };
+      showInviteModal = false;
+      showEditModal = false;
+      setTimeout(() => feedbackMessage = null, 3000);
+    } else if (form?.message) {
+      feedbackMessage = { type: 'error', text: form.message };
+      setTimeout(() => feedbackMessage = null, 5000);
+    }
+  });
 
   // Form state for general settings
   let companyName = $state(data.platformSettings.companyName);
@@ -49,7 +68,8 @@
     });
   }
 
-  function formatRelativeTime(dateStr: string): string {
+  function formatRelativeTime(dateStr: string | null): string {
+    if (!dateStr) return 'Never';
     const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -81,7 +101,9 @@
   }
 
   function getInitials(firstName: string, lastName: string): string {
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    const first = firstName?.[0] || '?';
+    const last = lastName?.[0] || '?';
+    return `${first}${last}`.toUpperCase();
   }
 
   function closeInviteModal() {
@@ -91,11 +113,40 @@
     inviteLastName = '';
     inviteRole = 'support';
   }
+
+  function openEditModal(member: any) {
+    editingMember = { ...member };
+    showEditModal = true;
+  }
+
+  function closeEditModal() {
+    showEditModal = false;
+    editingMember = null;
+  }
+
+  function handleFormSubmit() {
+    isSubmitting = true;
+    return async ({ result, update }: any) => {
+      isSubmitting = false;
+      if (result.type === 'success') {
+        await invalidateAll();
+      }
+      await update();
+    };
+  }
 </script>
 
 <svelte:head>
   <title>Settings - SqueezMedia Operations</title>
 </svelte:head>
+
+<!-- Feedback Message -->
+{#if feedbackMessage}
+  <div class="feedback-message {feedbackMessage.type === 'success' ? 'success' : 'error'}">
+    <span>{feedbackMessage.text}</span>
+    <button onclick={() => feedbackMessage = null} class="close-btn">×</button>
+  </div>
+{/if}
 
 <!-- Page Header -->
 <div class="mb-6">
@@ -615,16 +666,16 @@
               </td>
               <td>
                 <div class="table-actions">
-                  <button class="btn btn-sm btn-outline" title="Edit">
+                  <button class="btn btn-sm btn-outline" title="Edit" onclick={() => openEditModal(member)}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                   </button>
                   {#if member.role !== 'super_admin'}
-                    <form method="POST" action="?/removeTeamMember" style="display: inline;">
+                    <form method="POST" action="?/removeTeamMember" style="display: inline;" use:enhance={handleFormSubmit}>
                       <input type="hidden" name="memberId" value={member.id}>
-                      <button type="submit" class="btn btn-sm btn-outline" title="Remove">
+                      <button type="submit" class="btn btn-sm btn-outline btn-danger-outline" title="Remove" disabled={isSubmitting}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <polyline points="3 6 5 6 21 6"/>
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -703,7 +754,7 @@
           </svg>
         </button>
       </div>
-      <form method="POST" action="?/inviteTeamMember">
+      <form method="POST" action="?/inviteTeamMember" use:enhance={handleFormSubmit}>
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label" for="inviteFirstName">First Name</label>
@@ -766,8 +817,98 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick={closeInviteModal}>Cancel</button>
-          <button type="submit" class="btn btn-primary">Send Invitation</button>
+          <button type="button" class="btn btn-secondary" onclick={closeInviteModal} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Team Member'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+<!-- Edit Member Modal -->
+{#if showEditModal && editingMember}
+  <div class="modal-overlay open" onclick={closeEditModal}>
+    <div class="modal" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Team Member</h3>
+        <button class="modal-close" onclick={closeEditModal}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <form method="POST" action="?/updateTeamMember" use:enhance={handleFormSubmit}>
+        <input type="hidden" name="memberId" value={editingMember.id}>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="editFirstName">First Name</label>
+            <input
+              type="text"
+              id="editFirstName"
+              name="firstName"
+              class="form-input"
+              bind:value={editingMember.firstName}
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editLastName">Last Name</label>
+            <input
+              type="text"
+              id="editLastName"
+              name="lastName"
+              class="form-input"
+              bind:value={editingMember.lastName}
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editEmail">Email Address</label>
+            <input
+              type="email"
+              id="editEmail"
+              class="form-input"
+              value={editingMember.email}
+              disabled
+            >
+            <p class="form-help">Email cannot be changed</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editRole">Role</label>
+            <select
+              id="editRole"
+              name="role"
+              class="form-input form-select"
+              bind:value={editingMember.role}
+            >
+              <option value="support">Support</option>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editStatus">Status</label>
+            <select
+              id="editStatus"
+              name="status"
+              class="form-input form-select"
+              bind:value={editingMember.status}
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick={closeEditModal} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
       </form>
     </div>
@@ -1043,5 +1184,54 @@
 
   .mt-6 {
     margin-top: var(--spacing-6);
+  }
+
+  /* Feedback Message */
+  .feedback-message {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-4);
+    font-size: 0.875rem;
+  }
+
+  .feedback-message.success {
+    background: var(--success-100, #dcfce7);
+    color: var(--success-800, #166534);
+    border: 1px solid var(--success-200, #bbf7d0);
+  }
+
+  .feedback-message.error {
+    background: var(--danger-100, #fee2e2);
+    color: var(--danger-800, #991b1b);
+    border: 1px solid var(--danger-200, #fecaca);
+  }
+
+  .feedback-message .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .feedback-message .close-btn:hover {
+    opacity: 1;
+  }
+
+  /* Danger outline button */
+  .btn-danger-outline {
+    color: var(--danger-600, #dc2626);
+    border-color: var(--danger-300, #fca5a5);
+  }
+
+  .btn-danger-outline:hover {
+    background: var(--danger-50, #fef2f2);
+    border-color: var(--danger-400, #f87171);
   }
 </style>

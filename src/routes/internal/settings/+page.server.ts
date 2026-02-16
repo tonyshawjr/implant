@@ -1,5 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
+import { prisma } from '$lib/server/db';
+import { hash } from '@node-rs/argon2';
 
 export const load: PageServerLoad = async ({ url }) => {
   const activeTab = url.searchParams.get('tab') || 'general';
@@ -102,54 +104,39 @@ export const load: PageServerLoad = async ({ url }) => {
     }
   ];
 
-  // Team members (internal staff)
-  const teamMembers = [
-    {
-      id: '1',
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      email: 'sarah@squeezmedia.com',
-      role: 'super_admin',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+  // Team members (internal staff) - loaded from database
+  // Internal roles are: super_admin, admin, support (no organizationId or null)
+  const internalUsers = await prisma.user.findMany({
+    where: {
+      role: {
+        in: ['super_admin', 'admin', 'support']
+      },
+      deletedAt: null
     },
-    {
-      id: '2',
-      firstName: 'Mike',
-      lastName: 'Chen',
-      email: 'mike@squeezmedia.com',
-      role: 'admin',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
-    },
-    {
-      id: '3',
-      firstName: 'Emily',
-      lastName: 'Davis',
-      email: 'emily@squeezmedia.com',
-      role: 'admin',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
-    },
-    {
-      id: '4',
-      firstName: 'James',
-      lastName: 'Wilson',
-      email: 'james@squeezmedia.com',
-      role: 'support',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString()
-    },
-    {
-      id: '5',
-      firstName: 'Anna',
-      lastName: 'Martinez',
-      email: 'anna@squeezmedia.com',
-      role: 'support',
-      status: 'inactive',
-      lastLogin: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()
+    orderBy: [
+      { role: 'asc' },
+      { firstName: 'asc' }
+    ],
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      isActive: true,
+      lastLoginAt: true
     }
-  ];
+  });
+
+  const teamMembers = internalUsers.map(user => ({
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    status: user.isActive ? 'active' : 'inactive',
+    lastLogin: user.lastLoginAt?.toISOString() || null
+  }));
 
   // API keys (masked)
   const apiKeys = [
@@ -270,10 +257,74 @@ export const actions: Actions = {
       return fail(400, { message: 'Email and role are required' });
     }
 
-    // In a real implementation, send invitation email and create pending user
-    console.log('Inviting team member:', { email, firstName, lastName, role });
+    if (!firstName || !lastName) {
+      return fail(400, { message: 'First name and last name are required' });
+    }
 
-    return { success: true, message: `Invitation sent to ${email}` };
+    // Validate role
+    if (!['super_admin', 'admin', 'support'].includes(role)) {
+      return fail(400, { message: 'Invalid role. Must be super_admin, admin, or support' });
+    }
+
+    // Only super_admin can create other super_admins
+    if (role === 'super_admin' && locals.user.role !== 'super_admin') {
+      return fail(403, { message: 'Only super admins can create other super admins' });
+    }
+
+    try {
+      // Check if user with this email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
+
+      if (existingUser) {
+        if (existingUser.deletedAt) {
+          // Reactivate deleted user
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              deletedAt: null,
+              isActive: true,
+              firstName,
+              lastName,
+              role: role as any
+            }
+          });
+          return { success: true, message: `Team member ${email} has been reactivated` };
+        }
+        return fail(400, { message: 'A user with this email already exists' });
+      }
+
+      // Generate a temporary password (in production, you'd send an invite email)
+      const tempPassword = crypto.randomUUID().slice(0, 12);
+      const passwordHash = await hash(tempPassword, {
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1
+      });
+
+      // Create the new team member
+      await prisma.user.create({
+        data: {
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          passwordHash,
+          role: role as any,
+          isActive: true,
+          organizationId: null // Internal staff don't belong to client organizations
+        }
+      });
+
+      // In production, you would send an invitation email here with the temp password
+      // or a password reset link
+
+      return { success: true, message: `Team member ${email} created successfully` };
+    } catch (error) {
+      console.error('Failed to invite team member:', error);
+      return fail(500, { message: 'Failed to create team member' });
+    }
   },
 
   updateTeamMember: async ({ request, locals }) => {
@@ -281,15 +332,72 @@ export const actions: Actions = {
       return fail(401, { message: 'Unauthorized' });
     }
 
+    if (!['super_admin', 'admin'].includes(locals.user.role)) {
+      return fail(403, { message: 'You do not have permission to update team members' });
+    }
+
     const formData = await request.formData();
     const memberId = formData.get('memberId') as string;
     const role = formData.get('role') as string;
     const status = formData.get('status') as string;
+    const firstName = formData.get('firstName') as string;
+    const lastName = formData.get('lastName') as string;
 
-    // In a real implementation, update user in database
-    console.log('Updating team member:', { memberId, role, status });
+    if (!memberId) {
+      return fail(400, { message: 'Member ID is required' });
+    }
 
-    return { success: true, message: 'Team member updated' };
+    try {
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: memberId },
+        select: { id: true, role: true }
+      });
+
+      if (!user) {
+        return fail(404, { message: 'Team member not found' });
+      }
+
+      // Only super_admin can modify other super_admins
+      if (user.role === 'super_admin' && locals.user.role !== 'super_admin') {
+        return fail(403, { message: 'Only super admins can modify other super admins' });
+      }
+
+      // Only super_admin can promote to super_admin
+      if (role === 'super_admin' && locals.user.role !== 'super_admin') {
+        return fail(403, { message: 'Only super admins can promote users to super admin' });
+      }
+
+      // Build update data
+      const updateData: any = {};
+
+      if (role && ['super_admin', 'admin', 'support'].includes(role)) {
+        updateData.role = role;
+      }
+
+      if (status) {
+        updateData.isActive = status === 'active';
+      }
+
+      if (firstName) {
+        updateData.firstName = firstName;
+      }
+
+      if (lastName) {
+        updateData.lastName = lastName;
+      }
+
+      // Update the user
+      await prisma.user.update({
+        where: { id: memberId },
+        data: updateData
+      });
+
+      return { success: true, message: 'Team member updated successfully' };
+    } catch (error) {
+      console.error('Failed to update team member:', error);
+      return fail(500, { message: 'Failed to update team member' });
+    }
   },
 
   removeTeamMember: async ({ request, locals }) => {
@@ -304,10 +412,45 @@ export const actions: Actions = {
     const formData = await request.formData();
     const memberId = formData.get('memberId') as string;
 
-    // In a real implementation, soft delete user
-    console.log('Removing team member:', memberId);
+    if (!memberId) {
+      return fail(400, { message: 'Member ID is required' });
+    }
 
-    return { success: true, message: 'Team member removed' };
+    // Prevent deleting yourself
+    if (memberId === locals.user.id) {
+      return fail(400, { message: 'You cannot remove yourself' });
+    }
+
+    try {
+      // Check if user exists and is internal staff
+      const user = await prisma.user.findUnique({
+        where: { id: memberId },
+        select: { id: true, role: true, email: true }
+      });
+
+      if (!user) {
+        return fail(404, { message: 'Team member not found' });
+      }
+
+      // Only allow removing internal staff roles
+      if (!['super_admin', 'admin', 'support'].includes(user.role)) {
+        return fail(400, { message: 'Cannot remove client users from this page' });
+      }
+
+      // Soft delete the user
+      await prisma.user.update({
+        where: { id: memberId },
+        data: {
+          deletedAt: new Date(),
+          isActive: false
+        }
+      });
+
+      return { success: true, message: 'Team member removed successfully' };
+    } catch (error) {
+      console.error('Failed to remove team member:', error);
+      return fail(500, { message: 'Failed to remove team member' });
+    }
   },
 
   generateApiKey: async ({ request, locals }) => {
