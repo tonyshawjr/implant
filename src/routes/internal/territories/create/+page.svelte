@@ -38,6 +38,9 @@
     stateFips?: string;
     state: string;
     zipCodes: ZipCodeEntry[];
+    // Center coordinates for map display
+    centerLat?: number;
+    centerLng?: number;
   }
 
   interface GeoOption {
@@ -153,22 +156,57 @@
     circles.forEach(c => map.removeLayer(c));
     circles = [];
 
-    const zips = allZipCodes;
-    zips.forEach(zip => {
-      const circle = L.circle([zip.lat, zip.lng], {
-        radius: 8046.72, // 5 miles in meters
-        fillColor: '#3b82f6',
-        fillOpacity: 0.2,
-        color: '#3b82f6',
-        weight: 2
-      }).addTo(map);
+    const allCoords: [number, number][] = [];
 
-      circle.bindPopup(`<strong>${zip.zipCode}</strong><br>${zip.city}, ${zip.state}`);
-      circles.push(circle);
+    // Draw markers for all selected areas
+    selectedAreas.forEach(area => {
+      if (area.type === 'zipcode' && area.zipCodes.length > 0) {
+        // Zip codes - small circles
+        area.zipCodes.forEach(zip => {
+          const circle = L.circle([zip.lat, zip.lng], {
+            radius: 8046.72, // 5 miles in meters
+            fillColor: '#3b82f6',
+            fillOpacity: 0.3,
+            color: '#3b82f6',
+            weight: 2
+          }).addTo(map);
+          circle.bindPopup(`<strong>${zip.zipCode}</strong><br>${zip.city}, ${zip.state}`);
+          circles.push(circle);
+          allCoords.push([zip.lat, zip.lng]);
+        });
+      } else if (area.centerLat && area.centerLng) {
+        // Metros, counties, cities - different sized circles based on type
+        let radius = 16093.4; // 10 miles default
+        let color = '#3b82f6';
+
+        if (area.type === 'metro') {
+          radius = 48280.3; // 30 miles for metros
+          color = '#8b5cf6'; // purple
+        } else if (area.type === 'county') {
+          radius = 32186.9; // 20 miles for counties
+          color = '#10b981'; // green
+        } else if (area.type === 'city') {
+          radius = 16093.4; // 10 miles for cities
+          color = '#f59e0b'; // orange
+        }
+
+        const circle = L.circle([area.centerLat, area.centerLng], {
+          radius,
+          fillColor: color,
+          fillOpacity: 0.2,
+          color: color,
+          weight: 2
+        }).addTo(map);
+
+        circle.bindPopup(`<strong>${area.displayName}</strong><br>${area.type.charAt(0).toUpperCase() + area.type.slice(1)}`);
+        circles.push(circle);
+        allCoords.push([area.centerLat, area.centerLng]);
+      }
     });
 
-    if (zips.length > 0) {
-      const bounds = L.latLngBounds(zips.map(z => [z.lat, z.lng]));
+    // Fit map to show all markers
+    if (allCoords.length > 0) {
+      const bounds = L.latLngBounds(allCoords);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
   }
@@ -275,6 +313,26 @@
   // Census variables for comprehensive demographics
   const CENSUS_VARIABLES = 'B01003_001E,B11001_001E,B19013_001E,B01002_001E,B25077_001E,B21001_002E,B25003_001E,B25003_002E,B01001_020E,B01001_021E,B01001_022E,B01001_023E,B01001_024E,B01001_025E,B01001_044E,B01001_045E,B01001_046E,B01001_047E,B01001_048E,B01001_049E';
 
+  // Geocode a location to get coordinates
+  async function geocodeLocation(query: string): Promise<{lat: number, lng: number} | null> {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+        { headers: { 'User-Agent': 'SqueezMedia-Platform' } }
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon)
+        };
+      }
+    } catch (e) {
+      console.error('Geocoding error:', e);
+    }
+    return null;
+  }
+
   // Add selected metro area
   async function addMetroArea() {
     if (!selectedOption) return;
@@ -292,8 +350,9 @@
     errorMessage = '';
 
     try {
-      // For metros, we'll add a placeholder zip and fetch demographics
-      // In a real implementation, you'd fetch all zip codes in the metro
+      // Geocode the metro area to get coordinates for the map
+      const coords = await geocodeLocation(`${metro.name} metropolitan area, USA`);
+
       const newArea: SelectedArea = {
         id: `metro-${selectedOption}`,
         type: 'metro',
@@ -301,7 +360,9 @@
         displayName: `${metro.name} Metro`,
         fips: selectedOption,
         state: selectedState,
-        zipCodes: [] // Metro areas don't resolve to specific zips in this simplified version
+        zipCodes: [],
+        centerLat: coords?.lat,
+        centerLng: coords?.lng
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -313,6 +374,7 @@
       }
 
       await updateAggregateDemographics();
+      updateMapMarkers(); // Update map after adding
     } catch (error) {
       console.error('Error adding metro area:', error);
       errorMessage = 'Failed to add metro area.';
@@ -339,6 +401,10 @@
     errorMessage = '';
 
     try {
+      // Get state name for geocoding
+      const stateName = US_STATES.find(s => s.code === selectedState)?.name || selectedState;
+      const coords = await geocodeLocation(`${county.name} County, ${stateName}, USA`);
+
       const newArea: SelectedArea = {
         id: areaId,
         type: 'county',
@@ -347,7 +413,9 @@
         fips: selectedOption,
         stateFips: selectedStateFips,
         state: selectedState,
-        zipCodes: []
+        zipCodes: [],
+        centerLat: coords?.lat,
+        centerLng: coords?.lng
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -358,6 +426,7 @@
       }
 
       await updateAggregateDemographics();
+      updateMapMarkers();
     } catch (error) {
       console.error('Error adding county:', error);
       errorMessage = 'Failed to add county.';
@@ -384,6 +453,10 @@
     errorMessage = '';
 
     try {
+      // Get state name for geocoding
+      const stateName = US_STATES.find(s => s.code === selectedState)?.name || selectedState;
+      const coords = await geocodeLocation(`${city.name}, ${stateName}, USA`);
+
       const newArea: SelectedArea = {
         id: areaId,
         type: 'city',
@@ -392,7 +465,9 @@
         fips: selectedOption,
         stateFips: selectedStateFips,
         state: selectedState,
-        zipCodes: []
+        zipCodes: [],
+        centerLat: coords?.lat,
+        centerLng: coords?.lng
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -403,6 +478,7 @@
       }
 
       await updateAggregateDemographics();
+      updateMapMarkers();
     } catch (error) {
       console.error('Error adding city:', error);
       errorMessage = 'Failed to add city.';
