@@ -43,6 +43,8 @@
     centerLng?: number;
     // GeoJSON boundary for precise map display
     boundary?: any; // GeoJSON Feature
+    // Included cities/towns for metros and counties
+    includedPlaces?: string[];
   }
 
   interface GeoOption {
@@ -238,35 +240,104 @@
   // Fetch GeoJSON boundary from Census TIGERweb API
   async function fetchBoundary(type: string, geoid: string): Promise<any> {
     try {
-      // TIGERweb layer IDs:
-      // 82 = States, 84 = Counties, 86 = Places (cities), 2 = ZCTAs, 88 = CBSAs (metros)
+      // TIGERweb layer IDs for Current service (more reliable):
+      // States=82, Counties=84, Places=86, ZCTAs=2, CBSAs=8
+      // Note: Using 'Current' service instead of ACS2023 for better compatibility
       let layerId: number;
-      let whereField = 'GEOID';
+      let whereClause: string;
 
       if (type === 'metro') {
-        layerId = 88; // Combined Statistical Areas / CBSAs
-        whereField = 'CBSAFP';
+        layerId = 8; // CBSAs in Current service
+        whereClause = `CBSAFP='${geoid}'`;
       } else if (type === 'county') {
         layerId = 84;
+        whereClause = `GEOID='${geoid}'`;
       } else if (type === 'city') {
         layerId = 86;
+        whereClause = `GEOID='${geoid}'`;
       } else {
-        layerId = 2; // ZCTAs
-        whereField = 'ZCTA5CE20';
+        // ZIP codes - try multiple approaches
+        layerId = 2;
+        whereClause = `ZCTA5CE20='${geoid}'`;
       }
 
-      const url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${whereField}='${geoid}'&f=geojson&outSR=4326`;
+      // Try Current service first (more reliable)
+      let url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+      let response = await fetch(url);
+      let data = await response.json();
 
       if (data.features && data.features.length > 0) {
+        console.log(`Boundary found for ${type} ${geoid}`);
         return data.features[0];
       }
+
+      // Fallback to ACS2023 service
+      if (type === 'metro') {
+        layerId = 88;
+      }
+      url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
+
+      response = await fetch(url);
+      data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        console.log(`Boundary found (fallback) for ${type} ${geoid}`);
+        return data.features[0];
+      }
+
+      console.warn(`No boundary found for ${type} ${geoid}`);
     } catch (e) {
       console.error('Error fetching boundary:', e);
     }
     return null;
+  }
+
+  // Fetch principal cities/places for a metro area
+  async function fetchMetroPlaces(msaCode: string, metroName: string): Promise<string[]> {
+    try {
+      // Parse the metro name to extract principal cities
+      // Format is usually "City1-City2-City3, ST-ST Metro Area"
+      const namePart = metroName.split(' Metro')[0].split(' Micro')[0];
+      const citiesPart = namePart.split(',')[0]; // Get everything before the state abbreviations
+      const cities = citiesPart.split('-').map(c => c.trim()).filter(c => c.length > 0);
+      return cities;
+    } catch (e) {
+      console.error('Error parsing metro places:', e);
+      return [];
+    }
+  }
+
+  // Fetch cities/places within a county
+  async function fetchCountyPlaces(stateFips: string, countyFips: string): Promise<string[]> {
+    try {
+      // Use Census API to get places in the county
+      const response = await fetch(
+        `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=place:*&in=state:${stateFips}&in=county:${countyFips}`
+      );
+
+      if (!response.ok) {
+        // Some counties don't have places defined this way, try alternative
+        return [];
+      }
+
+      const data = await response.json();
+
+      // Sort by population and return top cities
+      const places = data.slice(1)
+        .map((row: string[]) => ({
+          name: row[0].replace(' city', '').replace(' town', '').replace(' village', '').replace(' CDP', '').split(',')[0],
+          population: parseInt(row[1]) || 0
+        }))
+        .sort((a: any, b: any) => b.population - a.population)
+        .slice(0, 10) // Top 10 places
+        .map((p: any) => p.name);
+
+      return places;
+    } catch (e) {
+      console.error('Error fetching county places:', e);
+      return [];
+    }
   }
 
   // Calculate market score and recommended price using config from database
@@ -496,6 +567,9 @@
       // Fetch the actual boundary from Census TIGERweb
       const boundary = await fetchBoundary('metro', selectedOption);
 
+      // Fetch principal cities in this metro
+      const includedPlaces = await fetchMetroPlaces(selectedOption, metro.name);
+
       // Fallback to geocoding if boundary not found
       let coords = null;
       if (!boundary) {
@@ -512,7 +586,8 @@
         zipCodes: [],
         centerLat: coords?.lat,
         centerLng: coords?.lng,
-        boundary
+        boundary,
+        includedPlaces
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -555,6 +630,9 @@
       const countyGeoid = `${selectedStateFips}${selectedOption}`;
       const boundary = await fetchBoundary('county', countyGeoid);
 
+      // Fetch cities/towns in this county
+      const includedPlaces = await fetchCountyPlaces(selectedStateFips, selectedOption);
+
       // Fallback to geocoding if boundary not found
       let coords = null;
       if (!boundary) {
@@ -573,7 +651,8 @@
         zipCodes: [],
         centerLat: coords?.lat,
         centerLng: coords?.lng,
-        boundary
+        boundary,
+        includedPlaces
       };
 
       selectedAreas = [...selectedAreas, newArea];
@@ -1046,6 +1125,12 @@
                   <div class="area-details">
                     <span class="area-name">{area.displayName}</span>
                     <span class="area-type">{getAreaTypeLabel(area.type)}</span>
+                    {#if area.includedPlaces && area.includedPlaces.length > 0}
+                      <div class="included-places">
+                        <span class="places-label">Includes:</span>
+                        <span class="places-list">{area.includedPlaces.join(', ')}</span>
+                      </div>
+                    {/if}
                   </div>
                 </div>
                 <button class="remove-btn" onclick={() => removeArea(area.id)} title="Remove">
@@ -1674,6 +1759,22 @@
   .area-type {
     font-size: 0.75rem;
     color: var(--gray-500);
+  }
+
+  .included-places {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    line-height: 1.4;
+  }
+
+  .places-label {
+    font-weight: 500;
+    color: var(--gray-500);
+  }
+
+  .places-list {
+    color: var(--gray-700);
   }
 
   .remove-btn {
