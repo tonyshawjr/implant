@@ -301,16 +301,20 @@ export const actions: Actions = {
 			return fail(400, { error: 'State is required' });
 		}
 
-		// Parse zip codes
+		// Parse zip codes - only required for zipcode boundary type
 		let zipCodes: ZipCodeEntry[] = [];
 		try {
 			zipCodes = JSON.parse(zipCodesJson || '[]');
-			if (!Array.isArray(zipCodes) || zipCodes.length === 0) {
-				return fail(400, { error: 'At least one zip code is required' });
+			// Only require zip codes for zipcode boundary type
+			if (boundaryType === 'zipcode' && (!Array.isArray(zipCodes) || zipCodes.length === 0)) {
+				return fail(400, { error: 'At least one zip code is required for zip code territories' });
 			}
 		} catch {
 			return fail(400, { error: 'Invalid zip codes format' });
 		}
+
+		// Get primary city name from form data or first zip code
+		const primaryCity = formData.get('primaryCity') as string || zipCodes[0]?.city || '';
 
 		// Parse demographics
 		let demographics: TerritoryDemographics;
@@ -377,7 +381,7 @@ export const actions: Actions = {
 			const territory = await prisma.territory.create({
 				data: {
 					name: name.trim(),
-					city: zipCodes[0]?.city || '',
+					city: primaryCity,
 					state,
 					boundaryType: boundaryType as 'metro' | 'county' | 'city' | 'zipcode' | 'custom',
 					territoryType: territoryType as 'standard' | 'premium' | 'metro',
@@ -401,15 +405,17 @@ export const actions: Actions = {
 				}
 			});
 
-			// Add zip codes to the territory
-			await prisma.territoryZipCode.createMany({
-				data: zipCodes.map((z, index) => ({
-					territoryId: territory.id,
-					zipCode: z.zipCode,
-					city: z.city || null,
-					isPrimary: index === 0
-				}))
-			});
+			// Add zip codes to the territory (if any)
+			if (zipCodes.length > 0) {
+				await prisma.territoryZipCode.createMany({
+					data: zipCodes.map((z, index) => ({
+						territoryId: territory.id,
+						zipCode: z.zipCode,
+						city: z.city || null,
+						isPrimary: index === 0
+					}))
+				});
+			}
 
 			// Redirect to the territories list page on success
 			throw redirect(303, '/internal/territories');

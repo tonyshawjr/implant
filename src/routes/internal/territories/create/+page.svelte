@@ -1270,11 +1270,12 @@
       <input type="hidden" name="name" value={territoryName} />
       <input type="hidden" name="boundaryType" value={selectedAreas.length === 1 ? selectedAreas[0].type : 'custom'} />
       <input type="hidden" name="state" value={selectedAreas[0]?.state || ''} />
+      <input type="hidden" name="primaryCity" value={selectedAreas[0]?.name || allZipCodes[0]?.city || ''} />
       <input type="hidden" name="zipCodes" value={JSON.stringify(allZipCodes.map(z => ({ zipCode: z.zipCode, city: z.city })))} />
       <input type="hidden" name="demographics" value={JSON.stringify(demographics || {})} />
       <input type="hidden" name="monthlyBasePrice" value={monthlyBasePrice} />
-      <input type="hidden" name="centerLat" value={allZipCodes.length > 0 ? allZipCodes.reduce((sum, z) => sum + z.lat, 0) / allZipCodes.length : 0} />
-      <input type="hidden" name="centerLng" value={allZipCodes.length > 0 ? allZipCodes.reduce((sum, z) => sum + z.lng, 0) / allZipCodes.length : 0} />
+      <input type="hidden" name="centerLat" value={selectedAreas[0]?.boundary?.properties?.CENTLAT || selectedAreas[0]?.centerLat || (allZipCodes.length > 0 ? allZipCodes.reduce((sum, z) => sum + z.lat, 0) / allZipCodes.length : 0)} />
+      <input type="hidden" name="centerLng" value={selectedAreas[0]?.boundary?.properties?.CENTLON || selectedAreas[0]?.centerLng || (allZipCodes.length > 0 ? allZipCodes.reduce((sum, z) => sum + z.lng, 0) / allZipCodes.length : 0)} />
       <input type="hidden" name="radiusMiles" value="15" />
       <input type="hidden" name="msaCode" value={selectedAreas.find(a => a.type === 'metro')?.fips || ''} />
       <input type="hidden" name="countyFips" value={selectedAreas.find(a => a.type === 'county')?.fips || ''} />
