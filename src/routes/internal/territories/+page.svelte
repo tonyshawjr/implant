@@ -45,7 +45,7 @@
   let showDeleteConfirm = $state(false);
   let territoryToDelete = $state<typeof data.territories[0] | null>(null);
 
-  // Geocoding lookup using Nominatim (free, no API key)
+  // Geocoding lookup using Nominatim (free, no API key) + Census Bureau for population
   async function lookupLocation() {
     if (!newTerritory.zipCode && !newTerritory.city) {
       lookupError = 'Enter a zip code or city name';
@@ -90,6 +90,25 @@
         const suffix = newTerritory.territoryType === 'metro' ? ' Metro' :
                        newTerritory.territoryType === 'county' ? ' County' : '';
         newTerritory.name = `${newTerritory.city}${suffix}`;
+      }
+
+      // Fetch population from US Census Bureau (free, no API key required)
+      if (newTerritory.zipCode) {
+        try {
+          // Use ACS 5-year estimates for zip code tabulation areas (ZCTAs)
+          const censusResponse = await fetch(
+            `https://api.census.gov/data/2022/acs/acs5?get=NAME,B01003_001E&for=zip%20code%20tabulation%20area:${newTerritory.zipCode}`
+          );
+          const censusData = await censusResponse.json();
+
+          // Census API returns array where first row is headers, second row is data
+          if (censusData && censusData.length > 1 && censusData[1][1]) {
+            newTerritory.population = parseInt(censusData[1][1]);
+          }
+        } catch (censusError) {
+          console.log('Census data not available for this zip code');
+          // Don't fail the whole lookup if census fails
+        }
       }
 
     } catch (error) {
