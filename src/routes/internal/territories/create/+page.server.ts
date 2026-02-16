@@ -31,6 +31,11 @@ interface TerritoryDemographics {
 	households: number;
 	medianIncome: number;
 	medianAge: number;
+	population65Plus?: number;
+	population65PlusPercent?: number;
+	medianHomeValue?: number;
+	veteransCount?: number;
+	ownerOccupiedPercent?: number;
 }
 
 // =============================================================================
@@ -344,6 +349,11 @@ export const actions: Actions = {
 					households: demographics.households || null,
 					medianIncome: demographics.medianIncome || null,
 					medianAge: demographics.medianAge || null,
+					population65Plus: demographics.population65Plus || null,
+					population65Pct: demographics.population65PlusPercent || null,
+					medianHomeValue: demographics.medianHomeValue || null,
+					veteransCount: demographics.veteransCount || null,
+					ownerOccupiedPct: demographics.ownerOccupiedPercent || null,
 					monthlyBasePrice: isNaN(monthlyBasePrice) ? null : monthlyBasePrice,
 					msaCode: msaCode || null,
 					countyFips: countyFips || null,

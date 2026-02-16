@@ -22,6 +22,12 @@
     households: number;
     medianIncome: number;
     medianAge: number;
+    // New fields for better market analysis
+    population65Plus: number;
+    population65PlusPercent: number;
+    medianHomeValue: number;
+    veteransCount: number;
+    ownerOccupiedPercent: number;
   }
 
   interface GeoOption {
@@ -268,6 +274,52 @@
     }
   }
 
+  // Census variables for comprehensive demographics
+  // B01003_001E = Total population
+  // B11001_001E = Total households
+  // B19013_001E = Median household income
+  // B01002_001E = Median age
+  // B25077_001E = Median home value
+  // B21001_002E = Civilian veterans
+  // B25003_001E = Total occupied housing units
+  // B25003_002E = Owner-occupied housing units
+  // B01001_020E-025E = Males 65+ (6 age groups)
+  // B01001_044E-049E = Females 65+ (6 age groups)
+  const CENSUS_VARIABLES = 'B01003_001E,B11001_001E,B19013_001E,B01002_001E,B25077_001E,B21001_002E,B25003_001E,B25003_002E,B01001_020E,B01001_021E,B01001_022E,B01001_023E,B01001_024E,B01001_025E,B01001_044E,B01001_045E,B01001_046E,B01001_047E,B01001_048E,B01001_049E';
+
+  // Parse Census API response into Demographics object
+  function parseDemographicsData(row: string[]): Demographics {
+    const population = parseInt(row[0]) || 0;
+    const households = parseInt(row[1]) || 0;
+    const medianIncome = parseInt(row[2]) || 0;
+    const medianAge = parseFloat(row[3]) || 0;
+    const medianHomeValue = parseInt(row[4]) || 0;
+    const veteransCount = parseInt(row[5]) || 0;
+    const totalOccupied = parseInt(row[6]) || 0;
+    const ownerOccupied = parseInt(row[7]) || 0;
+
+    // Sum 65+ population (males: indices 8-13, females: indices 14-19)
+    let population65Plus = 0;
+    for (let i = 8; i <= 19; i++) {
+      population65Plus += parseInt(row[i]) || 0;
+    }
+
+    const population65PlusPercent = population > 0 ? (population65Plus / population) * 100 : 0;
+    const ownerOccupiedPercent = totalOccupied > 0 ? (ownerOccupied / totalOccupied) * 100 : 0;
+
+    return {
+      population,
+      households,
+      medianIncome,
+      medianAge,
+      population65Plus,
+      population65PlusPercent,
+      medianHomeValue,
+      veteransCount,
+      ownerOccupiedPercent
+    };
+  }
+
   // Fetch demographics for metro area (MSA)
   async function fetchMetroDemographics() {
     if (!selectedMetro) return;
@@ -275,18 +327,12 @@
     isLoadingDemographics = true;
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${selectedMetro}`
+        `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${selectedMetro}`
       );
       const data = await response.json();
 
       if (data && data.length > 1) {
-        const row = data[1];
-        demographics = {
-          population: parseInt(row[0]) || 0,
-          households: parseInt(row[1]) || 0,
-          medianIncome: parseInt(row[2]) || 0,
-          medianAge: parseFloat(row[3]) || 0
-        };
+        demographics = parseDemographicsData(data[1]);
       }
     } catch (error) {
       console.error('Error fetching metro demographics:', error);
@@ -323,18 +369,12 @@
     isLoadingDemographics = true;
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=county:${selectedCounty}&in=state:${selectedStateFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=county:${selectedCounty}&in=state:${selectedStateFips}`
       );
       const data = await response.json();
 
       if (data && data.length > 1) {
-        const row = data[1];
-        demographics = {
-          population: parseInt(row[0]) || 0,
-          households: parseInt(row[1]) || 0,
-          medianIncome: parseInt(row[2]) || 0,
-          medianAge: parseFloat(row[3]) || 0
-        };
+        demographics = parseDemographicsData(data[1]);
       }
     } catch (error) {
       console.error('Error fetching county demographics:', error);
@@ -350,18 +390,12 @@
     isLoadingDemographics = true;
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=place:${selectedCity}&in=state:${selectedStateFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=place:${selectedCity}&in=state:${selectedStateFips}`
       );
       const data = await response.json();
 
       if (data && data.length > 1) {
-        const row = data[1];
-        demographics = {
-          population: parseInt(row[0]) || 0,
-          households: parseInt(row[1]) || 0,
-          medianIncome: parseInt(row[2]) || 0,
-          medianAge: parseFloat(row[3]) || 0
-        };
+        demographics = parseDemographicsData(data[1]);
       }
     } catch (error) {
       console.error('Error fetching city demographics:', error);
@@ -466,29 +500,52 @@
     try {
       let totalPop = 0;
       let totalHouseholds = 0;
+      let total65Plus = 0;
+      let totalVeterans = 0;
+      let totalOccupied = 0;
+      let totalOwnerOccupied = 0;
       let incomeSum = 0;
       let ageSum = 0;
-      let validCount = 0;
+      let homeValueSum = 0;
+      let validIncomeCount = 0;
+      let validHomeValueCount = 0;
 
       for (const zip of selectedZipCodes) {
         try {
           const response = await fetch(
-            `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=zip%20code%20tabulation%20area:${zip.zipCode}`
+            `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=zip%20code%20tabulation%20area:${zip.zipCode}`
           );
           const data = await response.json();
 
           if (data && data.length > 1) {
             const row = data[1];
             const pop = parseInt(row[0]) || 0;
+            const households = parseInt(row[1]) || 0;
             totalPop += pop;
-            totalHouseholds += parseInt(row[1]) || 0;
+            totalHouseholds += households;
+
+            // Sum 65+ population (indices 8-19)
+            for (let i = 8; i <= 19; i++) {
+              total65Plus += parseInt(row[i]) || 0;
+            }
+
+            totalVeterans += parseInt(row[5]) || 0;
+            totalOccupied += parseInt(row[6]) || 0;
+            totalOwnerOccupied += parseInt(row[7]) || 0;
 
             const income = parseInt(row[2]);
             const age = parseFloat(row[3]);
+            const homeValue = parseInt(row[4]);
+
             if (income > 0 && pop > 0) {
               incomeSum += income * pop;
               ageSum += age * pop;
-              validCount += pop;
+              validIncomeCount += pop;
+            }
+
+            if (homeValue > 0 && households > 0) {
+              homeValueSum += homeValue * households;
+              validHomeValueCount += households;
             }
           }
         } catch (e) {
@@ -499,8 +556,13 @@
       demographics = {
         population: totalPop,
         households: totalHouseholds,
-        medianIncome: validCount > 0 ? Math.round(incomeSum / validCount) : 0,
-        medianAge: validCount > 0 ? Math.round((ageSum / validCount) * 10) / 10 : 0
+        medianIncome: validIncomeCount > 0 ? Math.round(incomeSum / validIncomeCount) : 0,
+        medianAge: validIncomeCount > 0 ? Math.round((ageSum / validIncomeCount) * 10) / 10 : 0,
+        population65Plus: total65Plus,
+        population65PlusPercent: totalPop > 0 ? Math.round((total65Plus / totalPop) * 1000) / 10 : 0,
+        medianHomeValue: validHomeValueCount > 0 ? Math.round(homeValueSum / validHomeValueCount) : 0,
+        veteransCount: totalVeterans,
+        ownerOccupiedPercent: totalOccupied > 0 ? Math.round((totalOwnerOccupied / totalOccupied) * 1000) / 10 : 0
       };
     } catch (error) {
       console.error('Error updating demographics:', error);
@@ -796,6 +858,7 @@
       <div class="card-body">
         {#if demographics}
           <div class="demographics-grid">
+            <!-- Row 1: Population metrics -->
             <div class="demo-item">
               <div class="demo-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -849,6 +912,79 @@
                 <div class="demo-label">Median Age</div>
               </div>
             </div>
+
+            <!-- Row 2: Market indicators -->
+            <div class="demo-item highlight">
+              <div class="demo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div class="demo-content">
+                <div class="demo-value">{formatNumber(demographics.population65Plus)} <span class="demo-percent">({demographics.population65PlusPercent.toFixed(1)}%)</span></div>
+                <div class="demo-label">Population 65+</div>
+              </div>
+            </div>
+
+            <div class="demo-item">
+              <div class="demo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <path d="M9 22V12h6v10"/>
+                </svg>
+              </div>
+              <div class="demo-content">
+                <div class="demo-value">{formatCurrency(demographics.medianHomeValue)}</div>
+                <div class="demo-label">Median Home Value</div>
+              </div>
+            </div>
+
+            <div class="demo-item">
+              <div class="demo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                  <line x1="4" y1="22" x2="4" y2="15"/>
+                </svg>
+              </div>
+              <div class="demo-content">
+                <div class="demo-value">{formatNumber(demographics.veteransCount)}</div>
+                <div class="demo-label">Veterans</div>
+              </div>
+            </div>
+
+            <div class="demo-item">
+              <div class="demo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+              </div>
+              <div class="demo-content">
+                <div class="demo-value">{demographics.ownerOccupiedPercent.toFixed(1)}%</div>
+                <div class="demo-label">Owner Occupied</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Market Score Indicator -->
+          <div class="market-score">
+            <div class="market-score-header">
+              <span class="market-score-label">Implant Market Potential</span>
+              <span class="market-score-value" class:high={demographics.population65PlusPercent >= 15} class:medium={demographics.population65PlusPercent >= 10 && demographics.population65PlusPercent < 15} class:low={demographics.population65PlusPercent < 10}>
+                {#if demographics.population65PlusPercent >= 15}
+                  High
+                {:else if demographics.population65PlusPercent >= 10}
+                  Medium
+                {:else}
+                  Moderate
+                {/if}
+              </span>
+            </div>
+            <div class="market-score-bar">
+              <div class="market-score-fill" style="width: {Math.min(demographics.population65PlusPercent * 5, 100)}%"></div>
+            </div>
+            <p class="market-score-note">Based on 65+ population ({demographics.population65PlusPercent.toFixed(1)}%) - primary implant demographic</p>
           </div>
         {:else}
           <div class="empty-demographics">
@@ -1296,6 +1432,87 @@
   .demo-label {
     font-size: 0.8125rem;
     color: var(--gray-500);
+  }
+
+  .demo-percent {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--primary-600);
+  }
+
+  .demo-item.highlight {
+    background: var(--primary-50);
+    padding: var(--spacing-3);
+    border-radius: var(--radius-lg);
+    margin: calc(-1 * var(--spacing-3));
+    margin-top: var(--spacing-2);
+  }
+
+  .demo-item.highlight .demo-icon {
+    background: var(--primary-200);
+    color: var(--primary-700);
+  }
+
+  /* Market Score Indicator */
+  .market-score {
+    margin-top: var(--spacing-4);
+    padding-top: var(--spacing-4);
+    border-top: 1px solid var(--gray-100);
+  }
+
+  .market-score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-2);
+  }
+
+  .market-score-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+  }
+
+  .market-score-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  .market-score-value.high {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+
+  .market-score-value.medium {
+    background: var(--warning-100);
+    color: var(--warning-700);
+  }
+
+  .market-score-value.low {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  .market-score-bar {
+    height: 8px;
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  .market-score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-400), var(--primary-600));
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+  }
+
+  .market-score-note {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin: var(--spacing-2) 0 0 0;
   }
 
   .empty-demographics {

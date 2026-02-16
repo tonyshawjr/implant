@@ -624,6 +624,11 @@ model Territory {
   households        Int?
   medianAge         Decimal?        @map("median_age") @db.Decimal(4, 1)
   medianIncome      Int?            @map("median_income")
+  population65Plus  Int?            @map("population_65_plus")
+  population65Pct   Decimal?        @map("population_65_pct") @db.Decimal(5, 2)
+  medianHomeValue   Int?            @map("median_home_value")
+  veteransCount     Int?            @map("veterans_count")
+  ownerOccupiedPct  Decimal?        @map("owner_occupied_pct") @db.Decimal(5, 2)
   implantCandidates Int?            @map("implant_candidates")
   competitionCount  Int?            @map("competition_count")
   monthlyBasePrice  Decimal?        @map("monthly_base_price") @db.Decimal(10, 2)
