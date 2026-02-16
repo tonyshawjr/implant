@@ -81,7 +81,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	});
 
 	// Get pricing plans
-	const plans = await prisma.pricingPlan.findMany({
+	const plans = await prisma.plan.findMany({
 		where: { isActive: true },
 		orderBy: { basePrice: 'asc' }
 	});
@@ -227,8 +227,8 @@ export const actions: Actions = {
 					status: 'active'
 				},
 				data: {
-					status: 'ended',
-					endDate: new Date()
+					status: 'expired',
+					expiresAt: new Date()
 				}
 			});
 
@@ -239,7 +239,7 @@ export const actions: Actions = {
 					territoryId,
 					monthlyRate: isNaN(monthlyRate) ? 0 : monthlyRate,
 					status: 'active',
-					startDate: new Date()
+					assignedAt: new Date()
 				}
 			});
 
@@ -279,8 +279,8 @@ export const actions: Actions = {
 			await prisma.territoryAssignment.update({
 				where: { id: assignmentId },
 				data: {
-					status: 'ended',
-					endDate: new Date()
+					status: 'expired',
+					expiresAt: new Date()
 				}
 			});
 
