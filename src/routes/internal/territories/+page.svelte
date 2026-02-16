@@ -21,6 +21,21 @@
   let mapContainer: HTMLDivElement;
   let map: any = null;
   let L: any = null;
+  let isFullscreen = $state(false);
+  let isLoadingBoundaries = $state(false);
+  let boundaryLayers: Map<string, any> = new Map();
+
+  // State FIPS mapping for boundary lookups
+  const STATE_FIPS: Record<string, string> = {
+    'AL': '01', 'AK': '02', 'AZ': '04', 'AR': '05', 'CA': '06', 'CO': '08', 'CT': '09',
+    'DE': '10', 'FL': '12', 'GA': '13', 'HI': '15', 'ID': '16', 'IL': '17', 'IN': '18',
+    'IA': '19', 'KS': '20', 'KY': '21', 'LA': '22', 'ME': '23', 'MD': '24', 'MA': '25',
+    'MI': '26', 'MN': '27', 'MS': '28', 'MO': '29', 'MT': '30', 'NE': '31', 'NV': '32',
+    'NH': '33', 'NJ': '34', 'NM': '35', 'NY': '36', 'NC': '37', 'ND': '38', 'OH': '39',
+    'OK': '40', 'OR': '41', 'PA': '42', 'RI': '44', 'SC': '45', 'SD': '46', 'TN': '47',
+    'TX': '48', 'UT': '49', 'VT': '50', 'VA': '51', 'WA': '53', 'WV': '54', 'WI': '55',
+    'WY': '56', 'DC': '11', 'PR': '72'
+  };
 
   // Form state for Add/Edit Territory
   let newTerritory = $state({
@@ -192,39 +207,147 @@
     };
   });
 
-  function addTerritoryMarkers() {
+  // Fetch GeoJSON boundary from Census TIGERweb API
+  async function fetchBoundary(type: string, geoid: string): Promise<any> {
+    try {
+      let layerId: number;
+      let whereClause: string;
+
+      if (type === 'metro') {
+        layerId = 93; // Metropolitan Statistical Areas
+        whereClause = `GEOID='${geoid}'`;
+      } else if (type === 'county') {
+        layerId = 82; // Counties
+        whereClause = `GEOID='${geoid}'`;
+      } else if (type === 'city') {
+        layerId = 28; // Incorporated Places
+        whereClause = `GEOID='${geoid}'`;
+      } else {
+        layerId = 2; // ZCTAs
+        whereClause = `ZCTA5='${geoid}'`;
+      }
+
+      const url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        return data.features[0];
+      }
+    } catch (e) {
+      console.error('Error fetching boundary:', e);
+    }
+    return null;
+  }
+
+  async function addTerritoryMarkers() {
     if (!map || !L || !data.territories) return;
 
-    data.territories.forEach(territory => {
+    isLoadingBoundaries = true;
+    const allBounds: any[] = [];
+
+    // Clear existing layers
+    boundaryLayers.forEach(layer => map.removeLayer(layer));
+    boundaryLayers.clear();
+
+    for (const territory of data.territories) {
       const color = territory.status === 'locked' ? '#3b82f6' :
                     territory.status === 'available' ? '#22c55e' :
                     '#f59e0b';
 
-      // Add circle for territory radius
-      const circle = L.circle([territory.centerLat, territory.centerLng], {
-        radius: territory.radiusMiles * 1609.34, // Convert miles to meters
-        fillColor: color,
-        fillOpacity: 0.2,
-        color: color,
-        weight: 2
-      }).addTo(map);
+      let layer: any = null;
+      let boundary: any = null;
 
-      // Add popup
-      circle.bindPopup(`
-        <strong>${territory.name}</strong><br>
-        ${territory.city}, ${territory.state}<br>
-        Status: ${territory.status === 'locked' ? 'Assigned' : territory.status === 'available' ? 'Available' : 'Waitlist'}<br>
-        ${territory.client ? `Client: ${territory.client.name}` : ''}
-      `);
-    });
+      // Try to fetch real boundary based on boundary type
+      if (territory.boundaryType && territory.boundaryType !== 'custom') {
+        const bt = territory.boundaryType;
+        let geoid = '';
 
-    // Fit map to show all territories if there are any
-    if (data.territories.length > 0) {
-      const bounds = L.latLngBounds(
-        data.territories.map(t => [t.centerLat, t.centerLng])
-      );
-      map.fitBounds(bounds, { padding: [50, 50] });
+        if (bt === 'metro' && territory.msaCode) {
+          geoid = territory.msaCode;
+        } else if (bt === 'county' && territory.countyFips) {
+          const stateFips = STATE_FIPS[territory.state] || '';
+          geoid = `${stateFips}${territory.countyFips}`;
+        } else if (bt === 'city' && territory.placeFips) {
+          const stateFips = STATE_FIPS[territory.state] || '';
+          geoid = `${stateFips}${territory.placeFips}`;
+        }
+
+        if (geoid) {
+          boundary = await fetchBoundary(bt, geoid);
+        }
+      }
+
+      if (boundary) {
+        // Draw real GeoJSON boundary
+        layer = L.geoJSON(boundary, {
+          style: {
+            fillColor: color,
+            fillOpacity: 0.25,
+            color: color,
+            weight: 2
+          }
+        }).addTo(map);
+
+        allBounds.push(layer.getBounds());
+      } else {
+        // Fallback to circle
+        layer = L.circle([territory.centerLat, territory.centerLng], {
+          radius: territory.radiusMiles * 1609.34,
+          fillColor: color,
+          fillOpacity: 0.2,
+          color: color,
+          weight: 2,
+          dashArray: boundary ? undefined : '5, 5' // Dashed for approximate
+        }).addTo(map);
+
+        allBounds.push(layer.getBounds());
+      }
+
+      // Add popup with click to edit
+      const popupContent = `
+        <div style="min-width: 180px;">
+          <strong style="font-size: 14px;">${territory.name}</strong><br>
+          <span style="color: #666;">${territory.city}, ${territory.state}</span><br>
+          <span style="display: inline-block; padding: 2px 8px; margin: 4px 0; border-radius: 12px; font-size: 12px; background: ${color}22; color: ${color};">
+            ${territory.status === 'locked' ? 'Assigned' : territory.status === 'available' ? 'Available' : 'Waitlist'}
+          </span><br>
+          ${territory.client ? `<span style="font-size: 12px;">Client: ${territory.client.name}</span><br>` : ''}
+          ${territory.population ? `<span style="font-size: 12px;">Pop: ${formatNumber(territory.population)}</span><br>` : ''}
+          <a href="/internal/territories/${territory.id}/edit" style="display: inline-block; margin-top: 8px; padding: 4px 12px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Edit Territory</a>
+        </div>
+      `;
+      layer.bindPopup(popupContent);
+
+      // Make clickable
+      layer.on('click', () => {
+        layer.openPopup();
+      });
+
+      boundaryLayers.set(territory.id, layer);
     }
+
+    // Fit map to show all territories
+    if (allBounds.length > 0) {
+      let combinedBounds = allBounds[0];
+      for (let i = 1; i < allBounds.length; i++) {
+        combinedBounds = combinedBounds.extend(allBounds[i]);
+      }
+      map.fitBounds(combinedBounds, { padding: [50, 50] });
+    }
+
+    isLoadingBoundaries = false;
+  }
+
+  function toggleFullscreen() {
+    isFullscreen = !isFullscreen;
+    // Need to invalidate map size after transition
+    setTimeout(() => {
+      if (map) {
+        map.invalidateSize();
+      }
+    }, 300);
   }
 
   function closeAddModal() {
@@ -401,13 +524,31 @@
 </div>
 
 <!-- Map and Revenue Card -->
-<div class="map-revenue-row">
-  <div class="card map-card">
+<div class="map-revenue-row" class:fullscreen-active={isFullscreen}>
+  <div class="card map-card" class:fullscreen={isFullscreen}>
     <div class="card-header">
-      <h3 class="card-title">Territory Map</h3>
-      <span class="badge badge-info">Interactive</span>
+      <h3 class="card-title">
+        Territory Map
+        {#if isLoadingBoundaries}
+          <span class="loading-indicator">Loading boundaries...</span>
+        {/if}
+      </h3>
+      <div class="map-actions">
+        <span class="badge badge-info">Interactive</span>
+        <button class="fullscreen-btn" onclick={toggleFullscreen} title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}>
+          {#if isFullscreen}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+            </svg>
+          {:else}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+          {/if}
+        </button>
+      </div>
     </div>
-    <div class="map-container" bind:this={mapContainer}></div>
+    <div class="map-container" class:fullscreen-map={isFullscreen} bind:this={mapContainer}></div>
     <div class="map-legend-bar">
       <div class="legend-item">
         <span class="legend-dot available"></span>
@@ -421,6 +562,14 @@
         <span class="legend-dot waitlist"></span>
         <span>Waitlist ({data.stats.waitlist})</span>
       </div>
+      {#if isFullscreen}
+        <button class="btn btn-outline btn-sm" onclick={toggleFullscreen}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          Close Fullscreen
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -628,12 +777,12 @@
                       <circle cx="12" cy="12" r="3"/>
                     </svg>
                   </button>
-                  <button class="action-btn primary" title="Edit Territory" onclick={() => openEditModal(territory)}>
+                  <a href="/internal/territories/{territory.id}/edit" class="action-btn primary" title="Edit Territory">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                  </button>
+                  </a>
                   <button class="action-btn danger" title="Delete Territory" onclick={() => confirmDelete(territory)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polyline points="3 6 5 6 21 6"/>
@@ -2266,5 +2415,93 @@
     .input-row input {
       width: 100% !important;
     }
+  }
+
+  /* Fullscreen Map Styles */
+  .map-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+
+  .fullscreen-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--gray-200);
+    background: white;
+    color: var(--gray-600);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .fullscreen-btn:hover {
+    background: var(--gray-50);
+    color: var(--gray-900);
+    border-color: var(--gray-300);
+  }
+
+  .loading-indicator {
+    font-size: 0.75rem;
+    color: var(--primary-600);
+    margin-left: var(--spacing-2);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Fullscreen mode for map */
+  .map-revenue-row.fullscreen-active {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: block;
+    padding: 0;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.9);
+  }
+
+  .map-revenue-row.fullscreen-active .revenue-card {
+    display: none;
+  }
+
+  .map-card.fullscreen {
+    position: fixed;
+    inset: var(--spacing-4);
+    z-index: 1001;
+    min-height: auto;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .map-container.fullscreen-map {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .map-card.fullscreen .card-header {
+    flex-shrink: 0;
+  }
+
+  .map-card.fullscreen .map-legend-bar {
+    flex-shrink: 0;
+  }
+
+  /* Small button style for fullscreen close */
+  .btn-sm {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 0.8125rem;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
   }
 </style>
