@@ -39,6 +39,14 @@ enum TerritoryType {
   metro
 }
 
+enum BoundaryType {
+  metro
+  county
+  city
+  zipcode
+  custom
+}
+
 enum ContractStatus {
   active
   pending
@@ -608,6 +616,10 @@ model Territory {
   radiusMiles       Int             @map("radius_miles")
   territoryType     TerritoryType   @default(standard) @map("territory_type")
   status            TerritoryStatus @default(available)
+  boundaryType      BoundaryType    @default(custom) @map("boundary_type")
+  msaCode           String?         @map("msa_code")      // Metro Statistical Area code
+  countyFips        String?         @map("county_fips")   // County FIPS code
+  placeFips         String?         @map("place_fips")    // City/Place FIPS code
   population        Int?
   households        Int?
   medianAge         Decimal?        @map("median_age") @db.Decimal(4, 1)

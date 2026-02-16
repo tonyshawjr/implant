@@ -517,13 +517,13 @@
   {/if}
   <div class="filter-group filter-group-action">
     <label class="filter-label">&nbsp;</label>
-    <button class="btn btn-primary" onclick={() => showAddModal = true}>
+    <a href="/internal/territories/create" class="btn btn-primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
       Add Territory
-    </button>
+    </a>
   </div>
 </div>
 
@@ -665,7 +665,7 @@
                 {#if searchValue || statusFilter || stateFilter || typeFilter}
                   <button class="btn btn-outline" onclick={clearFilters}>Clear Filters</button>
                 {:else}
-                  <button class="btn btn-primary" onclick={() => showAddModal = true}>Add Territory</button>
+                  <a href="/internal/territories/create" class="btn btn-primary">Add Territory</a>
                 {/if}
               </div>
             </td>
