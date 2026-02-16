@@ -240,67 +240,83 @@
   // Fetch GeoJSON boundary from Census TIGERweb API
   async function fetchBoundary(type: string, geoid: string): Promise<any> {
     try {
-      // TIGERweb layer IDs for Current service (more reliable):
-      // States=82, Counties=84, Places=86, ZCTAs=2, CBSAs=8
-      // Note: Using 'Current' service instead of ACS2023 for better compatibility
+      // TIGERweb ACS2023 layer IDs (verified working):
+      // Layer 93 = Metropolitan Statistical Areas (MSAs)
+      // Layer 91 = Micropolitan Statistical Areas
+      // Layer 82 = Counties
+      // Layer 28 = Incorporated Places (cities/towns)
+      // Layer 2 = ZIP Code Tabulation Areas (ZCTAs)
       let layerId: number;
       let whereClause: string;
 
       if (type === 'metro') {
-        layerId = 8; // CBSAs in Current service
-        whereClause = `CBSAFP='${geoid}'`;
+        layerId = 93; // Metropolitan Statistical Areas
+        whereClause = `GEOID='${geoid}'`;
       } else if (type === 'county') {
-        layerId = 84;
+        layerId = 82; // Counties
         whereClause = `GEOID='${geoid}'`;
       } else if (type === 'city') {
-        layerId = 86;
+        layerId = 28; // Incorporated Places
         whereClause = `GEOID='${geoid}'`;
       } else {
-        // ZIP codes - try multiple approaches
-        layerId = 2;
-        whereClause = `ZCTA5CE20='${geoid}'`;
+        // ZIP codes
+        layerId = 2; // ZCTAs
+        whereClause = `ZCTA5='${geoid}'`;
       }
 
-      // Try Current service first (more reliable)
-      let url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
+      const url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
 
-      let response = await fetch(url);
-      let data = await response.json();
+      console.log(`Fetching boundary: ${type} ${geoid} from layer ${layerId}`);
+      const response = await fetch(url);
+      const data = await response.json();
 
       if (data.features && data.features.length > 0) {
-        console.log(`Boundary found for ${type} ${geoid}`);
+        console.log(`Boundary found for ${type} ${geoid}:`, data.features[0].properties);
         return data.features[0];
       }
 
-      // Fallback to ACS2023 service
-      if (type === 'metro') {
-        layerId = 88;
-      }
-      url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
-
-      response = await fetch(url);
-      data = await response.json();
-
-      if (data.features && data.features.length > 0) {
-        console.log(`Boundary found (fallback) for ${type} ${geoid}`);
-        return data.features[0];
-      }
-
-      console.warn(`No boundary found for ${type} ${geoid}`);
+      console.warn(`No boundary found for ${type} ${geoid}. Response:`, data);
     } catch (e) {
       console.error('Error fetching boundary:', e);
     }
     return null;
   }
 
-  // Fetch principal cities/places for a metro area
+  // Fetch principal cities and counties for a metro area
   async function fetchMetroPlaces(msaCode: string, metroName: string): Promise<string[]> {
     try {
       // Parse the metro name to extract principal cities
-      // Format is usually "City1-City2-City3, ST-ST Metro Area"
+      // Format is usually "City1-City2-City3, ST-ST Metro Area" or "City, ST Metro Area"
       const namePart = metroName.split(' Metro')[0].split(' Micro')[0];
       const citiesPart = namePart.split(',')[0]; // Get everything before the state abbreviations
       const cities = citiesPart.split('-').map(c => c.trim()).filter(c => c.length > 0);
+
+      // Try to get the counties in this metro from Census API
+      try {
+        const response = await fetch(
+          `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=county:*&in=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${msaCode}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const counties = data.slice(1)
+            .map((row: string[]) => row[0].split(',')[0].replace(' County', ''))
+            .slice(0, 5); // Top 5 counties
+
+          // Combine principal cities with county names
+          const allPlaces = [...cities];
+          counties.forEach((county: string) => {
+            if (!allPlaces.some(p => p.toLowerCase() === county.toLowerCase())) {
+              allPlaces.push(`${county} County`);
+            }
+          });
+
+          return allPlaces;
+        }
+      } catch (e) {
+        console.warn('Could not fetch metro counties:', e);
+      }
+
       return cities;
     } catch (e) {
       console.error('Error parsing metro places:', e);
@@ -308,29 +324,41 @@
     }
   }
 
-  // Fetch cities/places within a county
+  // Fetch cities/towns within a county using county subdivisions
   async function fetchCountyPlaces(stateFips: string, countyFips: string): Promise<string[]> {
     try {
-      // Use Census API to get places in the county
+      // Use Census API to get county subdivisions (townships, cities, etc.)
       const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=place:*&in=state:${stateFips}&in=county:${countyFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=county%20subdivision:*&in=state:${stateFips}&in=county:${countyFips}`
       );
 
       if (!response.ok) {
-        // Some counties don't have places defined this way, try alternative
+        console.warn('County subdivision query failed');
         return [];
       }
 
       const data = await response.json();
 
-      // Sort by population and return top cities
+      // Parse subdivision names and sort by population
       const places = data.slice(1)
-        .map((row: string[]) => ({
-          name: row[0].replace(' city', '').replace(' town', '').replace(' village', '').replace(' CDP', '').split(',')[0],
-          population: parseInt(row[1]) || 0
-        }))
+        .map((row: string[]) => {
+          // Extract city/township name from full name like "Jacksonville township, Onslow County, NC"
+          const fullName = row[0];
+          let name = fullName.split(',')[0]
+            .replace(' township', '')
+            .replace(' town', '')
+            .replace(' city', '')
+            .replace(' UT', '') // Unorganized Territory
+            .replace(' CCD', '') // Census County Division
+            .trim();
+          return {
+            name,
+            population: parseInt(row[1]) || 0
+          };
+        })
+        .filter((p: any) => p.population > 500) // Filter out very small areas
         .sort((a: any, b: any) => b.population - a.population)
-        .slice(0, 10) // Top 10 places
+        .slice(0, 8) // Top 8 places
         .map((p: any) => p.name);
 
       return places;
