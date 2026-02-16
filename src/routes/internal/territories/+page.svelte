@@ -305,7 +305,7 @@
       </button>
     </div>
   {/if}
-  <div class="filter-group" style="margin-left: auto;">
+  <div class="filter-group filter-group-action">
     <label class="filter-label">&nbsp;</label>
     <button class="btn btn-primary" onclick={() => showAddModal = true}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -825,16 +825,25 @@
     gap: var(--spacing-1);
   }
 
+  .filter-group-action {
+    margin-left: auto;
+  }
+
   @media (max-width: 768px) {
     .filter-group {
       flex: 1;
       min-width: calc(50% - var(--spacing-3));
     }
 
-    .filter-group[style*="margin-left: auto"] {
-      margin-left: 0 !important;
+    .filter-group-action {
+      margin-left: 0;
       width: 100%;
       flex: none;
+      min-width: 100%;
+    }
+
+    .filter-group-action .btn {
+      width: 100%;
     }
   }
 

@@ -239,6 +239,7 @@
 </div>
 
 <!-- Tabs Navigation -->
+<div class="tabs-wrapper">
 <div class="tabs">
   <button
     class="tab"
@@ -287,6 +288,7 @@
   >
     Optimizations
   </button>
+</div>
 </div>
 
 <!-- Voice Profile Queue Tab -->
@@ -414,12 +416,12 @@
 <!-- Campaign Factory Tab -->
 {#if activeTab === 'campaign-factory'}
   <div class="card">
-    <div class="card-header">
+    <div class="card-header card-header-with-action">
       <div>
         <h3 class="card-title">Campaign Factory</h3>
         <p class="card-subtitle">Campaigns in draft or pending review status</p>
       </div>
-      <button class="btn btn-primary">
+      <button class="btn btn-primary header-action-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
@@ -833,23 +835,25 @@
     color: var(--gray-900);
   }
 
-  /* Tabs Container - Mobile Scrolling */
-  :global(.tabs) {
+  /* Tabs Wrapper - Mobile Scrolling */
+  .tabs-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    margin-bottom: var(--spacing-6);
   }
 
-  :global(.tabs)::-webkit-scrollbar {
+  .tabs-wrapper::-webkit-scrollbar {
     display: none;
   }
 
   @media (max-width: 768px) {
-    :global(.tabs) {
-      margin: 0 calc(-1 * var(--spacing-4));
-      padding: 0 var(--spacing-4);
-      flex-wrap: nowrap;
+    .tabs-wrapper {
+      margin-left: calc(-1 * var(--spacing-4));
+      margin-right: calc(-1 * var(--spacing-4));
+      padding-left: var(--spacing-4);
+      padding-right: var(--spacing-4);
     }
   }
 
@@ -881,20 +885,22 @@
     color: var(--danger-600);
   }
 
-  /* Card Header - Mobile */
-  :global(.card-header) {
+  /* Card Header with Action Button - Mobile */
+  .card-header-with-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
     gap: var(--spacing-3);
   }
 
   @media (max-width: 640px) {
-    :global(.card-header) {
+    .card-header-with-action {
       flex-direction: column;
       align-items: stretch;
     }
 
-    :global(.card-header) > button,
-    :global(.card-header) > .btn {
+    .header-action-btn {
       width: 100%;
     }
   }
@@ -1286,18 +1292,6 @@
     color: var(--gray-500);
     padding-left: var(--spacing-2);
     border-left: 1px solid var(--gray-200);
-  }
-
-  /* Table Container - Mobile Scrolling */
-  :global(.table-container) {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  @media (max-width: 768px) {
-    :global(.table-container) .table {
-      min-width: 700px;
-    }
   }
 
   /* Table Actions - Mobile */
