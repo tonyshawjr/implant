@@ -214,73 +214,74 @@
 
 <!-- View Toggle & Filters -->
 <div class="filters-bar">
-  <div class="view-toggle">
-    <button
-      class="view-toggle-btn"
-      class:active={selectedView === 'pipeline'}
-      onclick={() => selectedView = 'pipeline'}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7"/>
-        <rect x="14" y="3" width="7" height="7"/>
-        <rect x="14" y="14" width="7" height="7"/>
-        <rect x="3" y="14" width="7" height="7"/>
-      </svg>
-      Pipeline
-    </button>
-    <button
-      class="view-toggle-btn"
-      class:active={selectedView === 'table'}
-      onclick={() => selectedView = 'table'}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="8" y1="6" x2="21" y2="6"/>
-        <line x1="8" y1="12" x2="21" y2="12"/>
-        <line x1="8" y1="18" x2="21" y2="18"/>
-        <line x1="3" y1="6" x2="3.01" y2="6"/>
-        <line x1="3" y1="12" x2="3.01" y2="12"/>
-        <line x1="3" y1="18" x2="3.01" y2="18"/>
-      </svg>
-      Table
-    </button>
-  </div>
-
-  <div class="filter-group search-filter">
-    <label class="filter-label">Search</label>
-    <div style="position: relative;">
-      <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input
-        type="text"
-        class="form-input filter-input"
-        placeholder="Search prospects..."
-        style="padding-left: 40px;"
-        bind:value={searchQuery}
+  <div class="filters-top-row">
+    <div class="view-toggle">
+      <button
+        class="view-toggle-btn"
+        class:active={selectedView === 'pipeline'}
+        onclick={() => selectedView = 'pipeline'}
       >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span class="view-toggle-label">Pipeline</span>
+      </button>
+      <button
+        class="view-toggle-btn"
+        class:active={selectedView === 'table'}
+        onclick={() => selectedView = 'table'}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        <span class="view-toggle-label">Table</span>
+      </button>
     </div>
-  </div>
 
-  <div class="filter-group">
-    <label class="filter-label">Stage</label>
-    <select class="form-input form-select filter-input" bind:value={stageFilter}>
-      <option value="">All Stages</option>
-      {#each data.stages as stage}
-        <option value={stage}>{getStageLabel(stage)}</option>
-      {/each}
-    </select>
-  </div>
-
-  <div class="filter-group" style="margin-left: auto;">
-    <label class="filter-label">&nbsp;</label>
-    <button class="btn btn-primary" onclick={() => showAddProspectModal = true}>
+    <button class="btn btn-primary add-prospect-btn" onclick={() => showAddProspectModal = true}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
-      Add Prospect
+      <span class="btn-text">Add Prospect</span>
     </button>
+  </div>
+
+  <div class="filters-bottom-row">
+    <div class="filter-group search-filter">
+      <label class="filter-label">Search</label>
+      <div style="position: relative;">
+        <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          class="form-input filter-input"
+          placeholder="Search prospects..."
+          style="padding-left: 40px;"
+          bind:value={searchQuery}
+        >
+      </div>
+    </div>
+
+    <div class="filter-group stage-filter">
+      <label class="filter-label">Stage</label>
+      <select class="form-input form-select filter-input" bind:value={stageFilter}>
+        <option value="">All Stages</option>
+        {#each data.stages as stage}
+          <option value={stage}>{getStageLabel(stage)}</option>
+        {/each}
+      </select>
+    </div>
   </div>
 </div>
 
@@ -353,7 +354,8 @@
 {:else}
   <!-- Table View -->
   <div class="card">
-    <div class="table-container">
+    <!-- Desktop Table -->
+    <div class="table-container desktop-table">
       <table class="table">
         <thead>
           <tr>
@@ -476,6 +478,85 @@
           {/if}
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Card List -->
+    <div class="mobile-card-list">
+      {#if filteredProspects.length > 0}
+        {#each filteredProspects as prospect}
+          <a href="/internal/sales/{prospect.id}" class="mobile-card-item prospect-mobile-card">
+            <div class="mobile-card-header">
+              <div class="lead-cell">
+                <div class="lead-avatar">{getInitials(prospect.contactName)}</div>
+                <div class="lead-info">
+                  <div class="lead-name">{prospect.contactName}</div>
+                  <div class="lead-email">{prospect.practiceName}</div>
+                </div>
+              </div>
+              <span class="badge {getStageBadgeClass(prospect.stage)}">
+                {getStageLabel(prospect.stage)}
+              </span>
+            </div>
+            <div class="mobile-card-content">
+              {#if prospect.location}
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">Location</span>
+                  <span class="text-sm">{prospect.location}</span>
+                </div>
+              {/if}
+              <div class="mobile-card-row">
+                <span class="mobile-card-label">Value</span>
+                <span class="value-amount">
+                  {#if prospect.monthlyValue}
+                    {formatCurrency(prospect.monthlyValue)}/mo
+                  {:else}
+                    -
+                  {/if}
+                </span>
+              </div>
+              <div class="mobile-card-row">
+                <span class="mobile-card-label">Updated</span>
+                <span class="text-sm text-gray-500">{formatRelativeTime(prospect.updatedAt)}</span>
+              </div>
+            </div>
+            <div class="mobile-card-actions">
+              <button class="btn btn-sm btn-outline" onclick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                Call
+              </button>
+              <button class="btn btn-sm btn-outline" onclick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                Email
+              </button>
+            </div>
+          </a>
+        {/each}
+      {:else}
+        <div class="empty-state-mobile">
+          <div class="empty-state-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h3 class="empty-state-title">No prospects found</h3>
+          <p class="empty-state-description">
+            {#if searchQuery || stageFilter}
+              Try adjusting your filters.
+            {:else}
+              Get started by adding your first prospect.
+            {/if}
+          </p>
+          <button class="btn btn-primary" onclick={() => showAddProspectModal = true}>Add Prospect</button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
@@ -1276,5 +1357,265 @@
     font-size: 0.875rem;
     color: var(--gray-500);
     margin-bottom: var(--spacing-4);
+  }
+
+  /* Mobile Responsive Styles */
+  .filters-top-row {
+    display: contents;
+  }
+
+  .filters-bottom-row {
+    display: contents;
+  }
+
+  .add-prospect-btn {
+    margin-left: auto;
+  }
+
+  .desktop-table {
+    display: block;
+  }
+
+  .mobile-card-list {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    /* Filters bar mobile */
+    .filters-bar {
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+
+    .filters-top-row {
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--spacing-3);
+    }
+
+    .filters-bottom-row {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: var(--spacing-3);
+    }
+
+    .view-toggle {
+      flex-shrink: 0;
+    }
+
+    .view-toggle-btn {
+      padding: 8px 12px;
+      min-height: 44px;
+    }
+
+    .view-toggle-label {
+      display: none;
+    }
+
+    .add-prospect-btn {
+      min-height: 44px;
+      padding: 0 var(--spacing-3);
+    }
+
+    .add-prospect-btn .btn-text {
+      display: none;
+    }
+
+    .filter-group {
+      width: 100%;
+    }
+
+    .search-filter,
+    .stage-filter {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .filter-input {
+      min-width: 0;
+      width: 100%;
+    }
+
+    /* Pipeline container mobile */
+    .pipeline-container {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      gap: var(--spacing-3);
+      padding: var(--spacing-2);
+      margin: 0 calc(-1 * var(--spacing-4));
+      padding-left: var(--spacing-4);
+      padding-right: var(--spacing-4);
+    }
+
+    .pipeline-column {
+      flex: 0 0 280px;
+      scroll-snap-align: start;
+      min-height: 300px;
+    }
+
+    .prospect-card {
+      padding: var(--spacing-3);
+    }
+
+    /* Table/Card toggle */
+    .desktop-table {
+      display: none;
+    }
+
+    .mobile-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+
+    .mobile-card-item {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-4);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .prospect-mobile-card:active {
+      background: var(--gray-50);
+    }
+
+    .mobile-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--spacing-3);
+      margin-bottom: var(--spacing-3);
+    }
+
+    .mobile-card-header .lead-cell {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mobile-card-header .lead-avatar {
+      width: 44px;
+      height: 44px;
+      font-size: 0.9375rem;
+    }
+
+    .mobile-card-header .lead-name {
+      font-size: 1rem;
+    }
+
+    .mobile-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+      margin-bottom: var(--spacing-3);
+    }
+
+    .mobile-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mobile-card-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .mobile-card-actions {
+      display: flex;
+      gap: var(--spacing-2);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .mobile-card-actions .btn {
+      flex: 1;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    /* Empty state mobile */
+    .empty-state-mobile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--spacing-8) var(--spacing-4);
+      text-align: center;
+    }
+
+    /* Activities on mobile */
+    .activity-item {
+      padding: var(--spacing-3);
+    }
+
+    .activity-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-1);
+    }
+
+    /* Modal mobile */
+    .modal-backdrop {
+      padding: var(--spacing-4);
+      align-items: flex-end;
+    }
+
+    .modal {
+      max-width: none;
+      width: 100%;
+      max-height: calc(100vh - var(--spacing-8));
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+
+    .modal-body {
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .form-group.full-width {
+      grid-column: span 1;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      gap: var(--spacing-2);
+    }
+
+    .modal-footer .btn {
+      width: 100%;
+      min-height: 44px;
+    }
+
+    /* Section header */
+    .section-header {
+      margin-top: var(--spacing-6);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stats-row {
+      gap: var(--spacing-3);
+    }
+
+    .pipeline-column {
+      flex: 0 0 260px;
+    }
   }
 </style>

@@ -24,12 +24,30 @@
     breadcrumbs = [],
     user = null
   }: Props = $props();
+
+  // Mobile sidebar state
+  let sidebarOpen = $state(false);
+
+  function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+  }
+
+  function closeSidebar() {
+    sidebarOpen = false;
+  }
 </script>
 
 <div class="app-container">
-  <Sidebar {variant} {user} />
+  <!-- Mobile sidebar overlay -->
+  <button
+    class="sidebar-overlay {sidebarOpen ? 'visible' : ''}"
+    onclick={closeSidebar}
+    aria-label="Close sidebar"
+  ></button>
 
-  <Header {title} {breadcrumbs} {user} />
+  <Sidebar {variant} {user} isOpen={sidebarOpen} onClose={closeSidebar} />
+
+  <Header {title} {breadcrumbs} {user} onMenuToggle={toggleSidebar} />
 
   <main class="main-content">
     <div class="page-content">
@@ -37,3 +55,28 @@
     </div>
   </main>
 </div>
+
+<style>
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .sidebar-overlay.visible {
+    display: block;
+    opacity: 1;
+  }
+
+  @media (min-width: 1025px) {
+    .sidebar-overlay {
+      display: none !important;
+    }
+  }
+</style>

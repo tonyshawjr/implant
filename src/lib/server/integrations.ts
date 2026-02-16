@@ -6,6 +6,7 @@ export type IntegrationId =
   | 'stripe'
   | 'twilio'
   | 'sendgrid'
+  | 'resend'
   | 'meta'
   | 'google-ads'
   | 'mapbox'
@@ -182,6 +183,38 @@ export const INTEGRATIONS_METADATA: IntegrationMeta[] = [
         type: 'email',
         required: true,
         placeholder: 'noreply@yourdomain.com'
+      },
+      {
+        key: 'fromName',
+        label: 'From Name',
+        type: 'text',
+        required: false,
+        placeholder: 'SqueezMedia'
+      }
+    ]
+  },
+  {
+    id: 'resend',
+    name: 'Resend',
+    description: 'Modern email API for developers',
+    icon: 'mail',
+    category: 'communication',
+    fields: [
+      {
+        key: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        required: true,
+        placeholder: 're_...',
+        helpText: 'Your Resend API key from resend.com/api-keys'
+      },
+      {
+        key: 'fromEmail',
+        label: 'From Email',
+        type: 'email',
+        required: true,
+        placeholder: 'noreply@yourdomain.com',
+        helpText: 'Must be from a verified domain'
       },
       {
         key: 'fromName',
@@ -575,7 +608,7 @@ export async function disconnectIntegration(
 
   const configValue: IntegrationConfig = {
     isConnected: false,
-    lastSync: null
+    lastSync: undefined
   };
 
   await prisma.systemSetting.upsert({
@@ -606,7 +639,7 @@ export async function updateIntegrationSyncTime(
   });
 
   if (setting && setting.value) {
-    const config = setting.value as IntegrationConfig;
+    const config = setting.value as unknown as IntegrationConfig;
     config.lastSync = new Date().toISOString();
 
     await prisma.systemSetting.update({
@@ -630,7 +663,7 @@ export async function getIntegrationCredentials(
 
   if (!setting || !setting.value) return null;
 
-  const config = setting.value as IntegrationConfig;
+  const config = setting.value as unknown as IntegrationConfig;
   if (!config.isConnected || !config.config) return null;
 
   // Decrypt password fields
@@ -664,6 +697,6 @@ export async function isIntegrationConnected(integrationId: IntegrationId): Prom
 
   if (!setting || !setting.value) return false;
 
-  const config = setting.value as IntegrationConfig;
+  const config = setting.value as unknown as IntegrationConfig;
   return config.isConnected === true;
 }

@@ -1,14 +1,48 @@
 import { prisma } from '../db';
-
-// SendGrid configuration
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@squeezmedia.com';
-const FROM_NAME = process.env.FROM_NAME || 'SqueezMedia';
+import {
+  getIntegrationCredentials,
+  isIntegrationConnected,
+  type IntegrationId
+} from '../integrations';
 
 export interface EmailResult {
   success: boolean;
   messageId?: string;
   error?: string;
+}
+
+export type EmailProvider = 'sendgrid' | 'resend' | 'smtp';
+
+interface EmailConfig {
+  provider: EmailProvider;
+  fromEmail: string;
+  fromName: string;
+  credentials: Record<string, string>;
+}
+
+/**
+ * Get the configured email provider and credentials
+ */
+async function getEmailConfig(): Promise<EmailConfig | null> {
+  // Check providers in priority order: Resend, SendGrid, SMTP
+  const providers: IntegrationId[] = ['resend', 'sendgrid', 'smtp'];
+
+  for (const provider of providers) {
+    const isConnected = await isIntegrationConnected(provider);
+    if (isConnected) {
+      const credentials = await getIntegrationCredentials(provider);
+      if (credentials) {
+        return {
+          provider: provider as EmailProvider,
+          fromEmail: credentials.fromEmail || 'noreply@squeezmedia.com',
+          fromName: credentials.fromName || 'SqueezMedia',
+          credentials
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 export interface LeadEmailInfo {
@@ -39,14 +73,136 @@ export interface InvoiceEmailInfo {
 }
 
 /**
- * Check if SendGrid is properly configured
+ * Check if any email provider is configured
  */
-export function isSendGridConfigured(): boolean {
-  return !!SENDGRID_API_KEY;
+export async function isEmailConfigured(): Promise<boolean> {
+  const config = await getEmailConfig();
+  return config !== null;
 }
 
 /**
- * Send an email using SendGrid
+ * Get the active email provider name
+ */
+export async function getActiveEmailProvider(): Promise<EmailProvider | null> {
+  const config = await getEmailConfig();
+  return config?.provider || null;
+}
+
+/**
+ * Send an email via SendGrid
+ */
+async function sendViaSendGrid(
+  to: string,
+  subject: string,
+  htmlContent: string,
+  textContent: string | undefined,
+  config: EmailConfig
+): Promise<EmailResult> {
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${config.credentials.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: config.fromEmail, name: config.fromName },
+      subject,
+      content: [
+        ...(textContent ? [{ type: 'text/plain', value: textContent }] : []),
+        { type: 'text/html', value: htmlContent }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`SendGrid API error: ${response.status} - ${errorText}`);
+  }
+
+  return {
+    success: true,
+    messageId: response.headers.get('X-Message-Id') || undefined
+  };
+}
+
+/**
+ * Send an email via Resend
+ */
+async function sendViaResend(
+  to: string,
+  subject: string,
+  htmlContent: string,
+  textContent: string | undefined,
+  config: EmailConfig
+): Promise<EmailResult> {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${config.credentials.apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: config.fromName ? `${config.fromName} <${config.fromEmail}>` : config.fromEmail,
+      to: [to],
+      subject,
+      html: htmlContent,
+      ...(textContent ? { text: textContent } : {})
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Resend API error: ${response.status} - ${JSON.stringify(errorData)}`);
+  }
+
+  const data = await response.json();
+
+  return {
+    success: true,
+    messageId: data.id
+  };
+}
+
+/**
+ * Send an email via SMTP using nodemailer
+ */
+async function sendViaSMTP(
+  to: string,
+  subject: string,
+  htmlContent: string,
+  textContent: string | undefined,
+  config: EmailConfig
+): Promise<EmailResult> {
+  // Dynamic import of nodemailer to avoid bundling issues
+  const nodemailer = await import('nodemailer');
+
+  const transporter = nodemailer.createTransport({
+    host: config.credentials.host,
+    port: parseInt(config.credentials.port || '587', 10),
+    secure: config.credentials.secure === 'true',
+    auth: {
+      user: config.credentials.username,
+      pass: config.credentials.password
+    }
+  });
+
+  const info = await transporter.sendMail({
+    from: config.fromName ? `"${config.fromName}" <${config.fromEmail}>` : config.fromEmail,
+    to,
+    subject,
+    text: textContent,
+    html: htmlContent
+  });
+
+  return {
+    success: true,
+    messageId: info.messageId
+  };
+}
+
+/**
+ * Send an email using the configured provider
  */
 async function sendEmail(
   to: string,
@@ -55,42 +211,29 @@ async function sendEmail(
   textContent?: string
 ): Promise<EmailResult> {
   try {
-    if (!isSendGridConfigured()) {
-      console.warn('SendGrid is not configured. Email not sent.');
+    const config = await getEmailConfig();
+
+    if (!config) {
+      console.warn('No email provider configured. Email not sent.');
       return {
         success: false,
-        error: 'SendGrid is not configured'
+        error: 'No email provider configured. Please configure SendGrid, Resend, or SMTP in Settings > Integrations.'
       };
     }
 
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: FROM_EMAIL, name: FROM_NAME },
-        subject,
-        content: [
-          ...(textContent ? [{ type: 'text/plain', value: textContent }] : []),
-          { type: 'text/html', value: htmlContent }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`SendGrid API error: ${response.status} - ${errorText}`);
+    switch (config.provider) {
+      case 'sendgrid':
+        return await sendViaSendGrid(to, subject, htmlContent, textContent, config);
+      case 'resend':
+        return await sendViaResend(to, subject, htmlContent, textContent, config);
+      case 'smtp':
+        return await sendViaSMTP(to, subject, htmlContent, textContent, config);
+      default:
+        return {
+          success: false,
+          error: `Unknown email provider: ${config.provider}`
+        };
     }
-
-    const messageId = response.headers.get('X-Message-Id') || undefined;
-
-    return {
-      success: true,
-      messageId
-    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error sending email';
     console.error('Error sending email:', errorMessage);

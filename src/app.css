@@ -1100,7 +1100,9 @@ a:hover {
  * Use Tailwind utility classes directly instead (flex, items-center, gap-4, etc.)
  */
 
-/* Responsive */
+/* ===== MOBILE RESPONSIVENESS ===== */
+
+/* Mobile breakpoints */
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
@@ -1116,6 +1118,454 @@ a:hover {
 
   .header {
     left: 0;
+  }
+}
+
+/* Mobile sidebar overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* Mobile hamburger menu button */
+.mobile-menu-btn {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-menu-btn:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.mobile-menu-btn:active {
+  background: var(--gray-200);
+}
+
+@media (max-width: 1024px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+}
+
+/* Ensure touch targets are at least 44px on mobile */
+@media (max-width: 768px) {
+  .btn,
+  .action-btn,
+  .nav-item,
+  .tab {
+    min-height: 44px;
+  }
+
+  .form-input,
+  .form-select {
+    min-height: 44px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+}
+
+/* Mobile page content padding */
+@media (max-width: 768px) {
+  .page-content {
+    padding: var(--spacing-4);
+  }
+}
+
+/* Mobile header adjustments */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 var(--spacing-4);
+  }
+
+  .header-title {
+    font-size: 1rem;
+  }
+
+  .header-search {
+    display: none;
+  }
+
+  .header-breadcrumb {
+    display: none;
+  }
+}
+
+/* ===== TABLE TO CARD TRANSFORMS ===== */
+
+/* Hide tables on mobile, show card view */
+@media (max-width: 768px) {
+  .table-container {
+    overflow-x: visible;
+  }
+
+  /* When using responsive-table class, convert to cards */
+  .responsive-table .table {
+    display: block;
+  }
+
+  .responsive-table .table thead {
+    display: none;
+  }
+
+  .responsive-table .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .responsive-table .table tbody tr {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-4);
+    gap: var(--spacing-3);
+  }
+
+  .responsive-table .table tbody tr:hover {
+    background: white;
+  }
+
+  .responsive-table .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    border: none;
+    gap: var(--spacing-2);
+  }
+
+  .responsive-table .table td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  /* Full width cells */
+  .responsive-table .table td.mobile-full-width {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .responsive-table .table td.mobile-full-width::before {
+    margin-bottom: var(--spacing-2);
+  }
+
+  /* Actions cell styling */
+  .responsive-table .table td:last-child {
+    border-top: 1px solid var(--gray-100);
+    padding-top: var(--spacing-3);
+    margin-top: var(--spacing-1);
+    justify-content: flex-end;
+  }
+
+  .responsive-table .table td:last-child::before {
+    display: none;
+  }
+}
+
+/* Alternative: Mobile card list component */
+.mobile-card-list {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .desktop-table {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-table {
+    display: block;
+  }
+
+  .mobile-card-list {
+    display: none;
+  }
+}
+
+/* Mobile card item */
+.mobile-card-item {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-4);
+}
+
+.mobile-card-item:active {
+  background: var(--gray-50);
+}
+
+.mobile-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+}
+
+.mobile-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.mobile-card-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mobile-card-value {
+  font-weight: 500;
+  color: var(--gray-900);
+}
+
+.mobile-card-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--gray-100);
+}
+
+.mobile-card-actions .btn {
+  flex: 1;
+}
+
+/* ===== MOBILE MODAL STYLES ===== */
+@media (max-width: 768px) {
+  .modal-overlay,
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 95vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    margin: 0;
+  }
+
+  .modal-body {
+    max-height: calc(95vh - 140px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+}
+
+/* ===== MOBILE FILTERS ===== */
+@media (max-width: 768px) {
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-3);
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-input {
+    min-width: 100%;
+  }
+
+  .search-filter {
+    order: -1;
+  }
+
+  .view-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .view-toggle-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* ===== MOBILE STATS ROW ===== */
+@media (max-width: 768px) {
+  .stat-card {
+    padding: var(--spacing-4);
+  }
+
+  .stat-card-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-card-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ===== MOBILE BUTTONS ===== */
+@media (max-width: 768px) {
+  /* Full width buttons on mobile */
+  .btn-mobile-full {
+    width: 100%;
+  }
+
+  /* Icon-only buttons on mobile */
+  .btn-mobile-icon .btn-text {
+    display: none;
+  }
+
+  .btn-mobile-icon {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+}
+
+/* ===== MOBILE QUICK ACTIONS ===== */
+@media (max-width: 768px) {
+  .quick-actions {
+    gap: var(--spacing-1);
+  }
+
+  .action-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ===== MOBILE PAGINATION ===== */
+@media (max-width: 768px) {
+  .pagination {
+    flex-direction: column;
+    gap: var(--spacing-3);
+    text-align: center;
+  }
+
+  .pagination-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-controls .btn {
+    flex: 1;
+  }
+}
+
+/* ===== MOBILE PIPELINE VIEW ===== */
+@media (max-width: 768px) {
+  .pipeline-container,
+  .pipeline-columns {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+
+  .pipeline-column {
+    min-height: auto;
+    max-height: none;
+  }
+
+  .pipeline-column-body {
+    max-height: none;
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+/* Hide on mobile */
+.hide-mobile {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+.show-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .show-mobile {
+    display: block;
+  }
+
+  .show-mobile-flex {
+    display: flex;
+  }
+}
+
+/* Stack on mobile */
+@media (max-width: 768px) {
+  .stack-mobile {
+    flex-direction: column;
+  }
+
+  .stack-mobile > * {
+    width: 100%;
+  }
+}
+
+/* No horizontal scroll */
+.no-horizontal-scroll {
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
   }
 }
 

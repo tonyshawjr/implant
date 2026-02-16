@@ -136,8 +136,8 @@
   </div>
 </div>
 
-<!-- Clients Table -->
-<div class="card">
+<!-- Clients Table - Desktop -->
+<div class="card desktop-table">
   <div class="table-container">
     <table class="table">
       <thead>
@@ -223,6 +223,58 @@
   </div>
 </div>
 
+<!-- Clients Cards - Mobile -->
+<div class="mobile-card-list">
+  {#if data.clients && data.clients.length > 0}
+    {#each data.clients as client}
+      <a href="/internal/clients/{client.id}" class="mobile-card-item">
+        <div class="mobile-card-header">
+          <div class="client-avatar">{getInitials(client.name)}</div>
+          <div class="client-info">
+            <div class="client-practice-name">{client.name}</div>
+            <div class="client-contact">{client.territory?.location || 'Unassigned'}</div>
+          </div>
+          <div class="health-score {getHealthClass(client.healthScore || 0)}">
+            {client.healthScore || 0}
+          </div>
+        </div>
+        <div class="mobile-card-content">
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">MRR</span>
+            <span class="mobile-card-value">{formatCurrency(client.contract?.mrr || 0)}</span>
+          </div>
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Leads/Mo</span>
+            <span class="mobile-card-value">{client.leadsThisMonth || 0}</span>
+          </div>
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">CPL</span>
+            <span class="mobile-card-value cpl-value {(client.cpl || 0) <= 50 ? 'good' : (client.cpl || 0) <= 75 ? 'average' : 'poor'}">{formatCurrency(client.cpl || 0)}</span>
+          </div>
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">Status</span>
+            <span class="contract-status {client.status || 'active'}">{client.status || 'Active'}</span>
+          </div>
+        </div>
+      </a>
+    {/each}
+  {:else}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <h3 class="empty-state-title">No clients yet</h3>
+      <p class="empty-state-description">Get started by adding your first client.</p>
+      <button class="btn btn-primary" onclick={() => showAddClientModal = true}>Add First Client</button>
+    </div>
+  {/if}
+</div>
+
 <!-- Add Client Modal -->
 {#if showAddClientModal}
 <div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (showAddClientModal = false)}>
@@ -267,7 +319,7 @@
           <input type="text" id="name" name="name" class="form-input" placeholder="e.g., Smile Dental Care" required />
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-4);">
+        <div class="form-grid-2">
           <div class="form-group">
             <label for="email" class="form-label">Contact Email *</label>
             <input type="email" id="email" name="email" class="form-input" placeholder="contact@practice.com" required />
@@ -278,7 +330,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--spacing-4);">
+        <div class="form-grid-3">
           <div class="form-group">
             <label for="city" class="form-label">City *</label>
             <input type="text" id="city" name="city" class="form-input" placeholder="City" required />
@@ -354,10 +406,28 @@
     margin-bottom: var(--spacing-6);
   }
 
+  @media (max-width: 768px) {
+    .filters-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--spacing-3);
+    }
+  }
+
   .filter-group {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-1);
+  }
+
+  @media (max-width: 768px) {
+    .filter-group {
+      width: 100%;
+    }
+
+    .filter-group[style*="margin-left: auto"] {
+      margin-left: 0 !important;
+    }
   }
 
   .filter-label {
@@ -372,9 +442,42 @@
     min-width: 180px;
   }
 
+  @media (max-width: 768px) {
+    .filter-input {
+      min-width: 100%;
+    }
+  }
+
   .search-filter {
     flex: 1;
     min-width: 250px;
+  }
+
+  @media (max-width: 768px) {
+    .search-filter {
+      min-width: 100%;
+      order: -1;
+    }
+  }
+
+  /* Form grids for modal */
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-4);
+  }
+
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--spacing-4);
+  }
+
+  @media (max-width: 768px) {
+    .form-grid-2,
+    .form-grid-3 {
+      grid-template-columns: 1fr;
+    }
   }
 
   .client-name-cell {

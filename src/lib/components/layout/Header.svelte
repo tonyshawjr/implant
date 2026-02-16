@@ -6,9 +6,10 @@
       firstName: string;
       lastName: string;
     } | null;
+    onMenuToggle?: () => void;
   }
 
-  let { title = 'Dashboard', breadcrumbs = [], user = null }: Props = $props();
+  let { title = 'Dashboard', breadcrumbs = [], user = null, onMenuToggle }: Props = $props();
 
   function getInitials(firstName: string, lastName: string): string {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
@@ -17,6 +18,15 @@
 
 <header class="header">
   <div class="header-left">
+    <!-- Mobile hamburger menu button -->
+    <button class="mobile-menu-btn" onclick={onMenuToggle} aria-label="Toggle menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
     <h1 class="header-title">{title}</h1>
     {#if breadcrumbs.length > 0}
       <div class="header-breadcrumb">

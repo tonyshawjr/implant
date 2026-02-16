@@ -15,10 +15,13 @@ export {
   sendInvoiceEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail,
-  isSendGridConfigured,
+  sendTeamInviteEmail,
+  isEmailConfigured,
+  getActiveEmailProvider,
   type LeadEmailInfo,
   type InvoiceEmailInfo,
-  type EmailResult
+  type EmailResult,
+  type EmailProvider
 } from './email';
 
 // Notification Preferences

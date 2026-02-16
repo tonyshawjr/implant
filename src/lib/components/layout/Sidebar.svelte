@@ -8,9 +8,18 @@
       lastName: string;
       role: string;
     } | null;
+    isOpen?: boolean;
+    onClose?: () => void;
   }
 
-  let { variant = 'internal', user = null }: Props = $props();
+  let { variant = 'internal', user = null, isOpen = false, onClose }: Props = $props();
+
+  // Close sidebar when navigating on mobile
+  function handleNavClick() {
+    if (onClose && window.innerWidth < 1024) {
+      onClose();
+    }
+  }
 
   // Get initials from user name
   function getInitials(firstName: string, lastName: string): string {
@@ -61,7 +70,7 @@
   }
 </script>
 
-<aside class="sidebar {variant === 'internal' ? 'sidebar-internal' : ''}">
+<aside class="sidebar {variant === 'internal' ? 'sidebar-internal' : ''} {isOpen ? 'open' : ''}">
   <div class="sidebar-logo">
     <div class="sidebar-logo-icon {variant === 'internal' ? 'sidebar-logo-icon-internal' : ''}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -84,7 +93,7 @@
       <div class="nav-section">
         <div class="nav-section-title">Management</div>
         {#each internalNavItems.management as item}
-          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}">
+          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}" onclick={handleNavClick}>
             <svg class="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               {#if item.icon === 'users'}
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -118,7 +127,7 @@
       <div class="nav-section">
         <div class="nav-section-title">Business</div>
         {#each internalNavItems.business as item}
-          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}">
+          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}" onclick={handleNavClick}>
             <svg class="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               {#if item.icon === 'credit-card'}
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
@@ -146,7 +155,7 @@
       <div class="nav-section">
         <div class="nav-section-title">System</div>
         {#each internalNavItems.system as item}
-          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}">
+          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}" onclick={handleNavClick}>
             <svg class="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               {#if item.icon === 'settings'}
                 <circle cx="12" cy="12" r="3"/>
@@ -162,7 +171,7 @@
       <div class="nav-section">
         <div class="nav-section-title">Dashboard</div>
         {#each clientNavItems.main as item}
-          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}">
+          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}" onclick={handleNavClick}>
             <svg class="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               {#if item.icon === 'home'}
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -193,7 +202,7 @@
       <div class="nav-section">
         <div class="nav-section-title">Account</div>
         {#each clientNavItems.account as item}
-          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}">
+          <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}" onclick={handleNavClick}>
             <svg class="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               {#if item.icon === 'credit-card'}
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
@@ -242,5 +251,17 @@
 
   .sidebar-logo-icon-internal {
     background: linear-gradient(135deg, #6366f1, #4f46e5);
+  }
+
+  /* Mobile sidebar transitions */
+  @media (max-width: 1024px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
   }
 </style>

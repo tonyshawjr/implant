@@ -13,7 +13,7 @@ import {
   type NotificationPreference
 } from '$lib/server/notifications';
 import { sendVerificationCode as sendSmsVerificationCode, sendSMS } from '$lib/server/twilio';
-import { sendLeadEmail, isSendGridConfigured } from '$lib/server/notifications/email';
+import { sendLeadEmail, isEmailConfigured } from '$lib/server/notifications/email';
 
 export const load: PageServerLoad = async ({ parent }) => {
   const { user, organization } = await parent();
@@ -500,8 +500,8 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!isSendGridConfigured()) {
-      return fail(500, { error: 'Email service is not configured' });
+    if (!await isEmailConfigured()) {
+      return fail(500, { error: 'Email service is not configured. Please configure SendGrid, Resend, or SMTP in Settings > Integrations.' });
     }
 
     const dashboardUrl = process.env.PUBLIC_APP_URL || 'https://app.squeezmedia.com';

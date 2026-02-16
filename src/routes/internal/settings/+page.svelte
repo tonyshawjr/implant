@@ -196,56 +196,58 @@
 </div>
 
 <!-- Tabs -->
-<div class="tabs">
-  <button
-    class="tab"
-    class:active={activeTab === 'general'}
-    onclick={() => activeTab = 'general'}
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-    General
-  </button>
-  <button
-    class="tab"
-    class:active={activeTab === 'notifications'}
-    onclick={() => activeTab = 'notifications'}
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-    </svg>
-    Notifications
-  </button>
-  <button
-    class="tab"
-    class:active={activeTab === 'integrations'}
-    onclick={() => activeTab = 'integrations'}
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34"/>
-      <path d="M23 11v-1a2 2 0 0 0-2-2h-2"/>
-      <path d="M11 15l1.34-1.34"/>
-      <path d="M14 18V9"/>
-      <path d="M18 14h-9"/>
-    </svg>
-    Integrations
-  </button>
-  <button
-    class="tab"
-    class:active={activeTab === 'team'}
-    onclick={() => activeTab = 'team'}
-  >
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-    Team
-  </button>
+<div class="tabs-wrapper">
+  <div class="tabs">
+    <button
+      class="tab"
+      class:active={activeTab === 'general'}
+      onclick={() => activeTab = 'general'}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      <span class="tab-label">General</span>
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'notifications'}
+      onclick={() => activeTab = 'notifications'}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <span class="tab-label">Notifications</span>
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'integrations'}
+      onclick={() => activeTab = 'integrations'}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34"/>
+        <path d="M23 11v-1a2 2 0 0 0-2-2h-2"/>
+        <path d="M11 15l1.34-1.34"/>
+        <path d="M14 18V9"/>
+        <path d="M18 14h-9"/>
+      </svg>
+      <span class="tab-label">Integrations</span>
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'team'}
+      onclick={() => activeTab = 'team'}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <span class="tab-label">Team</span>
+    </button>
+  </div>
 </div>
 
 <!-- General Tab -->
@@ -670,7 +672,7 @@
 <!-- Team Tab -->
 {#if activeTab === 'team'}
   <div class="card">
-    <div class="card-header">
+    <div class="card-header card-header-mobile">
       <div>
         <h2 class="card-title">Team Members</h2>
         <p class="card-subtitle">Manage internal staff access to the platform</p>
@@ -680,10 +682,12 @@
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
-        Invite Member
+        <span class="btn-text">Invite Member</span>
       </button>
     </div>
-    <div class="table-container">
+
+    <!-- Desktop Table -->
+    <div class="table-container desktop-table">
       <table class="table">
         <thead>
           <tr>
@@ -746,11 +750,68 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mobile Card List -->
+    <div class="mobile-card-list">
+      {#each data.teamMembers as member}
+        <div class="mobile-card-item team-member-card">
+          <div class="mobile-card-header">
+            <div class="member-cell">
+              <div class="member-avatar">{getInitials(member.firstName, member.lastName)}</div>
+              <div class="member-info">
+                <div class="member-name">{member.firstName} {member.lastName}</div>
+                <div class="member-email">{member.email}</div>
+              </div>
+            </div>
+          </div>
+          <div class="mobile-card-content">
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Role</span>
+              <span class="badge {getRoleBadgeClass(member.role)}">
+                {getRoleLabel(member.role)}
+              </span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Status</span>
+              <span class="status-indicator">
+                <span class="status-dot {member.status === 'active' ? 'green' : 'gray'}"></span>
+                {member.status === 'active' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Last Login</span>
+              <span class="text-sm text-gray-500">{formatRelativeTime(member.lastLogin)}</span>
+            </div>
+          </div>
+          <div class="mobile-card-actions">
+            <button class="btn btn-sm btn-outline" onclick={() => openEditModal(member)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Edit
+            </button>
+            {#if member.role !== 'super_admin'}
+              <form method="POST" action="?/removeTeamMember" style="flex: 1;" use:enhance={handleFormSubmit}>
+                <input type="hidden" name="memberId" value={member.id}>
+                <button type="submit" class="btn btn-sm btn-outline btn-danger-outline" style="width: 100%;" disabled={isSubmitting}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  Remove
+                </button>
+              </form>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
   </div>
 
   <!-- API Keys Section -->
   <div class="card mt-6">
-    <div class="card-header">
+    <div class="card-header card-header-mobile">
       <div>
         <h2 class="card-title">API Keys</h2>
         <p class="card-subtitle">Manage API access for external integrations</p>
@@ -760,10 +821,12 @@
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
-        Generate Key
+        <span class="btn-text">Generate Key</span>
       </button>
     </div>
-    <div class="table-container">
+
+    <!-- Desktop Table -->
+    <div class="table-container desktop-table">
       <table class="table">
         <thead>
           <tr>
@@ -793,6 +856,37 @@
           {/each}
         </tbody>
       </table>
+    </div>
+
+    <!-- Mobile Card List -->
+    <div class="mobile-card-list">
+      {#each data.apiKeys as apiKey}
+        <div class="mobile-card-item api-key-card">
+          <div class="mobile-card-header">
+            <span class="api-key-name">{apiKey.name}</span>
+          </div>
+          <div class="mobile-card-content">
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Key</span>
+              <code class="api-key-code">{apiKey.key}</code>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Created</span>
+              <span class="text-sm text-gray-500">{formatDate(apiKey.createdAt)}</span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Last Used</span>
+              <span class="text-sm text-gray-500">{formatDate(apiKey.lastUsed)}</span>
+            </div>
+          </div>
+          <div class="mobile-card-actions">
+            <form method="POST" action="?/revokeApiKey" style="width: 100%;">
+              <input type="hidden" name="keyId" value={apiKey.id}>
+              <button type="submit" class="btn btn-sm btn-danger" style="width: 100%;">Revoke</button>
+            </form>
+          </div>
+        </div>
+      {/each}
     </div>
   </div>
 {/if}
@@ -1673,5 +1767,260 @@
     flex-direction: column;
     gap: 4px;
     margin-top: var(--spacing-2);
+  }
+
+  /* Mobile Tabs Wrapper */
+  .tabs-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 calc(-1 * var(--spacing-4));
+    padding: 0 var(--spacing-4);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabs-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile Card List */
+  .mobile-card-list {
+    display: none;
+  }
+
+  .desktop-table {
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+
+    .desktop-table {
+      display: none;
+    }
+
+    .tabs-wrapper {
+      margin-bottom: var(--spacing-4);
+    }
+
+    .tabs {
+      display: flex;
+      gap: var(--spacing-1);
+      min-width: max-content;
+    }
+
+    .tab {
+      padding: var(--spacing-2) var(--spacing-3);
+      white-space: nowrap;
+      min-height: 44px;
+    }
+
+    .tab-label {
+      display: inline;
+    }
+
+    /* Card header mobile adjustments */
+    .card-header-mobile {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--spacing-3);
+    }
+
+    .card-header-mobile .btn {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    /* Mobile card item */
+    .mobile-card-item {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-4);
+    }
+
+    .mobile-card-header {
+      margin-bottom: var(--spacing-3);
+    }
+
+    .mobile-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      margin-bottom: var(--spacing-4);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .mobile-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mobile-card-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .mobile-card-actions {
+      display: flex;
+      gap: var(--spacing-2);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .mobile-card-actions .btn {
+      flex: 1;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    /* Team member card */
+    .team-member-card .member-cell {
+      width: 100%;
+    }
+
+    .team-member-card .member-avatar {
+      width: 44px;
+      height: 44px;
+      font-size: 0.9375rem;
+    }
+
+    .team-member-card .member-name {
+      font-size: 1rem;
+    }
+
+    .team-member-card .member-email {
+      font-size: 0.8125rem;
+    }
+
+    /* API key card */
+    .api-key-name {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--gray-900);
+    }
+
+    .api-key-card .api-key-code {
+      font-size: 0.6875rem;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Settings grid for notifications */
+    .settings-grid {
+      gap: var(--spacing-4);
+    }
+
+    .notification-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-3);
+    }
+
+    .notification-info {
+      width: 100%;
+    }
+
+    /* Config items */
+    .config-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-3);
+    }
+
+    /* Integration cards */
+    .integration-card .card-body {
+      padding: var(--spacing-4);
+    }
+
+    .integration-actions {
+      flex-direction: column;
+    }
+
+    .integration-actions .btn {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    /* Modals */
+    .modal {
+      width: calc(100% - var(--spacing-8));
+      max-width: none;
+      max-height: calc(100vh - var(--spacing-8));
+      margin: var(--spacing-4);
+    }
+
+    .modal-body {
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      gap: var(--spacing-2);
+    }
+
+    .modal-footer .btn {
+      width: 100%;
+      min-height: 44px;
+    }
+
+    /* Credentials modal */
+    .credentials-modal {
+      max-width: none;
+    }
+
+    .credential-value {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--spacing-2);
+    }
+
+    .credential-value code {
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: var(--spacing-2);
+    }
+
+    /* Integration modal */
+    .integration-modal {
+      max-width: none;
+    }
+
+    .modal-header-content {
+      flex-direction: column;
+    }
+  }
+
+  /* Small screen tab adjustments */
+  @media (max-width: 480px) {
+    .tab {
+      padding: var(--spacing-2);
+    }
+
+    .tab svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .tab-label {
+      font-size: 0.8125rem;
+    }
   }
 </style>
