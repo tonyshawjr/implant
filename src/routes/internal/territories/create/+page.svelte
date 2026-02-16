@@ -22,7 +22,6 @@
     households: number;
     medianIncome: number;
     medianAge: number;
-    // New fields for better market analysis
     population65Plus: number;
     population65PlusPercent: number;
     medianHomeValue: number;
@@ -30,20 +29,47 @@
     ownerOccupiedPercent: number;
   }
 
+  interface SelectedArea {
+    id: string;
+    type: 'metro' | 'county' | 'city' | 'zipcode';
+    name: string;
+    displayName: string;
+    fips?: string;
+    stateFips?: string;
+    state: string;
+    zipCodes: ZipCodeEntry[];
+  }
+
   interface GeoOption {
     fips: string;
     name: string;
   }
 
-  // State variables
-  let territoryType = $state<'metro' | 'county' | 'city' | 'zipcode'>('zipcode');
+  // State variables - simplified for multi-select
+  let addMode = $state<'metro' | 'county' | 'city' | 'zipcode'>('zipcode');
   let selectedState = $state('');
   let selectedStateFips = $state('');
-  let selectedMetro = $state('');
-  let selectedCounty = $state('');
-  let selectedCity = $state('');
+  let selectedOption = $state(''); // generic for metro/county/city selection
   let zipCodeInput = $state('');
-  let selectedZipCodes = $state<ZipCodeEntry[]>([]);
+
+  // Selected areas - the main collection
+  let selectedAreas = $state<SelectedArea[]>([]);
+
+  // Aggregated data
+  let allZipCodes = $derived<ZipCodeEntry[]>(() => {
+    const zips: ZipCodeEntry[] = [];
+    const seen = new Set<string>();
+    for (const area of selectedAreas) {
+      for (const zip of area.zipCodes) {
+        if (!seen.has(zip.zipCode)) {
+          seen.add(zip.zipCode);
+          zips.push(zip);
+        }
+      }
+    }
+    return zips;
+  });
+
   let demographics = $state<Demographics | null>(null);
   let territoryName = $state('');
   let monthlyBasePrice = $state(1500);
@@ -100,12 +126,7 @@
   let canCreate = $derived(
     territoryName.trim() !== '' &&
     monthlyBasePrice > 0 &&
-    (
-      (territoryType === 'zipcode' && selectedZipCodes.length > 0) ||
-      (territoryType === 'metro' && selectedState && selectedMetro) ||
-      (territoryType === 'county' && selectedState && selectedCounty) ||
-      (territoryType === 'city' && selectedState && selectedCity)
-    )
+    selectedAreas.length > 0
   );
 
   // Initialize Leaflet map
@@ -120,9 +141,9 @@
     return () => { if (map) map.remove(); };
   });
 
-  // Update map when zip codes change
+  // Update map when areas change
   $effect(() => {
-    if (map && L && selectedZipCodes.length > 0) {
+    if (map && L) {
       updateMapMarkers();
     }
   });
@@ -132,7 +153,8 @@
     circles.forEach(c => map.removeLayer(c));
     circles = [];
 
-    selectedZipCodes.forEach(zip => {
+    const zips = allZipCodes;
+    zips.forEach(zip => {
       const circle = L.circle([zip.lat, zip.lng], {
         radius: 8046.72, // 5 miles in meters
         fillColor: '#3b82f6',
@@ -145,51 +167,27 @@
       circles.push(circle);
     });
 
-    if (selectedZipCodes.length > 0) {
-      const bounds = L.latLngBounds(selectedZipCodes.map(z => [z.lat, z.lng]));
+    if (zips.length > 0) {
+      const bounds = L.latLngBounds(zips.map(z => [z.lat, z.lng]));
       map.fitBounds(bounds, { padding: [50, 50] });
     }
   }
 
-  // Handle territory type change
-  function handleTypeChange() {
-    selectedState = '';
-    selectedStateFips = '';
-    selectedMetro = '';
-    selectedCounty = '';
-    selectedCity = '';
-    selectedZipCodes = [];
-    demographics = null;
-    territoryName = '';
-    metroOptions = [];
-    countyOptions = [];
-    cityOptions = [];
-    errorMessage = '';
-  }
-
-  // Handle state change
+  // Handle state change - load options based on add mode
   async function handleStateChange() {
-    selectedMetro = '';
-    selectedCounty = '';
-    selectedCity = '';
-    metroOptions = [];
-    countyOptions = [];
-    cityOptions = [];
-    demographics = null;
-
     if (!selectedState) return;
-
     selectedStateFips = STATE_FIPS[selectedState] || '';
+    selectedOption = '';
 
     isLoading = true;
     errorMessage = '';
 
     try {
-      if (territoryType === 'metro') {
+      if (addMode === 'metro') {
         await fetchMetroAreas();
-      } else if (territoryType === 'county') {
+      } else if (addMode === 'county') {
         await fetchCounties();
-      } else if (territoryType === 'city') {
+      } else if (addMode === 'city') {
         await fetchCities();
       }
     } catch (error) {
@@ -197,6 +195,18 @@
       errorMessage = 'Failed to load options. Please try again.';
     } finally {
       isLoading = false;
+    }
+  }
+
+  // Handle add mode change
+  function handleModeChange() {
+    selectedOption = '';
+    metroOptions = [];
+    countyOptions = [];
+    cityOptions = [];
+
+    if (selectedState) {
+      handleStateChange();
     }
   }
 
@@ -208,13 +218,12 @@
       );
       const data = await response.json();
 
-      // Filter by state abbreviation (metro names include state like "Charlotte-Concord-Gastonia, NC-SC")
       const stateAbbr = selectedState;
       metroOptions = data.slice(1)
         .filter((row: string[]) => row[0].includes(`, ${stateAbbr}`) || row[0].includes(`-${stateAbbr}`) || row[0].includes(`${stateAbbr}-`))
         .map((row: string[]) => ({
           fips: row[1],
-          name: row[0].split(',')[0] // Get metro name without state suffix
+          name: row[0].split(',')[0]
         }))
         .sort((a: GeoOption, b: GeoOption) => a.name.localeCompare(b.name));
     } catch (error) {
@@ -233,7 +242,7 @@
 
       countyOptions = data.slice(1)
         .map((row: string[]) => ({
-          fips: row[2], // county FIPS
+          fips: row[2],
           name: row[0].replace(' County', '').split(',')[0]
         }))
         .sort((a: GeoOption, b: GeoOption) => a.name.localeCompare(b.name));
@@ -253,8 +262,8 @@
 
       cityOptions = data.slice(1)
         .map((row: string[]) => ({
-          fips: row[2], // place FIPS
-          name: row[0].replace(' city', '').replace(' town', '').replace(' village', '').split(',')[0]
+          fips: row[2],
+          name: row[0].replace(' city', '').replace(' town', '').replace(' village', '').replace(' CDP', '').split(',')[0]
         }))
         .sort((a: GeoOption, b: GeoOption) => a.name.localeCompare(b.name));
     } catch (error) {
@@ -263,144 +272,142 @@
     }
   }
 
-  // Handle selection changes - fetch demographics
-  async function handleMetroChange() {
-    if (selectedMetro) {
-      const metro = metroOptions.find(m => m.fips === selectedMetro);
-      if (metro) {
-        territoryName = `${metro.name} Metro`;
-      }
-      await fetchMetroDemographics();
-    }
-  }
-
   // Census variables for comprehensive demographics
-  // B01003_001E = Total population
-  // B11001_001E = Total households
-  // B19013_001E = Median household income
-  // B01002_001E = Median age
-  // B25077_001E = Median home value
-  // B21001_002E = Civilian veterans
-  // B25003_001E = Total occupied housing units
-  // B25003_002E = Owner-occupied housing units
-  // B01001_020E-025E = Males 65+ (6 age groups)
-  // B01001_044E-049E = Females 65+ (6 age groups)
   const CENSUS_VARIABLES = 'B01003_001E,B11001_001E,B19013_001E,B01002_001E,B25077_001E,B21001_002E,B25003_001E,B25003_002E,B01001_020E,B01001_021E,B01001_022E,B01001_023E,B01001_024E,B01001_025E,B01001_044E,B01001_045E,B01001_046E,B01001_047E,B01001_048E,B01001_049E';
 
-  // Parse Census API response into Demographics object
-  function parseDemographicsData(row: string[]): Demographics {
-    const population = parseInt(row[0]) || 0;
-    const households = parseInt(row[1]) || 0;
-    const medianIncome = parseInt(row[2]) || 0;
-    const medianAge = parseFloat(row[3]) || 0;
-    const medianHomeValue = parseInt(row[4]) || 0;
-    const veteransCount = parseInt(row[5]) || 0;
-    const totalOccupied = parseInt(row[6]) || 0;
-    const ownerOccupied = parseInt(row[7]) || 0;
+  // Add selected metro area
+  async function addMetroArea() {
+    if (!selectedOption) return;
 
-    // Sum 65+ population (males: indices 8-13, females: indices 14-19)
-    let population65Plus = 0;
-    for (let i = 8; i <= 19; i++) {
-      population65Plus += parseInt(row[i]) || 0;
+    const metro = metroOptions.find(m => m.fips === selectedOption);
+    if (!metro) return;
+
+    // Check if already added
+    if (selectedAreas.some(a => a.type === 'metro' && a.fips === selectedOption)) {
+      errorMessage = 'This metro area is already added.';
+      return;
     }
 
-    const population65PlusPercent = population > 0 ? (population65Plus / population) * 100 : 0;
-    const ownerOccupiedPercent = totalOccupied > 0 ? (ownerOccupied / totalOccupied) * 100 : 0;
+    isLoading = true;
+    errorMessage = '';
 
-    return {
-      population,
-      households,
-      medianIncome,
-      medianAge,
-      population65Plus,
-      population65PlusPercent,
-      medianHomeValue,
-      veteransCount,
-      ownerOccupiedPercent
-    };
-  }
-
-  // Fetch demographics for metro area (MSA)
-  async function fetchMetroDemographics() {
-    if (!selectedMetro) return;
-
-    isLoadingDemographics = true;
     try {
-      const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${selectedMetro}`
-      );
-      const data = await response.json();
+      // For metros, we'll add a placeholder zip and fetch demographics
+      // In a real implementation, you'd fetch all zip codes in the metro
+      const newArea: SelectedArea = {
+        id: `metro-${selectedOption}`,
+        type: 'metro',
+        name: metro.name,
+        displayName: `${metro.name} Metro`,
+        fips: selectedOption,
+        state: selectedState,
+        zipCodes: [] // Metro areas don't resolve to specific zips in this simplified version
+      };
 
-      if (data && data.length > 1) {
-        demographics = parseDemographicsData(data[1]);
+      selectedAreas = [...selectedAreas, newArea];
+      selectedOption = '';
+
+      // Auto-generate territory name if first area
+      if (selectedAreas.length === 1) {
+        territoryName = `${metro.name} Metro`;
       }
+
+      await updateAggregateDemographics();
     } catch (error) {
-      console.error('Error fetching metro demographics:', error);
-      errorMessage = 'Failed to load metro demographics.';
+      console.error('Error adding metro area:', error);
+      errorMessage = 'Failed to add metro area.';
     } finally {
-      isLoadingDemographics = false;
+      isLoading = false;
     }
   }
 
-  async function handleCountyChange() {
-    if (selectedCounty) {
-      const county = countyOptions.find(c => c.fips === selectedCounty);
-      if (county) {
-        territoryName = `${county.name} County, ${selectedState}`;
+  // Add selected county
+  async function addCounty() {
+    if (!selectedOption || !selectedStateFips) return;
+
+    const county = countyOptions.find(c => c.fips === selectedOption);
+    if (!county) return;
+
+    // Check if already added
+    const areaId = `county-${selectedStateFips}-${selectedOption}`;
+    if (selectedAreas.some(a => a.id === areaId)) {
+      errorMessage = 'This county is already added.';
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = '';
+
+    try {
+      const newArea: SelectedArea = {
+        id: areaId,
+        type: 'county',
+        name: county.name,
+        displayName: `${county.name} County, ${selectedState}`,
+        fips: selectedOption,
+        stateFips: selectedStateFips,
+        state: selectedState,
+        zipCodes: []
+      };
+
+      selectedAreas = [...selectedAreas, newArea];
+      selectedOption = '';
+
+      if (selectedAreas.length === 1) {
+        territoryName = `${county.name} County`;
       }
-      await fetchCountyDemographics();
+
+      await updateAggregateDemographics();
+    } catch (error) {
+      console.error('Error adding county:', error);
+      errorMessage = 'Failed to add county.';
+    } finally {
+      isLoading = false;
     }
   }
 
-  async function handleCityChange() {
-    if (selectedCity) {
-      const city = cityOptions.find(c => c.fips === selectedCity);
-      if (city) {
+  // Add selected city
+  async function addCity() {
+    if (!selectedOption || !selectedStateFips) return;
+
+    const city = cityOptions.find(c => c.fips === selectedOption);
+    if (!city) return;
+
+    // Check if already added
+    const areaId = `city-${selectedStateFips}-${selectedOption}`;
+    if (selectedAreas.some(a => a.id === areaId)) {
+      errorMessage = 'This city is already added.';
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = '';
+
+    try {
+      const newArea: SelectedArea = {
+        id: areaId,
+        type: 'city',
+        name: city.name,
+        displayName: `${city.name}, ${selectedState}`,
+        fips: selectedOption,
+        stateFips: selectedStateFips,
+        state: selectedState,
+        zipCodes: []
+      };
+
+      selectedAreas = [...selectedAreas, newArea];
+      selectedOption = '';
+
+      if (selectedAreas.length === 1) {
         territoryName = `${city.name}, ${selectedState}`;
       }
-      await fetchCityDemographics();
-    }
-  }
 
-  // Fetch demographics for county
-  async function fetchCountyDemographics() {
-    if (!selectedStateFips || !selectedCounty) return;
-
-    isLoadingDemographics = true;
-    try {
-      const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=county:${selectedCounty}&in=state:${selectedStateFips}`
-      );
-      const data = await response.json();
-
-      if (data && data.length > 1) {
-        demographics = parseDemographicsData(data[1]);
-      }
+      await updateAggregateDemographics();
     } catch (error) {
-      console.error('Error fetching county demographics:', error);
+      console.error('Error adding city:', error);
+      errorMessage = 'Failed to add city.';
     } finally {
-      isLoadingDemographics = false;
-    }
-  }
-
-  // Fetch demographics for city
-  async function fetchCityDemographics() {
-    if (!selectedStateFips || !selectedCity) return;
-
-    isLoadingDemographics = true;
-    try {
-      const response = await fetch(
-        `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=place:${selectedCity}&in=state:${selectedStateFips}`
-      );
-      const data = await response.json();
-
-      if (data && data.length > 1) {
-        demographics = parseDemographicsData(data[1]);
-      }
-    } catch (error) {
-      console.error('Error fetching city demographics:', error);
-    } finally {
-      isLoadingDemographics = false;
+      isLoading = false;
     }
   }
 
@@ -409,14 +416,13 @@
     const zip = zipCodeInput.trim();
     if (!zip) return;
 
-    // Validate format
     if (!/^\d{5}$/.test(zip)) {
       errorMessage = 'Please enter a valid 5-digit zip code.';
       return;
     }
 
     // Check if already added
-    if (selectedZipCodes.some(z => z.zipCode === zip)) {
+    if (selectedAreas.some(a => a.type === 'zipcode' && a.name === zip)) {
       errorMessage = 'This zip code is already added.';
       return;
     }
@@ -434,47 +440,42 @@
 
       if (!geoData || geoData.length === 0) {
         errorMessage = 'Zip code not found. Please check and try again.';
+        isLoading = false;
         return;
       }
 
       const result = geoData[0];
       const city = result.address?.city || result.address?.town || result.address?.village || result.address?.county || 'Unknown';
       const state = result.address?.state || '';
+      const stateCode = Object.entries(STATE_FIPS).find(([code, fips]) =>
+        US_STATES.find(s => s.code === code)?.name === state
+      )?.[0] || '';
 
-      // Get population from Census
-      let population = 0;
-      try {
-        const censusResponse = await fetch(
-          `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E&for=zip%20code%20tabulation%20area:${zip}`
-        );
-        const censusData = await censusResponse.json();
-        if (censusData && censusData.length > 1) {
-          population = parseInt(censusData[1][0]) || 0;
-        }
-      } catch (e) {
-        console.log('Census data not available for zip');
-      }
-
-      const newZip: ZipCodeEntry = {
+      const zipEntry: ZipCodeEntry = {
         zipCode: zip,
         city,
-        state,
+        state: stateCode || state,
         lat: parseFloat(result.lat),
-        lng: parseFloat(result.lon),
-        population
+        lng: parseFloat(result.lon)
       };
 
-      selectedZipCodes = [...selectedZipCodes, newZip];
+      const newArea: SelectedArea = {
+        id: `zip-${zip}`,
+        type: 'zipcode',
+        name: zip,
+        displayName: `${zip} - ${city}, ${stateCode || state}`,
+        state: stateCode || state,
+        zipCodes: [zipEntry]
+      };
+
+      selectedAreas = [...selectedAreas, newArea];
       zipCodeInput = '';
 
-      // Auto-generate territory name
-      if (selectedZipCodes.length === 1) {
+      if (selectedAreas.length === 1) {
         territoryName = `${city} Area`;
       }
 
-      // Update demographics
-      await updateZipDemographics();
-
+      await updateAggregateDemographics();
     } catch (error) {
       console.error('Error adding zip code:', error);
       errorMessage = 'Failed to add zip code. Please try again.';
@@ -483,14 +484,15 @@
     }
   }
 
-  function removeZipCode(zipCode: string) {
-    selectedZipCodes = selectedZipCodes.filter(z => z.zipCode !== zipCode);
-    updateZipDemographics();
+  // Remove an area
+  function removeArea(id: string) {
+    selectedAreas = selectedAreas.filter(a => a.id !== id);
+    updateAggregateDemographics();
   }
 
-  // Update demographics from selected zip codes
-  async function updateZipDemographics() {
-    if (selectedZipCodes.length === 0) {
+  // Update aggregate demographics from all selected areas
+  async function updateAggregateDemographics() {
+    if (selectedAreas.length === 0) {
       demographics = null;
       return;
     }
@@ -510,11 +512,21 @@
       let validIncomeCount = 0;
       let validHomeValueCount = 0;
 
-      for (const zip of selectedZipCodes) {
+      for (const area of selectedAreas) {
         try {
-          const response = await fetch(
-            `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=zip%20code%20tabulation%20area:${zip.zipCode}`
-          );
+          let apiUrl = '';
+
+          if (area.type === 'metro') {
+            apiUrl = `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${area.fips}`;
+          } else if (area.type === 'county') {
+            apiUrl = `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=county:${area.fips}&in=state:${area.stateFips}`;
+          } else if (area.type === 'city') {
+            apiUrl = `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=place:${area.fips}&in=state:${area.stateFips}`;
+          } else if (area.type === 'zipcode') {
+            apiUrl = `https://api.census.gov/data/2023/acs/acs5?get=${CENSUS_VARIABLES}&for=zip%20code%20tabulation%20area:${area.name}`;
+          }
+
+          const response = await fetch(apiUrl);
           const data = await response.json();
 
           if (data && data.length > 1) {
@@ -524,7 +536,6 @@
             totalPop += pop;
             totalHouseholds += households;
 
-            // Sum 65+ population (indices 8-19)
             for (let i = 8; i <= 19; i++) {
               total65Plus += parseInt(row[i]) || 0;
             }
@@ -549,7 +560,7 @@
             }
           }
         } catch (e) {
-          // Continue if one zip fails
+          console.error('Error fetching demographics for area:', area.id, e);
         }
       }
 
@@ -584,6 +595,26 @@
       maximumFractionDigits: 0
     }).format(value);
   }
+
+  function getAreaTypeIcon(type: string): string {
+    switch (type) {
+      case 'metro': return '🏙️';
+      case 'county': return '📍';
+      case 'city': return '🏘️';
+      case 'zipcode': return '📮';
+      default: return '📍';
+    }
+  }
+
+  function getAreaTypeLabel(type: string): string {
+    switch (type) {
+      case 'metro': return 'Metro Area';
+      case 'county': return 'County';
+      case 'city': return 'City';
+      case 'zipcode': return 'Zip Code';
+      default: return type;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -601,140 +632,67 @@
       Back to Territories
     </a>
     <h1 class="page-title">Create New Territory</h1>
-    <p class="page-subtitle">Define a new exclusive territory for your lead generation network.</p>
+    <p class="page-subtitle">Build a territory by adding metros, counties, cities, or zip codes. Mix and match as needed.</p>
   </div>
 </div>
 
 <!-- Builder Container -->
 <div class="builder-container">
-  <!-- Left Sidebar - Form -->
+  <!-- Left Sidebar - Add Locations -->
   <div class="builder-sidebar">
-    <!-- Step 1: Territory Type -->
-    <div class="step-section">
-      <div class="step-header">
-        <span class="step-number">1</span>
-        <h3 class="step-title">Territory Type</h3>
+    <!-- Add Location Section -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Add Locations</h3>
       </div>
-      <div class="step-content">
-        <div class="radio-group">
-          <label class="radio-option" class:selected={territoryType === 'metro'}>
-            <input type="radio" name="territoryType" value="metro" bind:group={territoryType} onchange={handleTypeChange} />
-            <div class="radio-content">
-              <span class="radio-label">Metro Area</span>
-              <span class="radio-description">Major metropolitan statistical area</span>
-            </div>
-          </label>
-
-          <label class="radio-option" class:selected={territoryType === 'county'}>
-            <input type="radio" name="territoryType" value="county" bind:group={territoryType} onchange={handleTypeChange} />
-            <div class="radio-content">
-              <span class="radio-label">County</span>
-              <span class="radio-description">Single county boundary</span>
-            </div>
-          </label>
-
-          <label class="radio-option" class:selected={territoryType === 'city'}>
-            <input type="radio" name="territoryType" value="city" bind:group={territoryType} onchange={handleTypeChange} />
-            <div class="radio-content">
-              <span class="radio-label">City</span>
-              <span class="radio-description">City or town boundary</span>
-            </div>
-          </label>
-
-          <label class="radio-option" class:selected={territoryType === 'zipcode'}>
-            <input type="radio" name="territoryType" value="zipcode" bind:group={territoryType} onchange={handleTypeChange} />
-            <div class="radio-content">
-              <span class="radio-label">Zip Code(s)</span>
-              <span class="radio-description">One or more zip codes</span>
-            </div>
-          </label>
+      <div class="card-body">
+        <!-- Add Mode Tabs -->
+        <div class="add-mode-tabs">
+          <button
+            class="mode-tab"
+            class:active={addMode === 'zipcode'}
+            onclick={() => { addMode = 'zipcode'; handleModeChange(); }}
+          >
+            Zip Codes
+          </button>
+          <button
+            class="mode-tab"
+            class:active={addMode === 'city'}
+            onclick={() => { addMode = 'city'; handleModeChange(); }}
+          >
+            Cities
+          </button>
+          <button
+            class="mode-tab"
+            class:active={addMode === 'county'}
+            onclick={() => { addMode = 'county'; handleModeChange(); }}
+          >
+            Counties
+          </button>
+          <button
+            class="mode-tab"
+            class:active={addMode === 'metro'}
+            onclick={() => { addMode = 'metro'; handleModeChange(); }}
+          >
+            Metros
+          </button>
         </div>
-      </div>
-    </div>
 
-    <!-- Step 2: Location Selection -->
-    <div class="step-section">
-      <div class="step-header">
-        <span class="step-number">2</span>
-        <h3 class="step-title">Location Selection</h3>
-      </div>
-      <div class="step-content">
-        {#if territoryType === 'metro' || territoryType === 'county' || territoryType === 'city'}
-          <!-- State Selection -->
+        <!-- Zip Code Input -->
+        {#if addMode === 'zipcode'}
           <div class="form-group">
-            <label class="form-label">State</label>
-            <select class="form-input form-select" bind:value={selectedState} onchange={handleStateChange}>
-              <option value="">Select a state...</option>
-              {#each US_STATES as state}
-                <option value={state.code}>{state.name}</option>
-              {/each}
-            </select>
-          </div>
-        {/if}
-
-        {#if territoryType === 'metro' && selectedState}
-          <div class="form-group">
-            <label class="form-label">Metro Area</label>
-            {#if isLoading}
-              <div class="loading-indicator"><span class="spinner"></span> Loading metro areas...</div>
-            {:else if metroOptions.length === 0}
-              <p class="no-options">No metro areas found for this state.</p>
-            {:else}
-              <select class="form-input form-select" bind:value={selectedMetro} onchange={handleMetroChange}>
-                <option value="">Select a metro area...</option>
-                {#each metroOptions as metro}
-                  <option value={metro.fips}>{metro.name}</option>
-                {/each}
-              </select>
-            {/if}
-          </div>
-        {/if}
-
-        {#if territoryType === 'county' && selectedState}
-          <div class="form-group">
-            <label class="form-label">County</label>
-            {#if isLoading}
-              <div class="loading-indicator"><span class="spinner"></span> Loading counties...</div>
-            {:else}
-              <select class="form-input form-select" bind:value={selectedCounty} onchange={handleCountyChange}>
-                <option value="">Select a county...</option>
-                {#each countyOptions as county}
-                  <option value={county.fips}>{county.name}</option>
-                {/each}
-              </select>
-            {/if}
-          </div>
-        {/if}
-
-        {#if territoryType === 'city' && selectedState}
-          <div class="form-group">
-            <label class="form-label">City</label>
-            {#if isLoading}
-              <div class="loading-indicator"><span class="spinner"></span> Loading cities...</div>
-            {:else}
-              <select class="form-input form-select" bind:value={selectedCity} onchange={handleCityChange}>
-                <option value="">Select a city...</option>
-                {#each cityOptions as city}
-                  <option value={city.fips}>{city.name}</option>
-                {/each}
-              </select>
-            {/if}
-          </div>
-        {/if}
-
-        {#if territoryType === 'zipcode'}
-          <div class="form-group">
-            <label class="form-label">Add Zip Codes</label>
-            <div class="search-row">
+            <label class="form-label">Enter Zip Code</label>
+            <div class="input-with-button">
               <input
                 type="text"
                 class="form-input"
-                placeholder="Enter 5-digit zip code"
-                maxlength="5"
+                placeholder="e.g., 28401"
                 bind:value={zipCodeInput}
                 onkeydown={(e) => e.key === 'Enter' && addZipCode()}
+                maxlength="5"
+                autocomplete="off"
               />
-              <button type="button" class="btn btn-primary" onclick={addZipCode} disabled={isLoading || !zipCodeInput.trim()}>
+              <button class="btn btn-primary" onclick={addZipCode} disabled={isLoading || !zipCodeInput.trim()}>
                 {#if isLoading}
                   <span class="spinner-sm"></span>
                 {:else}
@@ -743,106 +701,183 @@
               </button>
             </div>
           </div>
+        {:else}
+          <!-- State Selection -->
+          <div class="form-group">
+            <label class="form-label">Select State</label>
+            <select class="form-input form-select" bind:value={selectedState} onchange={handleStateChange} autocomplete="off">
+              <option value="">Choose a state...</option>
+              {#each US_STATES as state}
+                <option value={state.code}>{state.name}</option>
+              {/each}
+            </select>
+          </div>
 
-          {#if selectedZipCodes.length > 0}
-            <div class="selected-items">
-              <label class="form-label">Selected Zip Codes ({selectedZipCodes.length})</label>
-              <div class="selected-list">
-                {#each selectedZipCodes as zip}
-                  <div class="selected-item">
-                    <div class="selected-item-info">
-                      <span class="selected-item-primary">{zip.zipCode}</span>
-                      <span class="selected-item-secondary">{zip.city}, {zip.state}</span>
-                    </div>
-                    <button type="button" class="remove-btn" onclick={() => removeZipCode(zip.zipCode)} title="Remove">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </button>
-                  </div>
-                {/each}
-              </div>
+          <!-- Metro/County/City Selection -->
+          {#if selectedState}
+            <div class="form-group">
+              <label class="form-label">
+                Select {addMode === 'metro' ? 'Metro Area' : addMode === 'county' ? 'County' : 'City'}
+              </label>
+              {#if isLoading}
+                <div class="loading-inline">
+                  <span class="spinner-sm"></span>
+                  <span>Loading options...</span>
+                </div>
+              {:else}
+                <div class="input-with-button">
+                  <select class="form-input form-select" bind:value={selectedOption} autocomplete="off">
+                    <option value="">Choose...</option>
+                    {#if addMode === 'metro'}
+                      {#each metroOptions as opt}
+                        <option value={opt.fips}>{opt.name}</option>
+                      {/each}
+                    {:else if addMode === 'county'}
+                      {#each countyOptions as opt}
+                        <option value={opt.fips}>{opt.name}</option>
+                      {/each}
+                    {:else if addMode === 'city'}
+                      {#each cityOptions as opt}
+                        <option value={opt.fips}>{opt.name}</option>
+                      {/each}
+                    {/if}
+                  </select>
+                  <button
+                    class="btn btn-primary"
+                    onclick={() => {
+                      if (addMode === 'metro') addMetroArea();
+                      else if (addMode === 'county') addCounty();
+                      else if (addMode === 'city') addCity();
+                    }}
+                    disabled={isLoading || !selectedOption}
+                  >
+                    Add
+                  </button>
+                </div>
+              {/if}
             </div>
           {/if}
         {/if}
 
         {#if errorMessage}
-          <p class="error-message">{errorMessage}</p>
+          <div class="error-message">{errorMessage}</div>
         {/if}
       </div>
     </div>
 
-    <!-- Step 3: Territory Details -->
-    <div class="step-section">
-      <div class="step-header">
-        <span class="step-number">3</span>
-        <h3 class="step-title">Territory Details</h3>
+    <!-- Selected Areas -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Selected Areas</h3>
+        <span class="area-count">{selectedAreas.length} location{selectedAreas.length !== 1 ? 's' : ''}</span>
       </div>
-      <div class="step-content">
+      <div class="card-body">
+        {#if selectedAreas.length === 0}
+          <div class="empty-areas">
+            <p>No locations added yet.</p>
+            <p class="hint">Add zip codes, cities, counties, or metro areas above.</p>
+          </div>
+        {:else}
+          <div class="areas-list">
+            {#each selectedAreas as area}
+              <div class="area-item">
+                <div class="area-info">
+                  <span class="area-icon">{getAreaTypeIcon(area.type)}</span>
+                  <div class="area-details">
+                    <span class="area-name">{area.displayName}</span>
+                    <span class="area-type">{getAreaTypeLabel(area.type)}</span>
+                  </div>
+                </div>
+                <button class="remove-btn" onclick={() => removeArea(area.id)} title="Remove">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Territory Details -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Territory Details</h3>
+      </div>
+      <div class="card-body">
         <div class="form-group">
           <label class="form-label">Territory Name</label>
-          <input type="text" class="form-input" placeholder="e.g., Wilmington Metro" bind:value={territoryName} />
+          <input
+            type="text"
+            class="form-input"
+            placeholder="e.g., Greater Wilmington"
+            bind:value={territoryName}
+            autocomplete="off"
+          />
         </div>
 
         <div class="form-group">
           <label class="form-label">Monthly Base Price</label>
-          <div class="price-input-wrapper">
-            <span class="price-prefix">$</span>
-            <input type="number" class="form-input price-input" min="0" step="100" bind:value={monthlyBasePrice} />
-            <span class="price-suffix">/mo</span>
+          <div class="input-with-prefix">
+            <span class="input-prefix">$</span>
+            <input
+              type="number"
+              class="form-input"
+              bind:value={monthlyBasePrice}
+              min="0"
+              step="100"
+              autocomplete="off"
+            />
           </div>
         </div>
-
-        <form
-          method="POST"
-          action="?/createTerritory"
-          use:enhance={() => {
-            isCreating = true;
-            return async ({ result, update }) => {
-              isCreating = false;
-              if (result.type === 'redirect') {
-                goto('/internal/territories');
-              } else if (result.type === 'failure') {
-                errorMessage = (result.data as any)?.error || 'Failed to create territory';
-              }
-            };
-          }}
-        >
-          <input type="hidden" name="name" value={territoryName} />
-          <input type="hidden" name="boundaryType" value={territoryType} />
-          <input type="hidden" name="state" value={selectedState || (selectedZipCodes[0]?.state || '')} />
-          <input type="hidden" name="zipCodes" value={JSON.stringify(selectedZipCodes.map(z => ({ zipCode: z.zipCode, city: z.city })))} />
-          <input type="hidden" name="demographics" value={JSON.stringify(demographics || {})} />
-          <input type="hidden" name="monthlyBasePrice" value={monthlyBasePrice} />
-          <input type="hidden" name="centerLat" value={selectedZipCodes[0]?.lat || 39.8283} />
-          <input type="hidden" name="centerLng" value={selectedZipCodes[0]?.lng || -98.5795} />
-          <input type="hidden" name="radiusMiles" value={15} />
-          <input type="hidden" name="msaCode" value={selectedMetro || ''} />
-          <input type="hidden" name="countyFips" value={selectedCounty || ''} />
-          <input type="hidden" name="placeFips" value={selectedCity || ''} />
-
-          <button type="submit" class="btn btn-primary btn-lg btn-full" disabled={!canCreate || isCreating}>
-            {#if isCreating}
-              <span class="spinner-sm"></span> Creating...
-            {:else}
-              Create Territory
-            {/if}
-          </button>
-        </form>
       </div>
     </div>
+
+    <!-- Create Button -->
+    <form method="POST" action="?/createTerritory" use:enhance={() => {
+      isCreating = true;
+      return async ({ result }) => {
+        isCreating = false;
+        if (result.type === 'redirect') {
+          goto(result.location);
+        } else if (result.type === 'failure') {
+          errorMessage = result.data?.error || 'Failed to create territory';
+        }
+      };
+    }}>
+      <input type="hidden" name="name" value={territoryName} />
+      <input type="hidden" name="boundaryType" value={selectedAreas.length === 1 ? selectedAreas[0].type : 'custom'} />
+      <input type="hidden" name="state" value={selectedAreas[0]?.state || ''} />
+      <input type="hidden" name="zipCodes" value={JSON.stringify(allZipCodes.map(z => ({ zipCode: z.zipCode, city: z.city })))} />
+      <input type="hidden" name="demographics" value={JSON.stringify(demographics || {})} />
+      <input type="hidden" name="monthlyBasePrice" value={monthlyBasePrice} />
+      <input type="hidden" name="centerLat" value={allZipCodes.length > 0 ? allZipCodes.reduce((sum, z) => sum + z.lat, 0) / allZipCodes.length : 0} />
+      <input type="hidden" name="centerLng" value={allZipCodes.length > 0 ? allZipCodes.reduce((sum, z) => sum + z.lng, 0) / allZipCodes.length : 0} />
+      <input type="hidden" name="radiusMiles" value="15" />
+      <input type="hidden" name="msaCode" value={selectedAreas.find(a => a.type === 'metro')?.fips || ''} />
+      <input type="hidden" name="countyFips" value={selectedAreas.find(a => a.type === 'county')?.fips || ''} />
+      <input type="hidden" name="placeFips" value={selectedAreas.find(a => a.type === 'city')?.fips || ''} />
+      <input type="hidden" name="selectedAreas" value={JSON.stringify(selectedAreas)} />
+
+      <button type="submit" class="btn btn-primary btn-lg btn-full" disabled={!canCreate || isCreating}>
+        {#if isCreating}
+          <span class="spinner-sm"></span>
+          Creating Territory...
+        {:else}
+          Create Territory
+        {/if}
+      </button>
+    </form>
   </div>
 
   <!-- Right Side - Map and Demographics -->
   <div class="builder-main">
-    <!-- Map Card -->
+    <!-- Map -->
     <div class="card map-card">
       <div class="card-header">
         <h3 class="card-title">Territory Map</h3>
-        {#if selectedZipCodes.length > 0}
-          <span class="badge badge-info">{selectedZipCodes.length} zip code{selectedZipCodes.length > 1 ? 's' : ''}</span>
-        {/if}
       </div>
       <div class="map-container" bind:this={mapContainer}></div>
     </div>
@@ -992,44 +1027,16 @@
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
               <circle cx="12" cy="10" r="3"/>
             </svg>
-            <p>Select a location to view demographics</p>
+            <p>Add locations to view demographics</p>
           </div>
         {/if}
       </div>
     </div>
-
-    <!-- Territory Summary -->
-    {#if territoryName}
-      <div class="card summary-card">
-        <div class="card-header">
-          <h3 class="card-title">Territory Summary</h3>
-        </div>
-        <div class="card-body">
-          <div class="summary-row">
-            <span class="summary-label">Name</span>
-            <span class="summary-value">{territoryName}</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Type</span>
-            <span class="summary-value capitalize">{territoryType}</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Base Price</span>
-            <span class="summary-value">{formatCurrency(monthlyBasePrice)}/mo</span>
-          </div>
-          {#if territoryType === 'zipcode'}
-            <div class="summary-row">
-              <span class="summary-label">Zip Codes</span>
-              <span class="summary-value">{selectedZipCodes.length}</span>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
   </div>
 </div>
 
 <style>
+  /* Layout */
   .page-header {
     margin-bottom: var(--spacing-6);
   }
@@ -1037,7 +1044,7 @@
   .page-header-left {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-1);
+    gap: var(--spacing-2);
   }
 
   .back-link {
@@ -1051,7 +1058,7 @@
   }
 
   .back-link:hover {
-    color: var(--primary-600);
+    color: var(--gray-700);
   }
 
   .page-title {
@@ -1068,7 +1075,7 @@
 
   .builder-container {
     display: grid;
-    grid-template-columns: 420px 1fr;
+    grid-template-columns: 400px 1fr;
     gap: var(--spacing-6);
     align-items: start;
   }
@@ -1091,276 +1098,10 @@
     gap: var(--spacing-4);
   }
 
-  .step-section {
-    background: white;
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--gray-200);
-    overflow: hidden;
-  }
-
-  .step-header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-3);
-    padding: var(--spacing-4);
-    border-bottom: 1px solid var(--gray-200);
-    background: var(--gray-50);
-  }
-
-  .step-number {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--primary-600);
-    color: white;
-    border-radius: var(--radius-full);
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-
-  .step-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--gray-900);
-    margin: 0;
-  }
-
-  .step-content {
-    padding: var(--spacing-4);
-  }
-
-  .radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-2);
-  }
-
-  .radio-option {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-3);
-    padding: var(--spacing-3);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .radio-option:hover {
-    border-color: var(--primary-300);
-    background: var(--primary-50);
-  }
-
-  .radio-option.selected {
-    border-color: var(--primary-500);
-    background: var(--primary-50);
-  }
-
-  .radio-option input {
-    margin: 0;
-  }
-
-  .radio-content {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .radio-label {
-    font-weight: 500;
-    color: var(--gray-900);
-  }
-
-  .radio-description {
-    font-size: 0.8125rem;
-    color: var(--gray-500);
-  }
-
-  .form-group {
-    margin-bottom: var(--spacing-4);
-  }
-
-  .form-group:last-child {
-    margin-bottom: 0;
-  }
-
-  .form-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--gray-700);
-    margin-bottom: var(--spacing-1);
-  }
-
-  .form-input {
-    width: 100%;
-    padding: var(--spacing-2) var(--spacing-3);
-    border: 1px solid var(--gray-300);
-    border-radius: var(--radius-md);
-    font-size: 0.9375rem;
-    color: var(--gray-900);
-    background: white;
-    transition: all 0.2s ease;
-  }
-
-  .form-input:focus {
-    outline: none;
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .form-select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-  }
-
-  .search-row {
-    display: flex;
-    gap: var(--spacing-2);
-  }
-
-  .search-row .form-input {
-    flex: 1;
-  }
-
-  .selected-items {
-    margin-top: var(--spacing-4);
-  }
-
-  .selected-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-2);
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .selected-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--spacing-2) var(--spacing-3);
-    background: var(--gray-50);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--gray-200);
-  }
-
-  .selected-item-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .selected-item-primary {
-    font-weight: 500;
-    color: var(--gray-900);
-  }
-
-  .selected-item-secondary {
-    font-size: 0.8125rem;
-    color: var(--gray-500);
-  }
-
-  .remove-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    color: var(--gray-400);
-    cursor: pointer;
-    border-radius: var(--radius-md);
-    transition: all 0.2s ease;
-  }
-
-  .remove-btn:hover {
-    background: var(--danger-100);
-    color: var(--danger-600);
-  }
-
-  .loading-indicator {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
-    color: var(--gray-500);
-    font-size: 0.875rem;
-    padding: var(--spacing-2);
-  }
-
-  .no-options {
-    color: var(--gray-500);
-    font-size: 0.875rem;
-    font-style: italic;
-  }
-
-  .error-message {
-    color: var(--danger-600);
-    font-size: 0.875rem;
-    margin-top: var(--spacing-2);
-  }
-
-  .price-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
-  }
-
-  .price-prefix, .price-suffix {
-    color: var(--gray-500);
-    font-size: 0.9375rem;
-  }
-
-  .price-input {
-    flex: 1;
-    text-align: right;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-2);
-    padding: var(--spacing-2) var(--spacing-4);
-    border-radius: var(--radius-md);
-    font-weight: 500;
-    font-size: 0.9375rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
-  }
-
-  .btn-primary {
-    background: var(--primary-600);
-    color: white;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--primary-700);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-lg {
-    padding: var(--spacing-3) var(--spacing-5);
-    font-size: 1rem;
-  }
-
-  .btn-full {
-    width: 100%;
-  }
-
+  /* Cards */
   .card {
     background: white;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     border: 1px solid var(--gray-200);
     overflow: hidden;
   }
@@ -1370,7 +1111,7 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-4);
-    border-bottom: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-100);
   }
 
   .card-title {
@@ -1384,15 +1125,250 @@
     padding: var(--spacing-4);
   }
 
-  .map-card {
-    min-height: 350px;
+  /* Add Mode Tabs */
+  .add-mode-tabs {
+    display: flex;
+    gap: var(--spacing-1);
+    margin-bottom: var(--spacing-4);
+    background: var(--gray-100);
+    padding: 4px;
+    border-radius: var(--radius-lg);
+  }
+
+  .mode-tab {
+    flex: 1;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    background: transparent;
+    color: var(--gray-600);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+  }
+
+  .mode-tab:hover {
+    color: var(--gray-900);
+  }
+
+  .mode-tab.active {
+    background: white;
+    color: var(--gray-900);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  /* Form Elements */
+  .form-group {
+    margin-bottom: var(--spacing-4);
+  }
+
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .form-input {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px var(--primary-100);
+  }
+
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+  }
+
+  .input-with-button {
+    display: flex;
+    gap: var(--spacing-2);
+  }
+
+  .input-with-button .form-input {
+    flex: 1;
+  }
+
+  .input-with-prefix {
+    position: relative;
+  }
+
+  .input-prefix {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-500);
+    font-size: 0.875rem;
+  }
+
+  .input-with-prefix .form-input {
+    padding-left: 28px;
+  }
+
+  .loading-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    color: var(--gray-500);
+    font-size: 0.875rem;
+  }
+
+  .error-message {
+    margin-top: var(--spacing-3);
+    padding: var(--spacing-3);
+    background: var(--danger-50);
+    color: var(--danger-700);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--primary-600);
+    color: white;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--primary-700);
+  }
+
+  .btn-lg {
+    padding: var(--spacing-3) var(--spacing-6);
+    font-size: 1rem;
+  }
+
+  .btn-full {
+    width: 100%;
+  }
+
+  /* Selected Areas */
+  .area-count {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+  }
+
+  .empty-areas {
+    text-align: center;
+    padding: var(--spacing-6);
+    color: var(--gray-500);
+  }
+
+  .empty-areas p {
+    margin: 0;
+  }
+
+  .empty-areas .hint {
+    font-size: 0.8125rem;
+    color: var(--gray-400);
+    margin-top: var(--spacing-2);
+  }
+
+  .areas-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .area-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+  }
+
+  .area-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+  }
+
+  .area-icon {
+    font-size: 1.25rem;
+  }
+
+  .area-details {
     display: flex;
     flex-direction: column;
   }
 
+  .area-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+
+  .area-type {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+  }
+
+  .remove-btn {
+    padding: var(--spacing-1);
+    border: none;
+    background: transparent;
+    color: var(--gray-400);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
+
+  .remove-btn:hover {
+    background: var(--gray-100);
+    color: var(--danger-600);
+  }
+
+  /* Map */
+  .map-card {
+    min-height: 400px;
+  }
+
   .map-container {
-    flex: 1;
-    min-height: 300px;
+    height: 350px;
+    background: var(--gray-100);
+  }
+
+  /* Demographics */
+  .demographics-card .card-body {
+    padding: var(--spacing-4);
   }
 
   .demographics-grid {
@@ -1453,7 +1429,7 @@
     color: var(--primary-700);
   }
 
-  /* Market Score Indicator */
+  /* Market Score */
   .market-score {
     margin-top: var(--spacing-4);
     padding-top: var(--spacing-4);
@@ -1534,60 +1510,14 @@
     color: var(--gray-500);
   }
 
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-2) 0;
-    border-bottom: 1px solid var(--gray-100);
-  }
-
-  .summary-row:last-child {
-    border-bottom: none;
-  }
-
-  .summary-label {
-    color: var(--gray-500);
-  }
-
-  .summary-value {
-    font-weight: 500;
-    color: var(--gray-900);
-  }
-
-  .capitalize {
-    text-transform: capitalize;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
-    font-weight: 500;
-  }
-
-  .badge-info {
-    background: var(--primary-100);
-    color: var(--primary-700);
-  }
-
-  .spinner {
+  /* Spinner */
+  .spinner-sm {
     width: 16px;
     height: 16px;
-    border: 2px solid var(--gray-300);
-    border-top-color: var(--primary-600);
+    border: 2px solid currentColor;
+    border-right-color: transparent;
     border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-  }
-
-  .spinner-sm {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    animation: spin 0.75s linear infinite;
   }
 
   @keyframes spin {
