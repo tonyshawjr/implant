@@ -79,9 +79,26 @@
   let inviteLastName = $state('');
   let inviteRole = $state('support');
 
-  // Pricing config state
-  let pricingConfig = $state(data.pricingConfig);
-  let priceTiers = $state(data.pricingConfig.priceTiers || []);
+  // Default pricing config
+  const defaultPricingConfig = {
+    scoring: {
+      senior: { weight: 30, thresholds: [{ min: 20, points: 30 }, { min: 15, points: 25 }, { min: 12, points: 20 }, { min: 8, points: 15 }, { min: 0, points: 10 }] },
+      income: { weight: 25, thresholds: [{ min: 100000, points: 25 }, { min: 75000, points: 20 }, { min: 55000, points: 15 }, { min: 40000, points: 10 }, { min: 0, points: 5 }] },
+      population: { weight: 25, thresholds: [{ min: 500000, points: 25 }, { min: 250000, points: 20 }, { min: 100000, points: 15 }, { min: 50000, points: 10 }, { min: 0, points: 5 }] },
+      homeValue: { weight: 20, thresholds: [{ min: 500000, points: 20 }, { min: 350000, points: 16 }, { min: 250000, points: 12 }, { min: 150000, points: 8 }, { min: 0, points: 4 }] }
+    },
+    priceTiers: [
+      { minScore: 80, price: 3500, label: 'Premium' },
+      { minScore: 65, price: 2750, label: 'High' },
+      { minScore: 50, price: 2000, label: 'Standard' },
+      { minScore: 35, price: 1500, label: 'Moderate' },
+      { minScore: 0, price: 1000, label: 'Entry' }
+    ]
+  };
+
+  // Pricing config state - use data if available, otherwise use defaults
+  let pricingConfig = $state(data.pricingConfig || defaultPricingConfig);
+  let priceTiers = $state((data.pricingConfig?.priceTiers || defaultPricingConfig.priceTiers));
 
   function getIntegrationStatusClass(status: string): string {
     return status === 'connected' ? 'badge-success' : 'badge-gray';
