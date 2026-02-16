@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { PageData } from './$types';
   import { goto } from '$app/navigation';
+  import { enhance } from '$app/forms';
+  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
 
   let { data }: { data: PageData } = $props();
 
@@ -13,6 +16,100 @@
   // Modal state
   let showAddModal = $state(false);
   let selectedTerritory = $state<typeof data.territories[0] | null>(null);
+
+  // Map state
+  let mapContainer: HTMLDivElement;
+  let map: any = null;
+  let L: any = null;
+
+  // Form state for Add Territory
+  let newTerritory = $state({
+    name: '',
+    city: '',
+    state: '',
+    territoryType: 'city',
+    radiusMiles: 15,
+    centerLat: 33.4484, // Default to Phoenix
+    centerLng: -112.0740,
+    monthlyBasePrice: 1500,
+    population: 0
+  });
+  let isSubmitting = $state(false);
+
+  // Initialize Leaflet map
+  onMount(async () => {
+    if (browser) {
+      L = (await import('leaflet')).default;
+
+      // Initialize map centered on US
+      map = L.map(mapContainer).setView([39.8283, -98.5795], 4);
+
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      // Add territory markers
+      addTerritoryMarkers();
+    }
+
+    return () => {
+      if (map) {
+        map.remove();
+      }
+    };
+  });
+
+  function addTerritoryMarkers() {
+    if (!map || !L || !data.territories) return;
+
+    data.territories.forEach(territory => {
+      const color = territory.status === 'locked' ? '#3b82f6' :
+                    territory.status === 'available' ? '#22c55e' :
+                    '#f59e0b';
+
+      // Add circle for territory radius
+      const circle = L.circle([territory.centerLat, territory.centerLng], {
+        radius: territory.radiusMiles * 1609.34, // Convert miles to meters
+        fillColor: color,
+        fillOpacity: 0.2,
+        color: color,
+        weight: 2
+      }).addTo(map);
+
+      // Add popup
+      circle.bindPopup(`
+        <strong>${territory.name}</strong><br>
+        ${territory.city}, ${territory.state}<br>
+        Status: ${territory.status === 'locked' ? 'Assigned' : territory.status === 'available' ? 'Available' : 'Waitlist'}<br>
+        ${territory.client ? `Client: ${territory.client.name}` : ''}
+      `);
+    });
+
+    // Fit map to show all territories if there are any
+    if (data.territories.length > 0) {
+      const bounds = L.latLngBounds(
+        data.territories.map(t => [t.centerLat, t.centerLng])
+      );
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }
+
+  function closeAddModal() {
+    showAddModal = false;
+    // Reset form
+    newTerritory = {
+      name: '',
+      city: '',
+      state: '',
+      territoryType: 'city',
+      radiusMiles: 15,
+      centerLat: 33.4484,
+      centerLng: -112.0740,
+      monthlyBasePrice: 1500,
+      population: 0
+    };
+  }
 
   // Helper functions
   function formatCurrency(value: number): string {
@@ -96,6 +193,7 @@
 
 <svelte:head>
   <title>Territory Management - SqueezMedia Operations</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </svelte:head>
 
 <!-- Stats Row -->
@@ -181,35 +279,26 @@
   </div>
 </div>
 
-<!-- Map Placeholder and Revenue Card -->
+<!-- Map and Revenue Card -->
 <div class="map-revenue-row">
   <div class="card map-card">
     <div class="card-header">
       <h3 class="card-title">Territory Map</h3>
       <span class="badge badge-info">Interactive</span>
     </div>
-    <div class="map-placeholder">
-      <div class="map-placeholder-content">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-        <p class="map-placeholder-text">Territory map visualization</p>
-        <p class="map-placeholder-subtext">Showing {data.stats.total} territories across {data.states.length} states</p>
-        <div class="map-legend">
-          <div class="legend-item">
-            <span class="legend-dot available"></span>
-            <span>Available ({data.stats.available})</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot locked"></span>
-            <span>Assigned ({data.stats.locked})</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot waitlist"></span>
-            <span>Waitlist ({data.stats.waitlist})</span>
-          </div>
-        </div>
+    <div class="map-container" bind:this={mapContainer}></div>
+    <div class="map-legend-bar">
+      <div class="legend-item">
+        <span class="legend-dot available"></span>
+        <span>Available ({data.stats.available})</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot locked"></span>
+        <span>Assigned ({data.stats.locked})</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot waitlist"></span>
+        <span>Waitlist ({data.stats.waitlist})</span>
       </div>
     </div>
   </div>
@@ -642,6 +731,159 @@
   </div>
 {/if}
 
+<!-- Add Territory Modal -->
+{#if showAddModal}
+  <div class="modal-overlay" onclick={closeAddModal}></div>
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Add New Territory</h2>
+      <button class="close-btn" onclick={closeAddModal}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form
+      method="POST"
+      action="?/addTerritory"
+      use:enhance={() => {
+        isSubmitting = true;
+        return async ({ result, update }) => {
+          isSubmitting = false;
+          if (result.type === 'success') {
+            closeAddModal();
+            await update();
+          }
+        };
+      }}
+    >
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label">Territory Name *</label>
+            <input
+              type="text"
+              name="name"
+              class="form-input"
+              placeholder="e.g., Phoenix Metro, Austin North"
+              bind:value={newTerritory.name}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">City *</label>
+            <input
+              type="text"
+              name="city"
+              class="form-input"
+              placeholder="Phoenix"
+              bind:value={newTerritory.city}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">State *</label>
+            <input
+              type="text"
+              name="state"
+              class="form-input"
+              placeholder="AZ"
+              maxlength="2"
+              bind:value={newTerritory.state}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Territory Type</label>
+            <select name="territoryType" class="form-input form-select" bind:value={newTerritory.territoryType}>
+              <option value="city">City</option>
+              <option value="county">County</option>
+              <option value="metro">Metro Area</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Radius (miles) *</label>
+            <input
+              type="number"
+              name="radiusMiles"
+              class="form-input"
+              min="5"
+              max="100"
+              bind:value={newTerritory.radiusMiles}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Center Latitude *</label>
+            <input
+              type="number"
+              name="centerLat"
+              class="form-input"
+              step="0.0001"
+              placeholder="33.4484"
+              bind:value={newTerritory.centerLat}
+              required
+            />
+            <span class="form-help">Use Google Maps to find coordinates</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Center Longitude *</label>
+            <input
+              type="number"
+              name="centerLng"
+              class="form-input"
+              step="0.0001"
+              placeholder="-112.0740"
+              bind:value={newTerritory.centerLng}
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Monthly Base Price ($)</label>
+            <input
+              type="number"
+              name="monthlyBasePrice"
+              class="form-input"
+              min="0"
+              step="100"
+              bind:value={newTerritory.monthlyBasePrice}
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Population (estimate)</label>
+            <input
+              type="number"
+              name="population"
+              class="form-input"
+              min="0"
+              bind:value={newTerritory.population}
+            />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick={closeAddModal}>Cancel</button>
+        <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+          {#if isSubmitting}
+            Creating...
+          {:else}
+            Create Territory
+          {/if}
+        </button>
+      </div>
+    </form>
+  </div>
+{/if}
+
 <style>
   .stats-row {
     display: grid;
@@ -681,7 +923,26 @@
   }
 
   .map-card {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .map-container {
+    flex: 1;
     min-height: 300px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    z-index: 1;
+  }
+
+  .map-legend-bar {
+    display: flex;
+    gap: var(--spacing-4);
+    justify-content: center;
+    padding: var(--spacing-3);
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    flex-wrap: wrap;
   }
 
   .map-placeholder {
@@ -1461,5 +1722,94 @@
   .badge-info {
     background: var(--primary-100);
     color: var(--primary-700);
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+  }
+
+  .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4) var(--spacing-5);
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+  }
+
+  .modal-body {
+    padding: var(--spacing-5);
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4) var(--spacing-5);
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-4);
+  }
+
+  @media (max-width: 640px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+  }
+
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+  }
+
+  .form-help {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: var(--spacing-1);
   }
 </style>

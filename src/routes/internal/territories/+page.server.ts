@@ -359,5 +359,54 @@ export const actions: Actions = {
       console.error('Failed to check overlap:', error);
       return fail(500, { error: 'Failed to check overlap' });
     }
+  },
+
+  addTerritory: async ({ request }) => {
+    const formData = await request.formData();
+
+    const name = formData.get('name') as string;
+    const city = formData.get('city') as string;
+    const state = formData.get('state') as string;
+    const territoryType = formData.get('territoryType') as string;
+    const radiusMiles = parseInt(formData.get('radiusMiles') as string);
+    const centerLat = parseFloat(formData.get('centerLat') as string);
+    const centerLng = parseFloat(formData.get('centerLng') as string);
+    const monthlyBasePrice = parseFloat(formData.get('monthlyBasePrice') as string) || null;
+    const population = parseInt(formData.get('population') as string) || null;
+
+    // Validation
+    if (!name || !city || !state) {
+      return fail(400, { error: 'Name, city, and state are required' });
+    }
+
+    if (isNaN(radiusMiles) || radiusMiles <= 0) {
+      return fail(400, { error: 'Valid radius is required' });
+    }
+
+    if (isNaN(centerLat) || isNaN(centerLng)) {
+      return fail(400, { error: 'Valid coordinates are required' });
+    }
+
+    try {
+      await prisma.territory.create({
+        data: {
+          name,
+          city,
+          state,
+          territoryType: territoryType || 'city',
+          radiusMiles,
+          centerLat,
+          centerLng,
+          monthlyBasePrice,
+          population,
+          status: 'available'
+        }
+      });
+
+      return { success: true, message: 'Territory created successfully' };
+    } catch (error) {
+      console.error('Failed to create territory:', error);
+      return fail(500, { error: 'Failed to create territory' });
+    }
   }
 };
