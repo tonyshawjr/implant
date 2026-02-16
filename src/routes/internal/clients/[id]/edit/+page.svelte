@@ -176,7 +176,7 @@
 							</div>
 							<div class="territory-actions">
 								<a href="/internal/territories/{data.currentTerritory.id}/edit" class="btn btn-sm btn-secondary">Edit</a>
-								<button type="button" class="btn btn-sm btn-danger" on:click={() => showUnassignConfirm = true}>Unassign</button>
+								<button type="button" class="btn btn-sm btn-danger" onclick={() => showUnassignConfirm = true}>Unassign</button>
 							</div>
 						</div>
 
@@ -185,14 +185,14 @@
 								<input type="hidden" name="assignmentId" value={data.currentTerritory.assignmentId} />
 								<p class="confirm-text">Are you sure you want to unassign this territory?</p>
 								<div class="confirm-actions">
-									<button type="button" class="btn btn-sm btn-secondary" on:click={() => showUnassignConfirm = false}>Cancel</button>
+									<button type="button" class="btn btn-sm btn-secondary" onclick={() => showUnassignConfirm = false}>Cancel</button>
 									<button type="submit" class="btn btn-sm btn-danger">Unassign</button>
 								</div>
 							</form>
 						{/if}
 					{:else}
 						<p class="no-territory">No territory assigned</p>
-						<button type="button" class="btn btn-primary btn-block" on:click={() => showAssignTerritoryModal = true}>Assign Territory</button>
+						<button type="button" class="btn btn-primary btn-block" onclick={() => showAssignTerritoryModal = true}>Assign Territory</button>
 					{/if}
 				</div>
 			</div>
@@ -201,7 +201,7 @@
 			<div class="card">
 				<div class="card-header">
 					<h2 class="card-title">Contacts</h2>
-					<button type="button" class="btn btn-sm btn-secondary" on:click={() => showAddContactModal = true}>
+					<button type="button" class="btn btn-sm btn-secondary" onclick={() => showAddContactModal = true}>
 						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="12" y1="5" x2="12" y2="19" />
 							<line x1="5" y1="12" x2="19" y2="12" />
@@ -288,11 +288,11 @@
 
 <!-- Assign Territory Modal -->
 {#if showAssignTerritoryModal}
-	<div class="modal-overlay" on:click={(e) => { if (e.target === e.currentTarget) showAssignTerritoryModal = false }}>
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAssignTerritoryModal = false }}>
 		<div class="modal">
 			<div class="modal-header">
 				<h2 class="modal-title">Assign Territory</h2>
-				<button type="button" class="modal-close" on:click={() => showAssignTerritoryModal = false}>
+				<button type="button" class="modal-close" onclick={() => showAssignTerritoryModal = false}>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="18" y1="6" x2="6" y2="18" />
 						<line x1="6" y1="6" x2="18" y2="18" />
@@ -333,7 +333,7 @@
 					{/if}
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" on:click={() => showAssignTerritoryModal = false}>Cancel</button>
+					<button type="button" class="btn btn-secondary" onclick={() => showAssignTerritoryModal = false}>Cancel</button>
 					{#if data.availableTerritories.length > 0}
 						<button type="submit" class="btn btn-primary" disabled={isSubmitting || !selectedTerritoryId}>
 							{isSubmitting ? 'Assigning...' : 'Assign Territory'}
@@ -347,11 +347,11 @@
 
 <!-- Add Contact Modal -->
 {#if showAddContactModal}
-	<div class="modal-overlay" on:click={(e) => { if (e.target === e.currentTarget) showAddContactModal = false }}>
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddContactModal = false }}>
 		<div class="modal">
 			<div class="modal-header">
 				<h2 class="modal-title">Add Contact</h2>
-				<button type="button" class="modal-close" on:click={() => showAddContactModal = false}>
+				<button type="button" class="modal-close" onclick={() => showAddContactModal = false}>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<line x1="18" y1="6" x2="6" y2="18" />
 						<line x1="6" y1="6" x2="18" y2="18" />
@@ -415,7 +415,7 @@
 					</div>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" on:click={() => showAddContactModal = false}>Cancel</button>
+					<button type="button" class="btn btn-secondary" onclick={() => showAddContactModal = false}>Cancel</button>
 					<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
 						{isSubmitting ? 'Adding...' : 'Add Contact'}
 					</button>
