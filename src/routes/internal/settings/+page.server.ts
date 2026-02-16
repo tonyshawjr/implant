@@ -2,6 +2,13 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 import { hash } from '@node-rs/argon2';
+import {
+  getIntegrations,
+  connectIntegration as connectInt,
+  disconnectIntegration as disconnectInt,
+  INTEGRATIONS_METADATA,
+  type IntegrationId
+} from '$lib/server/integrations';
 
 export const load: PageServerLoad = async ({ url }) => {
   const activeTab = url.searchParams.get('tab') || 'general';
@@ -36,73 +43,14 @@ export const load: PageServerLoad = async ({ url }) => {
     weeklyReport: true
   };
 
-  // Integration status
-  const integrations = [
-    {
-      id: 'stripe',
-      name: 'Stripe',
-      description: 'Payment processing and subscription management',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'credit-card'
-    },
-    {
-      id: 'twilio',
-      name: 'Twilio',
-      description: 'SMS and voice notifications',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'phone'
-    },
-    {
-      id: 'facebook',
-      name: 'Meta Ads',
-      description: 'Facebook and Instagram advertising',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'megaphone'
-    },
-    {
-      id: 'google-ads',
-      name: 'Google Ads',
-      description: 'Google advertising platform',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'search'
-    },
-    {
-      id: 'mapbox',
-      name: 'Mapbox',
-      description: 'Territory mapping and visualization',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'map'
-    },
-    {
-      id: 'calendly',
-      name: 'Calendly',
-      description: 'Appointment scheduling',
-      status: 'disconnected',
-      lastSync: null,
-      icon: 'calendar'
-    },
-    {
-      id: 'slack',
-      name: 'Slack',
-      description: 'Team notifications and alerts',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'chat'
-    },
-    {
-      id: 'openai',
-      name: 'OpenAI',
-      description: 'AI content generation',
-      status: 'connected',
-      lastSync: new Date().toISOString(),
-      icon: 'sparkles'
-    }
-  ];
+  // Integration status - loaded dynamically from database
+  const integrations = await getIntegrations();
+
+  // Get integration metadata for configuration forms
+  const integrationFields = INTEGRATIONS_METADATA.reduce((acc, meta) => {
+    acc[meta.id] = meta.fields;
+    return acc;
+  }, {} as Record<string, typeof INTEGRATIONS_METADATA[0]['fields']>);
 
   // Team members (internal staff) - loaded from database
   // Internal roles are: super_admin, admin, support (no organizationId or null)
@@ -163,6 +111,7 @@ export const load: PageServerLoad = async ({ url }) => {
     platformSettings,
     notificationSettings,
     integrations,
+    integrationFields,
     teamMembers,
     apiKeys
   };
@@ -215,13 +164,40 @@ export const actions: Actions = {
       return fail(401, { message: 'Unauthorized' });
     }
 
+    if (!['super_admin', 'admin'].includes(locals.user.role)) {
+      return fail(403, { message: 'You do not have permission to configure integrations' });
+    }
+
     const formData = await request.formData();
-    const integrationId = formData.get('integrationId') as string;
+    const integrationId = formData.get('integrationId') as IntegrationId;
 
-    // In a real implementation, initiate OAuth flow or API key setup
-    console.log('Connecting integration:', integrationId);
+    if (!integrationId) {
+      return fail(400, { message: 'Integration ID is required' });
+    }
 
-    return { success: true, message: 'Integration connection initiated' };
+    // Get all form fields for this integration
+    const meta = INTEGRATIONS_METADATA.find(m => m.id === integrationId);
+    if (!meta) {
+      return fail(400, { message: 'Unknown integration' });
+    }
+
+    // Extract credentials from form data
+    const credentials: Record<string, string> = {};
+    for (const field of meta.fields) {
+      const value = formData.get(field.key);
+      if (value) {
+        credentials[field.key] = value.toString();
+      }
+    }
+
+    // Connect the integration
+    const result = await connectInt(integrationId, credentials, locals.user.id);
+
+    if (!result.success) {
+      return fail(400, { message: result.error || 'Failed to connect integration' });
+    }
+
+    return { success: true, message: `${meta.name} connected successfully` };
   },
 
   disconnectIntegration: async ({ request, locals }) => {
@@ -229,13 +205,71 @@ export const actions: Actions = {
       return fail(401, { message: 'Unauthorized' });
     }
 
+    if (!['super_admin', 'admin'].includes(locals.user.role)) {
+      return fail(403, { message: 'You do not have permission to configure integrations' });
+    }
+
     const formData = await request.formData();
-    const integrationId = formData.get('integrationId') as string;
+    const integrationId = formData.get('integrationId') as IntegrationId;
 
-    // In a real implementation, revoke OAuth tokens and remove from database
-    console.log('Disconnecting integration:', integrationId);
+    if (!integrationId) {
+      return fail(400, { message: 'Integration ID is required' });
+    }
 
-    return { success: true, message: 'Integration disconnected' };
+    const meta = INTEGRATIONS_METADATA.find(m => m.id === integrationId);
+    if (!meta) {
+      return fail(400, { message: 'Unknown integration' });
+    }
+
+    // Disconnect the integration
+    const result = await disconnectInt(integrationId, locals.user.id);
+
+    if (!result.success) {
+      return fail(400, { message: result.error || 'Failed to disconnect integration' });
+    }
+
+    return { success: true, message: `${meta.name} disconnected` };
+  },
+
+  configureIntegration: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { message: 'Unauthorized' });
+    }
+
+    if (!['super_admin', 'admin'].includes(locals.user.role)) {
+      return fail(403, { message: 'You do not have permission to configure integrations' });
+    }
+
+    const formData = await request.formData();
+    const integrationId = formData.get('integrationId') as IntegrationId;
+
+    if (!integrationId) {
+      return fail(400, { message: 'Integration ID is required' });
+    }
+
+    // Get all form fields for this integration
+    const meta = INTEGRATIONS_METADATA.find(m => m.id === integrationId);
+    if (!meta) {
+      return fail(400, { message: 'Unknown integration' });
+    }
+
+    // Extract credentials from form data
+    const credentials: Record<string, string> = {};
+    for (const field of meta.fields) {
+      const value = formData.get(field.key);
+      if (value) {
+        credentials[field.key] = value.toString();
+      }
+    }
+
+    // Update the integration configuration
+    const result = await connectInt(integrationId, credentials, locals.user.id);
+
+    if (!result.success) {
+      return fail(400, { message: result.error || 'Failed to update integration' });
+    }
+
+    return { success: true, message: `${meta.name} configuration updated` };
   },
 
   inviteTeamMember: async ({ request, locals }) => {

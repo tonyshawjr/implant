@@ -9,6 +9,9 @@
   let showInviteModal = $state(false);
   let showEditModal = $state(false);
   let showCredentialsModal = $state(false);
+  let showIntegrationModal = $state(false);
+  let selectedIntegration = $state<any>(null);
+  let integrationModalMode = $state<'connect' | 'configure'>('connect');
   let newUserCredentials = $state<{ email: string; password: string; name: string } | null>(null);
   let editingMember = $state<any>(null);
   let isSubmitting = $state(false);
@@ -145,6 +148,21 @@
   function closeEditModal() {
     showEditModal = false;
     editingMember = null;
+  }
+
+  function openIntegrationModal(integration: any, mode: 'connect' | 'configure') {
+    selectedIntegration = integration;
+    integrationModalMode = mode;
+    showIntegrationModal = true;
+  }
+
+  function closeIntegrationModal() {
+    showIntegrationModal = false;
+    selectedIntegration = null;
+  }
+
+  function getFieldsForIntegration(integrationId: string) {
+    return data.integrationFields?.[integrationId] || [];
   }
 
   function handleFormSubmit() {
@@ -594,6 +612,11 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
                 </svg>
+              {:else if integration.icon === 'mail'}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
               {:else}
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"/>
@@ -611,21 +634,31 @@
           {#if integration.status === 'connected'}
             <div class="integration-meta">
               <span class="text-xs text-gray-500">Last sync: {formatDate(integration.lastSync)}</span>
+              {#if integration.apiKeyMasked}
+                <span class="text-xs text-gray-500">Key: <code class="api-key-mini">{integration.apiKeyMasked}</code></span>
+              {/if}
             </div>
           {/if}
 
           <div class="integration-actions">
             {#if integration.status === 'connected'}
-              <button class="btn btn-sm btn-outline">Configure</button>
-              <form method="POST" action="?/disconnectIntegration" style="display: inline;">
+              <button
+                class="btn btn-sm btn-outline"
+                onclick={() => openIntegrationModal(integration, 'configure')}
+              >
+                Configure
+              </button>
+              <form method="POST" action="?/disconnectIntegration" style="display: inline;" use:enhance={handleFormSubmit}>
                 <input type="hidden" name="integrationId" value={integration.id}>
-                <button type="submit" class="btn btn-sm btn-danger">Disconnect</button>
+                <button type="submit" class="btn btn-sm btn-danger" disabled={isSubmitting}>Disconnect</button>
               </form>
             {:else}
-              <form method="POST" action="?/connectIntegration">
-                <input type="hidden" name="integrationId" value={integration.id}>
-                <button type="submit" class="btn btn-sm btn-primary">Connect</button>
-              </form>
+              <button
+                class="btn btn-sm btn-primary"
+                onclick={() => openIntegrationModal(integration, 'connect')}
+              >
+                Connect
+              </button>
             {/if}
           </div>
         </div>
@@ -909,6 +942,131 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" onclick={closeCredentialsModal}>Done</button>
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Integration Configuration Modal -->
+{#if showIntegrationModal && selectedIntegration}
+  <div class="modal-overlay open" onclick={closeIntegrationModal}>
+    <div class="modal integration-modal" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <div class="modal-header-content">
+          <div class="integration-modal-icon">
+            {#if selectedIntegration.icon === 'credit-card'}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                <line x1="1" y1="10" x2="23" y2="10"/>
+              </svg>
+            {:else if selectedIntegration.icon === 'phone'}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            {:else if selectedIntegration.icon === 'mail'}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            {:else if selectedIntegration.icon === 'sparkles'}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
+              </svg>
+            {:else}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+              </svg>
+            {/if}
+          </div>
+          <div>
+            <h3 class="modal-title">
+              {integrationModalMode === 'connect' ? 'Connect' : 'Configure'} {selectedIntegration.name}
+            </h3>
+            <p class="modal-subtitle">{selectedIntegration.description}</p>
+          </div>
+        </div>
+        <button class="modal-close" onclick={closeIntegrationModal}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <form
+        method="POST"
+        action={integrationModalMode === 'connect' ? '?/connectIntegration' : '?/configureIntegration'}
+        use:enhance={handleFormSubmit}
+      >
+        <input type="hidden" name="integrationId" value={selectedIntegration.id}>
+        <div class="modal-body">
+          {#if integrationModalMode === 'configure' && selectedIntegration.apiKeyMasked}
+            <div class="current-config-notice">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <span>Current key: <code>{selectedIntegration.apiKeyMasked}</code>. Enter new credentials to update.</span>
+            </div>
+          {/if}
+
+          {#each getFieldsForIntegration(selectedIntegration.id) as field}
+            <div class="form-group">
+              <label class="form-label" for={`field-${field.key}`}>
+                {field.label}
+                {#if field.required && integrationModalMode === 'connect'}
+                  <span class="required-star">*</span>
+                {/if}
+              </label>
+
+              {#if field.type === 'select' && field.options}
+                <select
+                  id={`field-${field.key}`}
+                  name={field.key}
+                  class="form-input form-select"
+                  required={field.required && integrationModalMode === 'connect'}
+                >
+                  <option value="">Select an option</option>
+                  {#each field.options as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              {:else}
+                <input
+                  type={field.type === 'password' ? 'password' : field.type === 'number' ? 'number' : field.type === 'email' ? 'email' : 'text'}
+                  id={`field-${field.key}`}
+                  name={field.key}
+                  class="form-input"
+                  placeholder={field.placeholder || ''}
+                  required={field.required && integrationModalMode === 'connect'}
+                  autocomplete={field.type === 'password' ? 'new-password' : 'off'}
+                >
+              {/if}
+
+              {#if field.helpText}
+                <p class="form-help">{field.helpText}</p>
+              {/if}
+            </div>
+          {/each}
+
+          {#if integrationModalMode === 'configure'}
+            <p class="form-note">
+              Leave fields blank to keep current values. Only filled fields will be updated.
+            </p>
+          {/if}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick={closeIntegrationModal} disabled={isSubmitting}>
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+            {#if isSubmitting}
+              {integrationModalMode === 'connect' ? 'Connecting...' : 'Saving...'}
+            {:else}
+              {integrationModalMode === 'connect' ? 'Connect' : 'Save Changes'}
+            {/if}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 {/if}
@@ -1429,5 +1587,91 @@
     border-radius: var(--radius-lg);
     font-size: 0.8125rem;
     color: var(--warning-800, #92400e);
+  }
+
+  /* Integration Modal Styles */
+  .integration-modal {
+    max-width: 520px;
+  }
+
+  .modal-header-content {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+  }
+
+  .integration-modal-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    background: var(--primary-100);
+    color: var(--primary-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .modal-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+
+  .current-config-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
+    background: var(--primary-50, #eff6ff);
+    border: 1px solid var(--primary-200, #bfdbfe);
+    border-radius: var(--radius-lg);
+    font-size: 0.8125rem;
+    color: var(--primary-800, #1e40af);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .current-config-notice svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .current-config-notice code {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    background: white;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    color: var(--primary-700);
+  }
+
+  .required-star {
+    color: var(--danger-500, #ef4444);
+    margin-left: 2px;
+  }
+
+  .form-note {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: var(--spacing-4);
+    padding-top: var(--spacing-3);
+    border-top: 1px solid var(--gray-100);
+    font-style: italic;
+  }
+
+  .api-key-mini {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    background: var(--gray-200);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    color: var(--gray-600);
+  }
+
+  .integration-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: var(--spacing-2);
   }
 </style>
