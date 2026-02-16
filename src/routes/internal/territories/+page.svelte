@@ -247,9 +247,11 @@
       // Initialize map centered on US
       map = L.map(mapContainer).setView([39.8283, -98.5795], 4);
 
-      // Add OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      // Add CartoDB Positron tiles (clean, minimal style)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
       }).addTo(map);
 
       // Add territory markers
@@ -308,9 +310,10 @@
     boundaryLayers.clear();
 
     for (const territory of data.territories) {
-      const color = territory.status === 'locked' ? '#3b82f6' :
-                    territory.status === 'available' ? '#22c55e' :
-                    '#f59e0b';
+      // Colorblind-friendly colors: Blue (assigned), Cyan (available), Orange (waitlist)
+      const color = territory.status === 'locked' ? '#2563eb' :
+                    territory.status === 'available' ? '#0891b2' :
+                    '#ea580c';
 
       let layer: any = null;
       let boundary: any = null;
@@ -362,16 +365,17 @@
       }
 
       // Add popup with click to edit
+      const statusLabel = territory.status === 'locked' ? 'Assigned' : territory.status === 'available' ? 'Available' : 'Waitlist';
       const popupContent = `
-        <div style="min-width: 180px;">
-          <strong style="font-size: 14px;">${territory.name}</strong><br>
-          <span style="color: #666;">${territory.city}, ${territory.state}</span><br>
-          <span style="display: inline-block; padding: 2px 8px; margin: 4px 0; border-radius: 12px; font-size: 12px; background: ${color}22; color: ${color};">
-            ${territory.status === 'locked' ? 'Assigned' : territory.status === 'available' ? 'Available' : 'Waitlist'}
+        <div style="min-width: 180px; font-family: system-ui, sans-serif;">
+          <strong style="font-size: 14px; color: #1e293b;">${territory.name}</strong><br>
+          <span style="color: #64748b; font-size: 13px;">${territory.city}, ${territory.state}</span><br>
+          <span style="display: inline-block; padding: 3px 10px; margin: 6px 0; border-radius: 12px; font-size: 12px; font-weight: 500; background: ${color}20; color: ${color};">
+            ${statusLabel}
           </span><br>
-          ${territory.client ? `<span style="font-size: 12px;">Client: ${territory.client.name}</span><br>` : ''}
-          ${territory.population ? `<span style="font-size: 12px;">Pop: ${formatNumber(territory.population)}</span><br>` : ''}
-          <a href="/internal/territories/${territory.id}/edit" style="display: inline-block; margin-top: 8px; padding: 4px 12px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">Edit Territory</a>
+          ${territory.client ? `<span style="font-size: 12px; color: #475569;">Client: ${territory.client.name}</span><br>` : ''}
+          ${territory.population ? `<span style="font-size: 12px; color: #64748b;">Pop: ${formatNumber(territory.population)}</span><br>` : ''}
+          <a href="/internal/territories/${territory.id}/edit" style="display: inline-block; margin-top: 8px; padding: 6px 14px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 500;">Edit Territory</a>
         </div>
       `;
       layer.bindPopup(popupContent);
@@ -1591,15 +1595,15 @@
   }
 
   .legend-dot.available {
-    background: var(--success-500);
+    background: #0891b2;
   }
 
   .legend-dot.locked {
-    background: var(--primary-500);
+    background: #2563eb;
   }
 
   .legend-dot.waitlist {
-    background: var(--warning-500);
+    background: #ea580c;
   }
 
   .revenue-card .card-body {

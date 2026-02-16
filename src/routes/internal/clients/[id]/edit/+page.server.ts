@@ -118,13 +118,13 @@ export const load: PageServerLoad = async ({ params }) => {
 			? {
 					id: organization.contracts[0].id,
 					planId: organization.contracts[0].planId,
-					planName: organization.contracts[0].plan.name,
-					monthlyCommitment: organization.contracts[0].monthlyCommitment.toNumber(),
-					termMonths: organization.contracts[0].termMonths,
+					planName: organization.contracts[0].plan?.name ?? 'Unknown',
+					monthlyCommitment: organization.contracts[0].monthlyCommitment?.toNumber() ?? 0,
+					termMonths: organization.contracts[0].termMonths ?? 12,
 					status: organization.contracts[0].status,
-					autoRenew: organization.contracts[0].autoRenew,
-					startDate: organization.contracts[0].startDate.toISOString().split('T')[0],
-					endDate: organization.contracts[0].endDate.toISOString().split('T')[0]
+					autoRenew: organization.contracts[0].autoRenew ?? false,
+					startDate: organization.contracts[0].startDate?.toISOString().split('T')[0] ?? '',
+					endDate: organization.contracts[0].endDate?.toISOString().split('T')[0] ?? ''
 				}
 			: null,
 		contacts: organization.contacts.map((c) => ({
@@ -152,7 +152,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		plans: plans.map((p) => ({
 			id: p.id,
 			name: p.name,
-			basePrice: p.basePrice.toNumber()
+			basePrice: p.basePrice?.toNumber() ?? 0
 		}))
 	};
 };

@@ -232,8 +232,11 @@
       const centerLng = data.territory.centerLng || -98.5795;
 
       map = L.map(mapContainer).setView([centerLat, centerLng], 8);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      // CartoDB Positron - clean, minimal map style
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
       }).addTo(map);
 
       // Load boundary for existing territory
@@ -346,12 +349,13 @@
   }
 
   function getAreaColor(type: string): string {
+    // Colorblind-friendly colors with good contrast on light map
     switch (type) {
-      case 'metro': return '#8b5cf6';
-      case 'county': return '#10b981';
-      case 'city': return '#f59e0b';
-      case 'zipcode': return '#3b82f6';
-      default: return '#6b7280';
+      case 'metro': return '#7c3aed'; // violet (distinct)
+      case 'county': return '#0891b2'; // cyan (colorblind-safe)
+      case 'city': return '#ea580c'; // orange (colorblind-safe)
+      case 'zipcode': return '#2563eb'; // blue (primary)
+      default: return '#64748b'; // slate gray
     }
   }
 

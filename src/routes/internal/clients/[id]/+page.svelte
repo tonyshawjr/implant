@@ -114,52 +114,51 @@
 	}
 </script>
 
+<!-- Breadcrumb -->
+<a href="/internal" class="back-link">
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+		<path d="M19 12H5M12 19l-7-7 7-7" />
+	</svg>
+	Back to Clients
+</a>
+
 <!-- Page Header -->
 <div class="page-header">
 	<div class="header-left">
-		<a href="/internal" class="back-link">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M19 12H5M12 19l-7-7 7-7" />
-			</svg>
-			Back to Clients
-		</a>
-		<div class="client-header">
-			<div class="client-avatar large">{getInitials(data.organization.name.split(' ')[0], data.organization.name.split(' ')[1] || '')}</div>
-			<div class="client-info">
-				<div class="client-name-row">
-					<h1 class="client-name">{data.organization.name}</h1>
-					<span class="status-badge {data.organization.status}">{data.organization.status}</span>
-				</div>
-				<div class="client-meta">
-					{#if data.territory}
-						<span class="meta-item">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-								<circle cx="12" cy="10" r="3" />
-							</svg>
-							{data.territory.location}
-						</span>
-					{/if}
-					{#if data.organization.phone}
-						<span class="meta-item">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-							</svg>
-							{formatPhone(data.organization.phone)}
-						</span>
-					{/if}
-					{#if data.organization.clientSince}
-						<span class="meta-item">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-								<line x1="16" y1="2" x2="16" y2="6" />
-								<line x1="8" y1="2" x2="8" y2="6" />
-								<line x1="3" y1="10" x2="21" y2="10" />
-							</svg>
-							Client since {formatDate(data.organization.clientSince, 'medium')}
-						</span>
-					{/if}
-				</div>
+		<div class="client-info">
+			<div class="client-name-row">
+				<h1 class="client-name">{data.organization.name}</h1>
+				<span class="status-badge {data.organization.status}">{data.organization.status}</span>
+			</div>
+			<div class="client-meta">
+				{#if data.territory}
+					<span class="meta-item">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+							<circle cx="12" cy="10" r="3" />
+						</svg>
+						{data.territory.location}
+					</span>
+				{/if}
+				{#if data.organization.phone}
+					<span class="meta-item">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+						</svg>
+						{formatPhone(data.organization.phone)}
+					</span>
+				{/if}
+				{#if data.organization.clientSince}
+					<span class="meta-item">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+							<line x1="16" y1="2" x2="16" y2="6" />
+							<line x1="8" y1="2" x2="8" y2="6" />
+							<line x1="3" y1="10" x2="21" y2="10" />
+						</svg>
+						Client since {formatDate(data.organization.clientSince, 'medium')}
+					</span>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -833,6 +832,22 @@
 {/if}
 
 <style>
+	/* Breadcrumb */
+	.back-link {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-2);
+		color: var(--gray-500);
+		text-decoration: none;
+		font-size: 0.875rem;
+		margin-bottom: var(--spacing-4);
+		transition: color 0.2s;
+	}
+
+	.back-link:hover {
+		color: var(--primary-600);
+	}
+
 	/* Page Header */
 	.page-header {
 		display: flex;
@@ -841,46 +856,6 @@
 		gap: var(--spacing-6);
 		margin-bottom: var(--spacing-6);
 		flex-wrap: wrap;
-	}
-
-	.back-link {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--spacing-2);
-		color: var(--gray-500);
-		text-decoration: none;
-		font-size: 0.875rem;
-		margin-bottom: var(--spacing-3);
-		transition: color 0.2s;
-	}
-
-	.back-link:hover {
-		color: var(--primary-600);
-	}
-
-	.client-header {
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-4);
-	}
-
-	.client-avatar {
-		width: 36px;
-		height: 36px;
-		border-radius: var(--radius-lg);
-		background: var(--primary-100);
-		color: var(--primary-700);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 600;
-		font-size: 0.8125rem;
-	}
-
-	.client-avatar.large {
-		width: 56px;
-		height: 56px;
-		font-size: 1.125rem;
 	}
 
 	.client-name-row {
