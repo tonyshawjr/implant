@@ -120,6 +120,36 @@
     }
   });
 
+  // Recalculate market score when demographics change
+  $effect(() => {
+    if (demographics) {
+      const config = data.pricingConfig;
+      let score = 0;
+
+      function getPoints(value: number, thresholds: Array<{min: number, points: number}>): number {
+        for (const t of thresholds) {
+          if (value >= t.min) return t.points;
+        }
+        return 0;
+      }
+
+      if (config.scoring?.senior?.thresholds) {
+        score += getPoints(demographics.population65PlusPercent, config.scoring.senior.thresholds);
+      }
+      if (config.scoring?.income?.thresholds) {
+        score += getPoints(demographics.medianIncome, config.scoring.income.thresholds);
+      }
+      if (config.scoring?.population?.thresholds) {
+        score += getPoints(demographics.population, config.scoring.population.thresholds);
+      }
+      if (config.scoring?.homeValue?.thresholds) {
+        score += getPoints(demographics.medianHomeValue, config.scoring.homeValue.thresholds);
+      }
+
+      marketScore = score;
+    }
+  });
+
   // Filtered lists
   let filteredStates = $derived(
     stateSearch.length > 0
