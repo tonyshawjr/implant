@@ -198,7 +198,7 @@
   async function fetchMetroAreas() {
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2022/acs/acs5?get=NAME&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:*`
+        `https://api.census.gov/data/2023/acs/acs5?get=NAME&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:*`
       );
       const data = await response.json();
 
@@ -221,7 +221,7 @@
   async function fetchCounties() {
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2022/acs/acs5?get=NAME&for=county:*&in=state:${selectedStateFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=NAME&for=county:*&in=state:${selectedStateFips}`
       );
       const data = await response.json();
 
@@ -241,7 +241,7 @@
   async function fetchCities() {
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2022/acs/acs5?get=NAME&for=place:*&in=state:${selectedStateFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=NAME&for=place:*&in=state:${selectedStateFips}`
       );
       const data = await response.json();
 
@@ -264,8 +264,35 @@
       if (metro) {
         territoryName = `${metro.name} Metro`;
       }
-      // Metro demographics would require aggregating all counties in the metro - simplified for now
-      demographics = null;
+      await fetchMetroDemographics();
+    }
+  }
+
+  // Fetch demographics for metro area (MSA)
+  async function fetchMetroDemographics() {
+    if (!selectedMetro) return;
+
+    isLoadingDemographics = true;
+    try {
+      const response = await fetch(
+        `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${selectedMetro}`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 1) {
+        const row = data[1];
+        demographics = {
+          population: parseInt(row[0]) || 0,
+          households: parseInt(row[1]) || 0,
+          medianIncome: parseInt(row[2]) || 0,
+          medianAge: parseFloat(row[3]) || 0
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching metro demographics:', error);
+      errorMessage = 'Failed to load metro demographics.';
+    } finally {
+      isLoadingDemographics = false;
     }
   }
 
@@ -296,7 +323,7 @@
     isLoadingDemographics = true;
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2022/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=county:${selectedCounty}&in=state:${selectedStateFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=county:${selectedCounty}&in=state:${selectedStateFips}`
       );
       const data = await response.json();
 
@@ -323,7 +350,7 @@
     isLoadingDemographics = true;
     try {
       const response = await fetch(
-        `https://api.census.gov/data/2022/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=place:${selectedCity}&in=state:${selectedStateFips}`
+        `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=place:${selectedCity}&in=state:${selectedStateFips}`
       );
       const data = await response.json();
 
@@ -384,7 +411,7 @@
       let population = 0;
       try {
         const censusResponse = await fetch(
-          `https://api.census.gov/data/2022/acs/acs5?get=B01003_001E&for=zip%20code%20tabulation%20area:${zip}`
+          `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E&for=zip%20code%20tabulation%20area:${zip}`
         );
         const censusData = await censusResponse.json();
         if (censusData && censusData.length > 1) {
@@ -446,7 +473,7 @@
       for (const zip of selectedZipCodes) {
         try {
           const response = await fetch(
-            `https://api.census.gov/data/2022/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=zip%20code%20tabulation%20area:${zip.zipCode}`
+            `https://api.census.gov/data/2023/acs/acs5?get=B01003_001E,B11001_001E,B19013_001E,B01002_001E&for=zip%20code%20tabulation%20area:${zip.zipCode}`
           );
           const data = await response.json();
 
