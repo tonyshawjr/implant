@@ -79,6 +79,10 @@
   let inviteLastName = $state('');
   let inviteRole = $state('support');
 
+  // Pricing config state
+  let pricingConfig = $state(data.pricingConfig);
+  let priceTiers = $state(data.pricingConfig.priceTiers || []);
+
   function getIntegrationStatusClass(status: string): string {
     return status === 'connected' ? 'badge-success' : 'badge-gray';
   }
@@ -246,6 +250,17 @@
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
       <span class="tab-label">Team</span>
+    </button>
+    <button
+      class="tab"
+      class:active={activeTab === 'pricing'}
+      onclick={() => activeTab = 'pricing'}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+      <span class="tab-label">Pricing</span>
     </button>
   </div>
 </div>
@@ -887,6 +902,130 @@
           </div>
         </div>
       {/each}
+    </div>
+  </div>
+{/if}
+
+<!-- Pricing Tab -->
+{#if activeTab === 'pricing'}
+  <div class="settings-grid">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Territory Pricing Tiers</h2>
+        <p class="card-subtitle">Set pricing based on market score</p>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="?/updatePricingConfig" use:enhance={handleFormSubmit}>
+          <input type="hidden" name="pricingConfig" value={JSON.stringify(pricingConfig)}>
+
+          <div class="pricing-tiers">
+            {#each priceTiers as tier, index}
+              <div class="pricing-tier-row">
+                <div class="tier-score">
+                  <label class="form-label">Min Score</label>
+                  <input
+                    type="number"
+                    class="form-input form-input-sm"
+                    bind:value={tier.minScore}
+                    min="0"
+                    max="100"
+                    onchange={() => pricingConfig = { ...pricingConfig, priceTiers }}
+                  >
+                </div>
+                <div class="tier-price">
+                  <label class="form-label">Price</label>
+                  <div class="input-with-prefix">
+                    <span class="input-prefix">$</span>
+                    <input
+                      type="number"
+                      class="form-input form-input-sm"
+                      bind:value={tier.price}
+                      min="0"
+                      step="50"
+                      onchange={() => pricingConfig = { ...pricingConfig, priceTiers }}
+                    >
+                  </div>
+                </div>
+                <div class="tier-label">
+                  <label class="form-label">Label</label>
+                  <input
+                    type="text"
+                    class="form-input form-input-sm"
+                    bind:value={tier.label}
+                    onchange={() => pricingConfig = { ...pricingConfig, priceTiers }}
+                  >
+                </div>
+              </div>
+            {/each}
+          </div>
+
+          <div class="pricing-preview">
+            <h4 class="preview-title">Preview</h4>
+            <div class="preview-tiers">
+              {#each priceTiers.sort((a, b) => b.minScore - a.minScore) as tier}
+                <div class="preview-tier">
+                  <span class="preview-score">Score {tier.minScore}+</span>
+                  <span class="preview-label">{tier.label}</span>
+                  <span class="preview-price">${tier.price.toLocaleString()}/mo</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Pricing Configuration'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Scoring Factors</h2>
+        <p class="card-subtitle">How market scores are calculated</p>
+      </div>
+      <div class="card-body">
+        <div class="scoring-factors">
+          <div class="scoring-factor">
+            <div class="factor-header">
+              <span class="factor-name">65+ Population %</span>
+              <span class="factor-weight">{pricingConfig.scoring?.senior?.weight || 30} pts max</span>
+            </div>
+            <p class="factor-description">Primary implant demographic - higher senior population = more potential patients</p>
+          </div>
+
+          <div class="scoring-factor">
+            <div class="factor-header">
+              <span class="factor-name">Median Household Income</span>
+              <span class="factor-weight">{pricingConfig.scoring?.income?.weight || 25} pts max</span>
+            </div>
+            <p class="factor-description">Ability to pay for implant procedures (typically $3,000-$5,000+)</p>
+          </div>
+
+          <div class="scoring-factor">
+            <div class="factor-header">
+              <span class="factor-name">Population Size</span>
+              <span class="factor-weight">{pricingConfig.scoring?.population?.weight || 25} pts max</span>
+            </div>
+            <p class="factor-description">Total market size - larger population = more lead potential</p>
+          </div>
+
+          <div class="scoring-factor">
+            <div class="factor-header">
+              <span class="factor-name">Median Home Value</span>
+              <span class="factor-weight">{pricingConfig.scoring?.homeValue?.weight || 20} pts max</span>
+            </div>
+            <p class="factor-description">Wealth indicator - homeowners tend to have more disposable income</p>
+          </div>
+        </div>
+
+        <div class="scoring-total">
+          <span>Maximum Score</span>
+          <span>100 pts</span>
+        </div>
+      </div>
     </div>
   </div>
 {/if}
@@ -2021,6 +2160,138 @@
 
     .tab-label {
       font-size: 0.8125rem;
+    }
+  }
+
+  /* Pricing Tab Styles */
+  .pricing-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+
+  .pricing-tier-row {
+    display: grid;
+    grid-template-columns: 120px 150px 1fr;
+    gap: var(--spacing-4);
+    align-items: end;
+    padding: var(--spacing-4);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+  }
+
+  .tier-score,
+  .tier-price,
+  .tier-label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+  }
+
+  .form-input-sm {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 0.875rem;
+  }
+
+  .pricing-preview {
+    margin-top: var(--spacing-6);
+    padding-top: var(--spacing-6);
+    border-top: 1px solid var(--gray-200);
+  }
+
+  .preview-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .preview-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .preview-tier {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-3);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+  }
+
+  .preview-score {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    min-width: 80px;
+  }
+
+  .preview-label {
+    flex: 1;
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+
+  .preview-price {
+    font-weight: 600;
+    color: var(--primary-600);
+  }
+
+  .scoring-factors {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+
+  .scoring-factor {
+    padding: var(--spacing-4);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+  }
+
+  .factor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-2);
+  }
+
+  .factor-name {
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .factor-weight {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--primary-600);
+    background: var(--primary-50);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  .factor-description {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  .scoring-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-4);
+    padding-top: var(--spacing-4);
+    border-top: 1px solid var(--gray-200);
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  @media (max-width: 768px) {
+    .pricing-tier-row {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-3);
     }
   }
 </style>

@@ -106,6 +106,32 @@ export const load: PageServerLoad = async ({ url }) => {
     }
   ];
 
+  // Territory pricing configuration
+  const pricingConfigSetting = await prisma.systemSetting.findUnique({
+    where: { key: 'territory_pricing' }
+  });
+
+  // Default pricing configuration
+  const defaultPricingConfig = {
+    // Score thresholds for each factor
+    scoring: {
+      senior: { weight: 30, thresholds: [{ min: 20, points: 30 }, { min: 15, points: 25 }, { min: 12, points: 20 }, { min: 8, points: 15 }, { min: 0, points: 10 }] },
+      income: { weight: 25, thresholds: [{ min: 100000, points: 25 }, { min: 75000, points: 20 }, { min: 55000, points: 15 }, { min: 40000, points: 10 }, { min: 0, points: 5 }] },
+      population: { weight: 25, thresholds: [{ min: 500000, points: 25 }, { min: 250000, points: 20 }, { min: 100000, points: 15 }, { min: 50000, points: 10 }, { min: 0, points: 5 }] },
+      homeValue: { weight: 20, thresholds: [{ min: 500000, points: 20 }, { min: 350000, points: 16 }, { min: 250000, points: 12 }, { min: 150000, points: 8 }, { min: 0, points: 4 }] }
+    },
+    // Price tiers based on total score
+    priceTiers: [
+      { minScore: 80, price: 3500, label: 'Premium' },
+      { minScore: 65, price: 2750, label: 'High' },
+      { minScore: 50, price: 2000, label: 'Standard' },
+      { minScore: 35, price: 1500, label: 'Moderate' },
+      { minScore: 0, price: 1000, label: 'Entry' }
+    ]
+  };
+
+  const pricingConfig = pricingConfigSetting?.value || defaultPricingConfig;
+
   return {
     activeTab,
     platformSettings,
@@ -113,7 +139,8 @@ export const load: PageServerLoad = async ({ url }) => {
     integrations,
     integrationFields,
     teamMembers,
-    apiKeys
+    apiKeys,
+    pricingConfig
   };
 };
 
@@ -528,5 +555,51 @@ export const actions: Actions = {
     console.log('Revoking API key:', keyId);
 
     return { success: true, message: 'API key revoked' };
+  },
+
+  updatePricingConfig: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { message: 'Unauthorized' });
+    }
+
+    if (!['super_admin', 'admin'].includes(locals.user.role)) {
+      return fail(403, { message: 'You do not have permission to update pricing configuration' });
+    }
+
+    const formData = await request.formData();
+    const pricingConfigJson = formData.get('pricingConfig') as string;
+
+    if (!pricingConfigJson) {
+      return fail(400, { message: 'Pricing configuration is required' });
+    }
+
+    try {
+      const pricingConfig = JSON.parse(pricingConfigJson);
+
+      // Validate the structure
+      if (!pricingConfig.scoring || !pricingConfig.priceTiers) {
+        return fail(400, { message: 'Invalid pricing configuration structure' });
+      }
+
+      // Upsert the pricing config
+      await prisma.systemSetting.upsert({
+        where: { key: 'territory_pricing' },
+        update: {
+          value: pricingConfig,
+          updatedBy: locals.user.id
+        },
+        create: {
+          key: 'territory_pricing',
+          value: pricingConfig,
+          description: 'Territory pricing configuration including scoring weights and price tiers',
+          updatedBy: locals.user.id
+        }
+      });
+
+      return { success: true, message: 'Pricing configuration updated successfully' };
+    } catch (error) {
+      console.error('Failed to update pricing config:', error);
+      return fail(500, { message: 'Failed to update pricing configuration' });
+    }
   }
 };

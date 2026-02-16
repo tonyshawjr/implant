@@ -269,49 +269,87 @@
     return null;
   }
 
-  // Calculate market score and recommended price
+  // Calculate market score and recommended price using config from database
   function calculateMarketScore(demo: Demographics): { score: number; price: number } {
+    const config = data.pricingConfig;
     let score = 0;
 
-    // 65+ Population % (0-30 points) - primary implant demographic
-    const seniorPct = demo.population65PlusPercent;
-    if (seniorPct >= 20) score += 30;
-    else if (seniorPct >= 15) score += 25;
-    else if (seniorPct >= 12) score += 20;
-    else if (seniorPct >= 8) score += 15;
-    else score += 10;
+    // Helper function to get points based on thresholds
+    function getPoints(value: number, thresholds: Array<{min: number, points: number}>): number {
+      for (const t of thresholds) {
+        if (value >= t.min) return t.points;
+      }
+      return 0;
+    }
 
-    // Median Household Income (0-25 points)
-    const income = demo.medianIncome;
-    if (income >= 100000) score += 25;
-    else if (income >= 75000) score += 20;
-    else if (income >= 55000) score += 15;
-    else if (income >= 40000) score += 10;
-    else score += 5;
+    // 65+ Population % scoring
+    if (config.scoring?.senior?.thresholds) {
+      score += getPoints(demo.population65PlusPercent, config.scoring.senior.thresholds);
+    } else {
+      // Fallback
+      const seniorPct = demo.population65PlusPercent;
+      if (seniorPct >= 20) score += 30;
+      else if (seniorPct >= 15) score += 25;
+      else if (seniorPct >= 12) score += 20;
+      else if (seniorPct >= 8) score += 15;
+      else score += 10;
+    }
 
-    // Population Size (0-25 points) - market size
-    const pop = demo.population;
-    if (pop >= 500000) score += 25;
-    else if (pop >= 250000) score += 20;
-    else if (pop >= 100000) score += 15;
-    else if (pop >= 50000) score += 10;
-    else score += 5;
+    // Median Household Income scoring
+    if (config.scoring?.income?.thresholds) {
+      score += getPoints(demo.medianIncome, config.scoring.income.thresholds);
+    } else {
+      const income = demo.medianIncome;
+      if (income >= 100000) score += 25;
+      else if (income >= 75000) score += 20;
+      else if (income >= 55000) score += 15;
+      else if (income >= 40000) score += 10;
+      else score += 5;
+    }
 
-    // Median Home Value (0-20 points) - wealth indicator
-    const homeValue = demo.medianHomeValue;
-    if (homeValue >= 500000) score += 20;
-    else if (homeValue >= 350000) score += 16;
-    else if (homeValue >= 250000) score += 12;
-    else if (homeValue >= 150000) score += 8;
-    else score += 4;
+    // Population Size scoring
+    if (config.scoring?.population?.thresholds) {
+      score += getPoints(demo.population, config.scoring.population.thresholds);
+    } else {
+      const pop = demo.population;
+      if (pop >= 500000) score += 25;
+      else if (pop >= 250000) score += 20;
+      else if (pop >= 100000) score += 15;
+      else if (pop >= 50000) score += 10;
+      else score += 5;
+    }
 
-    // Calculate price based on score (0-100)
-    let price: number;
-    if (score >= 80) price = 3500;      // Premium
-    else if (score >= 65) price = 2750; // High
-    else if (score >= 50) price = 2000; // Standard
-    else if (score >= 35) price = 1500; // Moderate
-    else price = 1000;                   // Entry
+    // Median Home Value scoring
+    if (config.scoring?.homeValue?.thresholds) {
+      score += getPoints(demo.medianHomeValue, config.scoring.homeValue.thresholds);
+    } else {
+      const homeValue = demo.medianHomeValue;
+      if (homeValue >= 500000) score += 20;
+      else if (homeValue >= 350000) score += 16;
+      else if (homeValue >= 250000) score += 12;
+      else if (homeValue >= 150000) score += 8;
+      else score += 4;
+    }
+
+    // Calculate price based on score using config tiers
+    let price = 1000; // Default
+    if (config.priceTiers && Array.isArray(config.priceTiers)) {
+      // Sort tiers by minScore descending to find the right tier
+      const sortedTiers = [...config.priceTiers].sort((a, b) => b.minScore - a.minScore);
+      for (const tier of sortedTiers) {
+        if (score >= tier.minScore) {
+          price = tier.price;
+          break;
+        }
+      }
+    } else {
+      // Fallback
+      if (score >= 80) price = 3500;
+      else if (score >= 65) price = 2750;
+      else if (score >= 50) price = 2000;
+      else if (score >= 35) price = 1500;
+      else price = 1000;
+    }
 
     return { score, price };
   }
