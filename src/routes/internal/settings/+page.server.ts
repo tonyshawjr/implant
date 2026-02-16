@@ -2,7 +2,6 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 import { hash } from '@node-rs/argon2';
-import { sendTeamInviteEmail } from '$lib/server/notifications/email';
 
 export const load: PageServerLoad = async ({ url }) => {
   const activeTab = url.searchParams.get('tab') || 'general';
@@ -318,33 +317,17 @@ export const actions: Actions = {
         }
       });
 
-      // Send invitation email with login credentials
-      const loginUrl = process.env.PUBLIC_BASE_URL
-        ? `${process.env.PUBLIC_BASE_URL}/login`
-        : 'https://app.squeezmedia.com/login';
-
-      const emailResult = await sendTeamInviteEmail(
-        email.toLowerCase(),
-        firstName,
-        lastName,
-        role,
-        tempPassword,
-        loginUrl
-      );
-
-      if (emailResult.success) {
-        return {
-          success: true,
-          message: `Team member created and invitation sent to ${email}`
-        };
-      } else {
-        // User created but email failed - still return success with password
-        return {
-          success: true,
-          message: `Team member created but email failed. Temporary password: ${tempPassword}`,
-          tempPassword
-        };
-      }
+      // Return credentials for admin to share with the new team member
+      return {
+        success: true,
+        showCredentials: true,
+        credentials: {
+          email: email.toLowerCase(),
+          password: tempPassword,
+          name: `${firstName} ${lastName}`
+        },
+        message: `Team member created successfully`
+      };
     } catch (error) {
       console.error('Failed to invite team member:', error);
       return fail(500, { message: 'Failed to create team member' });

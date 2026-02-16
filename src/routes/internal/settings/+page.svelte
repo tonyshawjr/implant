@@ -8,22 +8,45 @@
   let activeTab = $state(data.activeTab || 'general');
   let showInviteModal = $state(false);
   let showEditModal = $state(false);
+  let showCredentialsModal = $state(false);
+  let newUserCredentials = $state<{ email: string; password: string; name: string } | null>(null);
   let editingMember = $state<any>(null);
   let isSubmitting = $state(false);
   let feedbackMessage = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+  let copiedField = $state<string | null>(null);
 
   // Watch for form results
   $effect(() => {
     if (form?.success) {
-      feedbackMessage = { type: 'success', text: form.message || 'Operation successful' };
-      showInviteModal = false;
-      showEditModal = false;
-      setTimeout(() => feedbackMessage = null, 3000);
+      // Check if we have credentials to show (new user created)
+      if (form.showCredentials && form.credentials) {
+        newUserCredentials = form.credentials;
+        showCredentialsModal = true;
+        showInviteModal = false;
+      } else {
+        feedbackMessage = { type: 'success', text: form.message || 'Operation successful' };
+        showInviteModal = false;
+        showEditModal = false;
+        setTimeout(() => feedbackMessage = null, 3000);
+      }
     } else if (form?.message) {
       feedbackMessage = { type: 'error', text: form.message };
       setTimeout(() => feedbackMessage = null, 5000);
     }
   });
+
+  async function copyToClipboard(text: string, field: string) {
+    await navigator.clipboard.writeText(text);
+    copiedField = field;
+    setTimeout(() => copiedField = null, 2000);
+  }
+
+  function closeCredentialsModal() {
+    showCredentialsModal = false;
+    newUserCredentials = null;
+    feedbackMessage = { type: 'success', text: 'Team member created successfully' };
+    setTimeout(() => feedbackMessage = null, 3000);
+  }
 
   // Form state for general settings
   let companyName = $state(data.platformSettings.companyName);
@@ -827,6 +850,69 @@
   </div>
 {/if}
 
+<!-- New User Credentials Modal -->
+{#if showCredentialsModal && newUserCredentials}
+  <div class="modal-overlay open" onclick={closeCredentialsModal}>
+    <div class="modal credentials-modal" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header success-header">
+        <div class="success-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="modal-title">Team Member Created!</h3>
+      </div>
+      <div class="modal-body">
+        <p class="credentials-intro">Share these login credentials with <strong>{newUserCredentials.name}</strong>:</p>
+
+        <div class="credential-row">
+          <label>Email</label>
+          <div class="credential-value">
+            <code>{newUserCredentials.email}</code>
+            <button
+              type="button"
+              class="copy-btn"
+              onclick={() => copyToClipboard(newUserCredentials!.email, 'email')}
+            >
+              {copiedField === 'email' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <div class="credential-row">
+          <label>Temporary Password</label>
+          <div class="credential-value">
+            <code class="password">{newUserCredentials.password}</code>
+            <button
+              type="button"
+              class="copy-btn"
+              onclick={() => copyToClipboard(newUserCredentials!.password, 'password')}
+            >
+              {copiedField === 'password' ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="copy-all-btn"
+          onclick={() => copyToClipboard(`Email: ${newUserCredentials!.email}\nPassword: ${newUserCredentials!.password}`, 'all')}
+        >
+          {copiedField === 'all' ? 'Copied!' : 'Copy All Credentials'}
+        </button>
+
+        <p class="credentials-note">
+          <strong>Note:</strong> The user should change their password after first login.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick={closeCredentialsModal}>Done</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <!-- Edit Member Modal -->
 {#if showEditModal && editingMember}
   <div class="modal-overlay open" onclick={closeEditModal}>
@@ -1233,5 +1319,115 @@
   .btn-danger-outline:hover {
     background: var(--danger-50, #fef2f2);
     border-color: var(--danger-400, #f87171);
+  }
+
+  /* Credentials Modal */
+  .credentials-modal {
+    max-width: 480px;
+  }
+
+  .success-header {
+    background: var(--success-50, #f0fdf4);
+    border-bottom: 1px solid var(--success-200, #bbf7d0);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+  }
+
+  .success-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--success-100, #dcfce7);
+    color: var(--success-600, #16a34a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .credentials-intro {
+    margin-bottom: var(--spacing-4);
+    color: var(--gray-600);
+  }
+
+  .credential-row {
+    margin-bottom: var(--spacing-4);
+  }
+
+  .credential-row label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-1);
+  }
+
+  .credential-value {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-3);
+  }
+
+  .credential-value code {
+    flex: 1;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    background: none;
+  }
+
+  .credential-value code.password {
+    font-weight: 600;
+    color: var(--primary-700);
+  }
+
+  .copy-btn {
+    padding: var(--spacing-1) var(--spacing-3);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-600);
+    background: white;
+    border: 1px solid var(--primary-200);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    background: var(--primary-50);
+    border-color: var(--primary-300);
+  }
+
+  .copy-all-btn {
+    width: 100%;
+    padding: var(--spacing-3);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    background: var(--primary-600);
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    margin-top: var(--spacing-2);
+    transition: background 0.15s;
+  }
+
+  .copy-all-btn:hover {
+    background: var(--primary-700);
+  }
+
+  .credentials-note {
+    margin-top: var(--spacing-4);
+    padding: var(--spacing-3);
+    background: var(--warning-50, #fffbeb);
+    border: 1px solid var(--warning-200, #fde68a);
+    border-radius: var(--radius-lg);
+    font-size: 0.8125rem;
+    color: var(--warning-800, #92400e);
   }
 </style>
