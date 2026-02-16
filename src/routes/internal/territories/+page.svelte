@@ -1359,6 +1359,7 @@
     grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-6);
     margin-bottom: var(--spacing-6);
+    max-width: 100%;
   }
 
   @media (max-width: 1200px) {
@@ -1370,6 +1371,7 @@
   @media (max-width: 640px) {
     .stats-row {
       grid-template-columns: 1fr;
+      gap: var(--spacing-4);
     }
   }
 
@@ -1383,6 +1385,8 @@
     grid-template-columns: 2fr 1fr;
     gap: var(--spacing-6);
     margin-bottom: var(--spacing-6);
+    max-width: 100%;
+    overflow: hidden;
   }
 
   @media (max-width: 1024px) {
@@ -1391,10 +1395,24 @@
     }
   }
 
+  @media (max-width: 768px) {
+    .map-revenue-row {
+      gap: var(--spacing-4);
+    }
+  }
+
   .map-card {
     min-height: 400px;
     display: flex;
     flex-direction: column;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .map-card {
+      min-height: 300px;
+    }
   }
 
   .map-container {
@@ -1402,6 +1420,13 @@
     min-height: 300px;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     z-index: 1;
+    max-width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .map-container {
+      min-height: 250px;
+    }
   }
 
   .map-legend-bar {
@@ -1540,6 +1565,8 @@
     border-radius: var(--radius-xl);
     border: 1px solid var(--gray-200);
     margin-bottom: var(--spacing-6);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   @media (max-width: 768px) {
@@ -1618,16 +1645,12 @@
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    max-width: 100%;
   }
 
   @media (max-width: 768px) {
-    .table-container {
-      margin: 0 calc(-1 * var(--spacing-4));
-      padding: 0 var(--spacing-4);
-    }
-
     .table-container .table {
-      min-width: 800px;
+      min-width: 700px;
     }
   }
 
@@ -1969,12 +1992,19 @@
     right: 0;
     bottom: 0;
     width: 480px;
-    max-width: 100%;
+    max-width: 100vw;
     background: white;
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
     z-index: 50;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  @media (max-width: 480px) {
+    .detail-panel {
+      width: 100vw;
+    }
   }
 
   .detail-header {
@@ -2216,6 +2246,14 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+
+  @media (max-width: 480px) {
+    .modal {
+      width: 95%;
+      max-height: 95vh;
+      border-radius: var(--radius-lg);
+    }
   }
 
   .modal-header {

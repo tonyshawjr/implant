@@ -132,6 +132,7 @@ a:hover {
   padding: var(--spacing-6);
   max-width: 1600px;
   margin: 0 auto;
+  overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -414,6 +415,8 @@ a:hover {
   border-radius: var(--radius-xl);
   border: 1px solid var(--gray-200);
   box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .card-header {
