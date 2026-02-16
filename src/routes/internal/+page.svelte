@@ -8,6 +8,12 @@
   let showAddClientModal = $state(false);
   let isSubmitting = $state(false);
   let formError = $state('');
+  let selectedTerritoryId = $state('');
+
+  // Derived: selected territory details
+  let selectedTerritory = $derived(
+    data.territories.find(t => t.id === selectedTerritoryId)
+  );
 
   // Helper functions
   function formatCurrency(value: number): string {
@@ -351,13 +357,43 @@
         </div>
 
         <div class="form-group">
-          <label for="plan" class="form-label">Plan Tier</label>
-          <select id="plan" name="plan" class="form-input form-select">
-            <option value="starter">Starter - $1,500/mo</option>
-            <option value="growth" selected>Growth - $2,500/mo</option>
-            <option value="enterprise">Enterprise - $4,000+/mo</option>
+          <label for="territoryId" class="form-label">Territory *</label>
+          <select
+            id="territoryId"
+            name="territoryId"
+            class="form-input form-select"
+            bind:value={selectedTerritoryId}
+            required
+          >
+            <option value="">Select a territory...</option>
+            {#each data.territories as territory}
+              <option value={territory.id}>
+                {territory.name} ({territory.location}) - {formatCurrency(territory.monthlyPrice)}/mo
+                {territory.status !== 'available' ? ' [WAITLIST]' : ''}
+              </option>
+            {/each}
           </select>
         </div>
+
+        {#if selectedTerritory}
+          <div class="territory-preview" class:waitlist={selectedTerritory.status !== 'available'}>
+            {#if selectedTerritory.status === 'available'}
+              <div class="preview-badge available">Available</div>
+              <div class="preview-details">
+                <strong>{selectedTerritory.name}</strong>
+                <span>{selectedTerritory.location}</span>
+                <span class="preview-price">{formatCurrency(selectedTerritory.monthlyPrice)}/month</span>
+              </div>
+            {:else}
+              <div class="preview-badge waitlist">Waitlist</div>
+              <div class="preview-details">
+                <strong>{selectedTerritory.name}</strong>
+                <span>{selectedTerritory.location}</span>
+                <span class="preview-note">This territory is taken. Client will be added to the waitlist (no charge until territory becomes available).</span>
+              </div>
+            {/if}
+          </div>
+        {/if}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick={() => showAddClientModal = false}>Cancel</button>
@@ -621,5 +657,66 @@
     background: var(--primary-50);
     color: var(--primary-600);
     border-color: var(--primary-200);
+  }
+
+  /* Territory Preview in Add Client Modal */
+  .territory-preview {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4);
+    background: var(--success-50);
+    border: 1px solid var(--success-200);
+    border-radius: var(--radius-lg);
+    margin-top: var(--spacing-3);
+  }
+
+  .territory-preview.waitlist {
+    background: var(--warning-50);
+    border-color: var(--warning-200);
+  }
+
+  .preview-badge {
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .preview-badge.available {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+
+  .preview-badge.waitlist {
+    background: var(--warning-100);
+    color: var(--warning-700);
+  }
+
+  .preview-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .preview-details strong {
+    color: var(--gray-900);
+  }
+
+  .preview-details span {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+  }
+
+  .preview-price {
+    font-weight: 600;
+    color: var(--success-600) !important;
+  }
+
+  .preview-note {
+    font-size: 0.8125rem !important;
+    color: var(--warning-700) !important;
+    margin-top: var(--spacing-1);
   }
 </style>

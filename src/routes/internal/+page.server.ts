@@ -55,7 +55,8 @@ export const load: PageServerLoad = async ({ url }) => {
     stats,
     clientsAtRisk,
     upcomingRenewals,
-    recentLeadsCount
+    recentLeadsCount,
+    territories
   ] = await Promise.all([
     // Main clients query with related data
     prisma.organization.findMany({
@@ -167,6 +168,20 @@ export const load: PageServerLoad = async ({ url }) => {
           lte: endOfMonth
         }
       }
+    }),
+
+    // All territories for client creation
+    prisma.territory.findMany({
+      orderBy: [{ state: 'asc' }, { city: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        state: true,
+        status: true,
+        monthlyBasePrice: true,
+        population: true
+      }
     })
   ]);
 
@@ -271,7 +286,15 @@ export const load: PageServerLoad = async ({ url }) => {
       search,
       status,
       health: healthFilter
-    }
+    },
+    territories: territories.map(t => ({
+      id: t.id,
+      name: t.name,
+      location: `${t.city}, ${t.state}`,
+      status: t.status,
+      monthlyPrice: t.monthlyBasePrice?.toNumber() ?? 0,
+      population: t.population
+    }))
   };
 };
 
@@ -307,13 +330,33 @@ export const actions: Actions = {
     const state = formData.get('state') as string;
     const zip = formData.get('zip') as string;
     const website = formData.get('website') as string;
-    const plan = formData.get('plan') as string;
+    const territoryId = formData.get('territoryId') as string;
 
     if (!name || !email || !city || !state) {
       return fail(400, { error: 'Name, email, city, and state are required' });
     }
 
+    if (!territoryId) {
+      return fail(400, { error: 'Please select a territory' });
+    }
+
     try {
+      // Get the territory to check availability and pricing
+      const territory = await prisma.territory.findUnique({
+        where: { id: territoryId },
+        include: {
+          waitlist: {
+            where: { status: 'waiting' },
+            orderBy: { position: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      if (!territory) {
+        return fail(400, { error: 'Territory not found' });
+      }
+
       // Generate a slug from the name
       const slug = name
         .toLowerCase()
@@ -331,59 +374,90 @@ export const actions: Actions = {
           state,
           postalCode: zip || null,
           website: website || null,
-          status: 'active',
+          status: territory.status === 'available' ? 'active' : 'onboarding',
           healthScore: 75,
           clientSince: new Date()
         }
       });
 
-      // Create a default contract based on the plan
-      const planPrices: Record<string, number> = {
-        starter: 1500,
-        growth: 2500,
-        enterprise: 4000
-      };
-
-      const monthlyCommitment = planPrices[plan] || 2500;
-
-      // Find or create the plan
-      const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
-      const planSlug = plan.toLowerCase();
-
-      let planRecord = await prisma.plan.findFirst({
-        where: { slug: planSlug }
-      });
-
-      if (!planRecord) {
-        planRecord = await prisma.plan.create({
+      // If territory is available, assign it and create contract
+      if (territory.status === 'available') {
+        // Assign territory to client
+        await prisma.territoryAssignment.create({
           data: {
-            name: planName,
-            slug: planSlug,
-            basePrice: monthlyCommitment,
-            features: ['Lead generation', 'Territory exclusivity', 'AI brand voice'],
-            isActive: true
+            organizationId: organization.id,
+            territoryId: territory.id,
+            monthlyRate: territory.monthlyBasePrice ?? 0,
+            status: 'active',
+            assignedAt: new Date()
           }
         });
-      }
 
-      // Generate unique contract number
-      const contractNumber = `CNT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        // Lock the territory
+        await prisma.territory.update({
+          where: { id: territory.id },
+          data: { status: 'locked' }
+        });
 
-      // Create the contract
-      await prisma.contract.create({
-        data: {
-          organizationId: organization.id,
-          planId: planRecord.id,
-          contractNumber,
-          status: 'active',
-          monthlyCommitment,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-          autoRenew: true
+        // Find or create a default plan for contract (territory-based)
+        let planRecord = await prisma.plan.findFirst({
+          where: { slug: 'territory-standard' }
+        });
+
+        if (!planRecord) {
+          planRecord = await prisma.plan.create({
+            data: {
+              name: 'Territory Standard',
+              slug: 'territory-standard',
+              basePrice: territory.monthlyBasePrice ?? 0,
+              features: ['Lead generation', 'Territory exclusivity', 'AI brand voice'],
+              isActive: true
+            }
+          });
         }
-      });
 
-      return { success: true, organizationId: organization.id };
+        // Generate unique contract number
+        const contractNumber = `CNT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+        // Create contract with territory pricing
+        await prisma.contract.create({
+          data: {
+            organizationId: organization.id,
+            planId: planRecord.id,
+            contractNumber,
+            status: 'active',
+            monthlyCommitment: territory.monthlyBasePrice ?? 0,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+            autoRenew: true
+          }
+        });
+
+        return { success: true, organizationId: organization.id, message: 'Client created and territory assigned' };
+      } else {
+        // Territory is not available - add to waitlist
+        const nextPosition = (territory.waitlist[0]?.position ?? 0) + 1;
+
+        await prisma.territoryWaitlist.create({
+          data: {
+            territoryId: territory.id,
+            contactName: name,
+            contactEmail: email,
+            contactPhone: phone || null,
+            practiceName: name,
+            position: nextPosition,
+            joinedAt: new Date(),
+            status: 'waiting'
+          }
+        });
+
+        return {
+          success: true,
+          organizationId: organization.id,
+          waitlisted: true,
+          message: `Client created and added to waitlist (position #${nextPosition}) for ${territory.name}`
+        };
+      }
     } catch (error) {
       console.error('Failed to create client:', error);
       return fail(500, { error: 'Failed to create client' });
