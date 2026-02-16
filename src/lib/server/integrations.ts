@@ -9,7 +9,6 @@ export type IntegrationId =
   | 'resend'
   | 'meta'
   | 'google-ads'
-  | 'mapbox'
   | 'slack'
   | 'openai'
   | 'calendly'
@@ -21,7 +20,7 @@ export interface IntegrationMeta {
   name: string;
   description: string;
   icon: string;
-  category: 'payment' | 'communication' | 'advertising' | 'mapping' | 'ai' | 'scheduling';
+  category: 'payment' | 'communication' | 'advertising' | 'ai' | 'scheduling';
   fields: IntegrationField[];
 }
 
@@ -366,23 +365,6 @@ export const INTEGRATIONS_METADATA: IntegrationMeta[] = [
         required: false,
         placeholder: '123-456-7890',
         helpText: 'Default customer ID (MCC or regular account)'
-      }
-    ]
-  },
-  {
-    id: 'mapbox',
-    name: 'Mapbox',
-    description: 'Territory mapping and visualization',
-    icon: 'map',
-    category: 'mapping',
-    fields: [
-      {
-        key: 'accessToken',
-        label: 'Access Token',
-        type: 'password',
-        required: true,
-        placeholder: 'pk.ey...',
-        helpText: 'Your Mapbox public access token'
       }
     ]
   },
