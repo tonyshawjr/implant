@@ -317,10 +317,13 @@ export const actions: Actions = {
         }
       });
 
-      // In production, you would send an invitation email here with the temp password
-      // or a password reset link
-
-      return { success: true, message: `Team member ${email} created successfully` };
+      // Return the temporary password so admin can share it with the new user
+      // In production, you would send an invitation email instead
+      return {
+        success: true,
+        message: `Team member created! Temporary password: ${tempPassword}`,
+        tempPassword
+      };
     } catch (error) {
       console.error('Failed to invite team member:', error);
       return fail(500, { message: 'Failed to create team member' });
