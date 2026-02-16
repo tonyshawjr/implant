@@ -833,11 +833,33 @@
     color: var(--gray-900);
   }
 
+  /* Tabs Container - Mobile Scrolling */
+  :global(.tabs) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  :global(.tabs)::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    :global(.tabs) {
+      margin: 0 calc(-1 * var(--spacing-4));
+      padding: 0 var(--spacing-4);
+      flex-wrap: nowrap;
+    }
+  }
+
   /* Tabs Enhancement */
   .tab {
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .tab-badge {
@@ -857,6 +879,24 @@
   .tab-badge.danger {
     background: var(--danger-100);
     color: var(--danger-600);
+  }
+
+  /* Card Header - Mobile */
+  :global(.card-header) {
+    flex-wrap: wrap;
+    gap: var(--spacing-3);
+  }
+
+  @media (max-width: 640px) {
+    :global(.card-header) {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    :global(.card-header) > button,
+    :global(.card-header) > .btn {
+      width: 100%;
+    }
   }
 
   /* Client Cell */
@@ -1092,6 +1132,12 @@
     max-width: 300px;
   }
 
+  @media (max-width: 768px) {
+    .anomaly-info {
+      max-width: 200px;
+    }
+  }
+
   .anomaly-title {
     font-weight: 500;
     color: var(--gray-900);
@@ -1171,11 +1217,24 @@
     align-items: center;
     gap: var(--spacing-3);
     margin-bottom: var(--spacing-2);
+    flex-wrap: wrap;
   }
 
   .optimization-title {
     font-weight: 600;
     color: var(--gray-900);
+  }
+
+  @media (max-width: 640px) {
+    .optimization-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .optimization-meta {
+      flex-direction: column;
+      gap: var(--spacing-1);
+    }
   }
 
   .optimization-description {
@@ -1227,6 +1286,35 @@
     color: var(--gray-500);
     padding-left: var(--spacing-2);
     border-left: 1px solid var(--gray-200);
+  }
+
+  /* Table Container - Mobile Scrolling */
+  :global(.table-container) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 768px) {
+    :global(.table-container) .table {
+      min-width: 700px;
+    }
+  }
+
+  /* Table Actions - Mobile */
+  .table-actions {
+    display: flex;
+    gap: var(--spacing-2);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 640px) {
+    .table-actions {
+      flex-direction: column;
+    }
+
+    .table-actions .flex {
+      flex-direction: column;
+    }
   }
 
   /* Utility */

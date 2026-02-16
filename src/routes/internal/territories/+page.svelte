@@ -720,6 +720,13 @@
     display: flex;
     gap: var(--spacing-4);
     justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 480px) {
+    .map-legend {
+      gap: var(--spacing-2) var(--spacing-3);
+    }
   }
 
   .legend-item {
@@ -805,10 +812,36 @@
     margin-bottom: var(--spacing-6);
   }
 
+  @media (max-width: 768px) {
+    .filters-bar {
+      padding: var(--spacing-3);
+      gap: var(--spacing-3);
+    }
+  }
+
   .filter-group {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-1);
+  }
+
+  @media (max-width: 768px) {
+    .filter-group {
+      flex: 1;
+      min-width: calc(50% - var(--spacing-3));
+    }
+
+    .filter-group[style*="margin-left: auto"] {
+      margin-left: 0 !important;
+      width: 100%;
+      flex: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .filter-group {
+      min-width: 100%;
+    }
   }
 
   .filter-label {
@@ -823,18 +856,56 @@
     min-width: 160px;
   }
 
+  @media (max-width: 768px) {
+    .filter-input {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+
   .search-filter {
     flex: 1;
     min-width: 250px;
   }
 
+  @media (max-width: 768px) {
+    .search-filter {
+      min-width: 100%;
+      order: -1;
+    }
+  }
+
   /* Table Styles */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 768px) {
+    .table-container {
+      margin: 0 calc(-1 * var(--spacing-4));
+      padding: 0 var(--spacing-4);
+    }
+
+    .table-container .table {
+      min-width: 800px;
+    }
+  }
+
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-4) var(--spacing-5);
     border-bottom: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+
+  @media (max-width: 768px) {
+    .card-header {
+      padding: var(--spacing-3) var(--spacing-4);
+    }
   }
 
   .card-title {
@@ -1084,6 +1155,15 @@
     align-items: center;
     padding: var(--spacing-4) var(--spacing-5);
     border-top: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+    gap: var(--spacing-3);
+  }
+
+  @media (max-width: 640px) {
+    .pagination {
+      flex-direction: column;
+      padding: var(--spacing-3) var(--spacing-4);
+    }
   }
 
   .pagination-info {
@@ -1091,9 +1171,18 @@
     color: var(--gray-500);
   }
 
+  @media (max-width: 640px) {
+    .pagination-info {
+      font-size: 0.75rem;
+      text-align: center;
+    }
+  }
+
   .pagination-controls {
     display: flex;
     gap: var(--spacing-1);
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .pagination-btn {
