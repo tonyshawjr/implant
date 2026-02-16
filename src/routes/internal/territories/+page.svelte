@@ -60,6 +60,62 @@
   let showDeleteConfirm = $state(false);
   let territoryToDelete = $state<typeof data.territories[0] | null>(null);
 
+  // Searchable dropdown state
+  let stateSearchValue = $state('');
+  let showStateDropdown = $state(false);
+
+  // US States for searchable dropdown
+  const US_STATES = [
+    { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
+    { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+    { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' }, { code: 'FL', name: 'Florida' },
+    { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
+    { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' },
+    { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' },
+    { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' }, { code: 'MA', name: 'Massachusetts' },
+    { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
+    { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' },
+    { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' },
+    { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' }, { code: 'NC', name: 'North Carolina' },
+    { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
+    { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' },
+    { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' },
+    { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' }, { code: 'VT', name: 'Vermont' },
+    { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+    { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }, { code: 'DC', name: 'District of Columbia' }
+  ];
+
+  // Filtered states based on search
+  let filteredStates = $derived(
+    stateSearchValue.length > 0
+      ? US_STATES.filter(s =>
+          s.name.toLowerCase().includes(stateSearchValue.toLowerCase()) ||
+          s.code.toLowerCase().includes(stateSearchValue.toLowerCase())
+        )
+      : US_STATES
+  );
+
+  // Get state name from code
+  function getStateName(code: string): string {
+    return US_STATES.find(s => s.code === code)?.name || code;
+  }
+
+  // Select state from dropdown
+  function selectState(code: string) {
+    stateFilter = code;
+    stateSearchValue = '';
+    showStateDropdown = false;
+    applyFilters();
+  }
+
+  // Clear state filter
+  function clearStateFilter() {
+    stateFilter = '';
+    stateSearchValue = '';
+    showStateDropdown = false;
+    applyFilters();
+  }
+
   // Geocoding lookup using Nominatim (free, no API key) + Census Bureau for population
   async function lookupLocation() {
     if (!newTerritory.zipCode && !newTerritory.city) {
@@ -634,14 +690,50 @@
       <option value="waitlist">Waitlist</option>
     </select>
   </div>
-  <div class="filter-group">
+  <div class="filter-group filter-group-state">
     <label class="filter-label">State</label>
-    <select class="form-input form-select filter-input" bind:value={stateFilter} onchange={applyFilters}>
-      <option value="">All States</option>
-      {#each data.states as state}
-        <option value={state}>{state}</option>
-      {/each}
-    </select>
+    <div class="searchable-select">
+      <input
+        type="text"
+        class="form-input filter-input"
+        placeholder="Search states..."
+        bind:value={stateSearchValue}
+        onfocus={() => showStateDropdown = true}
+        onblur={() => setTimeout(() => showStateDropdown = false, 200)}
+        autocomplete="off"
+      />
+      {#if stateFilter && !showStateDropdown && !stateSearchValue}
+        <div class="selected-value">
+          {getStateName(stateFilter)}
+          <button type="button" class="clear-btn" onclick={clearStateFilter}>×</button>
+        </div>
+      {/if}
+      {#if showStateDropdown && filteredStates.length > 0}
+        <div class="dropdown-list">
+          <button
+            type="button"
+            class="dropdown-item"
+            class:selected={!stateFilter}
+            onmousedown={() => { stateFilter = ''; stateSearchValue = ''; showStateDropdown = false; applyFilters(); }}
+          >
+            All States
+          </button>
+          {#each filteredStates.slice(0, 12) as state}
+            <button
+              type="button"
+              class="dropdown-item"
+              class:selected={stateFilter === state.code}
+              onmousedown={() => selectState(state.code)}
+            >
+              {state.name} ({state.code})
+            </button>
+          {/each}
+          {#if filteredStates.length > 12}
+            <div class="dropdown-hint">{filteredStates.length - 12} more - keep typing to filter</div>
+          {/if}
+        </div>
+      {/if}
+    </div>
   </div>
   <div class="filter-group">
     <label class="filter-label">Type</label>
@@ -1567,6 +1659,9 @@
     margin-bottom: var(--spacing-6);
     max-width: 100%;
     box-sizing: border-box;
+    position: relative;
+    z-index: 10;
+    overflow: visible;
   }
 
   @media (max-width: 768px) {
@@ -2541,5 +2636,91 @@
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-1);
+  }
+
+  /* Searchable Dropdown */
+  .filter-group-state {
+    position: relative;
+    z-index: 20;
+  }
+
+  .searchable-select {
+    position: relative;
+  }
+
+  .searchable-select .selected-value {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-2) var(--spacing-3);
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .searchable-select .clear-btn {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0 4px;
+  }
+
+  .searchable-select .clear-btn:hover {
+    color: var(--gray-600);
+  }
+
+  .searchable-select .dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    margin-top: 4px;
+    min-width: 200px;
+  }
+
+  .searchable-select .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+  }
+
+  .searchable-select .dropdown-item:hover {
+    background: var(--gray-100);
+  }
+
+  .searchable-select .dropdown-item.selected {
+    background: var(--primary-50);
+    color: var(--primary-700);
+  }
+
+  .searchable-select .dropdown-hint {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
   }
 </style>

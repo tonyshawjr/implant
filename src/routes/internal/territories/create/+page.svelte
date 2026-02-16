@@ -1619,6 +1619,14 @@
     background: white;
     border-radius: var(--radius-lg);
     border: 1px solid var(--gray-200);
+    overflow: visible;
+  }
+
+  .card .card-header {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .map-card {
     overflow: hidden;
   }
 
@@ -1751,6 +1759,11 @@
   /* Searchable Select Dropdown */
   .searchable-select {
     position: relative;
+    z-index: 10;
+  }
+
+  .form-group:focus-within {
+    z-index: 20;
   }
 
   .searchable-select .form-input {
@@ -1798,8 +1811,8 @@
     background: white;
     border: 1px solid var(--gray-300);
     border-radius: var(--radius-md);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 50;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
     margin-top: 4px;
   }
 

@@ -20,6 +20,10 @@
       title: 'Create Territory',
       breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Territories', href: '/internal/territories' }, { label: 'Create' }]
     },
+    '/internal/clients': {
+      title: 'Clients',
+      breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Clients' }]
+    },
     '/internal/ai-operations': {
       title: 'AI Operations',
       breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'AI Operations' }]
