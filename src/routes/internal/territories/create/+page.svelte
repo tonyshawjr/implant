@@ -55,8 +55,8 @@
   // Selected areas - the main collection
   let selectedAreas = $state<SelectedArea[]>([]);
 
-  // Aggregated data
-  let allZipCodes = $derived<ZipCodeEntry[]>(() => {
+  // Aggregated data - get all unique zip codes from all areas
+  let allZipCodes = $derived.by(() => {
     const zips: ZipCodeEntry[] = [];
     const seen = new Set<string>();
     for (const area of selectedAreas) {
