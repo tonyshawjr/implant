@@ -282,46 +282,75 @@
     return null;
   }
 
-  // Fetch principal cities and counties for a metro area
+  // Fetch cities and counties within a metro area
   async function fetchMetroPlaces(msaCode: string, metroName: string): Promise<string[]> {
+    const allPlaces: string[] = [];
+
     try {
-      // Parse the metro name to extract principal cities
-      // Format is usually "City1-City2-City3, ST-ST Metro Area" or "City, ST Metro Area"
-      const namePart = metroName.split(' Metro')[0].split(' Micro')[0];
-      const citiesPart = namePart.split(',')[0]; // Get everything before the state abbreviations
-      const cities = citiesPart.split('-').map(c => c.trim()).filter(c => c.length > 0);
+      // Get the counties in this metro from Census API
+      const response = await fetch(
+        `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=county:*&in=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${msaCode}`
+      );
 
-      // Try to get the counties in this metro from Census API
-      try {
-        const response = await fetch(
-          `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=county:*&in=metropolitan%20statistical%20area/micropolitan%20statistical%20area:${msaCode}`
-        );
+      if (response.ok) {
+        const data = await response.json();
+        const counties = data.slice(1).map((row: string[]) => ({
+          name: row[0].split(',')[0].replace(' County', ''),
+          stateFips: row[0].includes('North Carolina') ? '37' :
+                     row[0].includes('South Carolina') ? '45' : '',
+          countyFips: row[3] || ''
+        }));
 
-        if (response.ok) {
-          const data = await response.json();
-          const counties = data.slice(1)
-            .map((row: string[]) => row[0].split(',')[0].replace(' County', ''))
-            .slice(0, 5); // Top 5 counties
+        // For each county, get the major cities/towns
+        for (const county of counties.slice(0, 5)) { // Limit to 5 counties
+          if (county.stateFips && county.countyFips) {
+            try {
+              const placesResponse = await fetch(
+                `https://api.census.gov/data/2023/acs/acs5?get=NAME,B01003_001E&for=county%20subdivision:*&in=state:${county.stateFips}&in=county:${county.countyFips}`
+              );
 
-          // Combine principal cities with county names
-          const allPlaces = [...cities];
-          counties.forEach((county: string) => {
-            if (!allPlaces.some(p => p.toLowerCase() === county.toLowerCase())) {
-              allPlaces.push(`${county} County`);
+              if (placesResponse.ok) {
+                const placesData = await placesResponse.json();
+                const places = placesData.slice(1)
+                  .map((row: string[]) => ({
+                    name: row[0].split(',')[0]
+                      .replace(' township', '')
+                      .replace(' town', '')
+                      .replace(' city', '')
+                      .replace(' UT', '')
+                      .replace(' CCD', '')
+                      .trim(),
+                    population: parseInt(row[1]) || 0
+                  }))
+                  .filter((p: any) => p.population > 1000)
+                  .sort((a: any, b: any) => b.population - a.population)
+                  .slice(0, 5); // Top 5 per county
+
+                places.forEach((p: any) => {
+                  if (!allPlaces.includes(p.name)) {
+                    allPlaces.push(p.name);
+                  }
+                });
+              }
+            } catch (e) {
+              console.warn(`Could not fetch places for county ${county.name}:`, e);
             }
-          });
-
-          return allPlaces;
+          }
         }
-      } catch (e) {
-        console.warn('Could not fetch metro counties:', e);
       }
-
-      return cities;
     } catch (e) {
-      console.error('Error parsing metro places:', e);
-      return [];
+      console.error('Error fetching metro places:', e);
     }
+
+    // If we got places, return them; otherwise, parse from metro name
+    if (allPlaces.length > 0) {
+      return allPlaces.slice(0, 15); // Limit to 15 places
+    }
+
+    // Fallback: parse principal city from metro name
+    const namePart = metroName.split(' Metro')[0].split(' Micro')[0];
+    const citiesPart = namePart.split(',')[0];
+    return citiesPart.split('-').map(c => c.trim()).filter(c => c.length > 0);
   }
 
   // Fetch cities/towns within a county using county subdivisions
