@@ -190,65 +190,70 @@
 
 <!-- Filters Bar -->
 <div class="filters-bar">
-  <div class="filter-group">
-    <label class="filter-label">Status</label>
-    <select class="form-input form-select filter-input" bind:value={statusFilter} onchange={applyFilters}>
-      <option value="">All Open</option>
-      <option value="open">Open</option>
-      <option value="pending">Pending</option>
-      <option value="in_progress">In Progress</option>
-      <option value="escalated">Escalated</option>
-      <option value="resolved">Resolved</option>
-      <option value="closed">Closed</option>
-    </select>
+  <div class="filters-row">
+    <div class="filter-group">
+      <label class="filter-label">Status</label>
+      <select class="form-input form-select filter-input" bind:value={statusFilter} onchange={applyFilters}>
+        <option value="">All Open</option>
+        <option value="open">Open</option>
+        <option value="pending">Pending</option>
+        <option value="in_progress">In Progress</option>
+        <option value="escalated">Escalated</option>
+        <option value="resolved">Resolved</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Priority</label>
+      <select class="form-input form-select filter-input" bind:value={priorityFilter} onchange={applyFilters}>
+        <option value="">All Priorities</option>
+        <option value="urgent">Urgent</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
   </div>
 
-  <div class="filter-group">
-    <label class="filter-label">Priority</label>
-    <select class="form-input form-select filter-input" bind:value={priorityFilter} onchange={applyFilters}>
-      <option value="">All Priorities</option>
-      <option value="urgent">Urgent</option>
-      <option value="high">High</option>
-      <option value="medium">Medium</option>
-      <option value="low">Low</option>
-    </select>
+  <div class="filters-row">
+    <div class="filter-group">
+      <label class="filter-label">Client</label>
+      <select class="form-input form-select filter-input" bind:value={clientFilter} onchange={applyFilters}>
+        <option value="">All Clients</option>
+        {#each data.organizations as org}
+          <option value={org.id}>{org.name}</option>
+        {/each}
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Assigned To</label>
+      <select class="form-input form-select filter-input" bind:value={assigneeFilter} onchange={applyFilters}>
+        <option value="">All Assignees</option>
+        {#each data.supportUsers as user}
+          <option value={user.id}>{user.name}</option>
+        {/each}
+      </select>
+    </div>
   </div>
 
-  <div class="filter-group">
-    <label class="filter-label">Client</label>
-    <select class="form-input form-select filter-input" bind:value={clientFilter} onchange={applyFilters}>
-      <option value="">All Clients</option>
-      {#each data.organizations as org}
-        <option value={org.id}>{org.name}</option>
-      {/each}
-    </select>
-  </div>
-
-  <div class="filter-group">
-    <label class="filter-label">Assigned To</label>
-    <select class="form-input form-select filter-input" bind:value={assigneeFilter} onchange={applyFilters}>
-      <option value="">All Assignees</option>
-      {#each data.supportUsers as user}
-        <option value={user.id}>{user.name}</option>
-      {/each}
-    </select>
-  </div>
-
-  <div class="filter-group" style="margin-left: auto;">
+  <div class="filter-group clear-filters-group">
     <label class="filter-label">&nbsp;</label>
-    <button class="btn btn-secondary" onclick={clearFilters}>
+    <button class="btn btn-secondary clear-btn" onclick={clearFilters}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="18" y1="6" x2="6" y2="18"/>
         <line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
-      Clear Filters
+      <span class="btn-text">Clear Filters</span>
     </button>
   </div>
 </div>
 
 <!-- Tickets Table -->
 <div class="card">
-  <div class="table-container">
+  <!-- Desktop Table -->
+  <div class="table-container desktop-table">
     <table class="table">
       <thead>
         <tr>
@@ -357,6 +362,59 @@
         {/if}
       </tbody>
     </table>
+  </div>
+
+  <!-- Mobile Card List -->
+  <div class="mobile-card-list">
+    {#if data.tickets && data.tickets.length > 0}
+      {#each data.tickets as ticket}
+        <button class="mobile-card-item ticket-card {ticket.priority === 'urgent' || ticket.priority === 'high' ? 'priority-highlight' : ''}" onclick={() => openTicketModal(ticket)}>
+          <div class="mobile-card-header">
+            <div class="ticket-header-left">
+              <span class="ticket-number">#{ticket.ticketNumber}</span>
+              <span class="category-badge">{ticket.category}</span>
+            </div>
+            <div class="ticket-badges">
+              <span class="badge badge-{getPriorityClass(ticket.priority)}">
+                {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+              </span>
+              <span class="badge badge-{getStatusClass(ticket.status)}">
+                {formatStatus(ticket.status)}
+              </span>
+            </div>
+          </div>
+          <div class="ticket-subject-mobile">
+            <span class="subject-text">{ticket.subject}</span>
+          </div>
+          <div class="mobile-card-content">
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Client</span>
+              <span>{ticket.organization.name}</span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Created</span>
+              <span class="created-ago">{formatRelativeTime(ticket.ageHours)}</span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Assigned</span>
+              <span>{ticket.assignedTo ? ticket.assignedTo.name : 'Unassigned'}</span>
+            </div>
+          </div>
+        </button>
+      {/each}
+    {:else}
+      <div class="empty-state-mobile">
+        <div class="empty-state-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="empty-state-title">No tickets found</h3>
+        <p class="empty-state-description">All caught up! No tickets match your current filters.</p>
+        <button class="btn btn-secondary" onclick={clearFilters}>Clear Filters</button>
+      </div>
+    {/if}
   </div>
 
   <!-- Pagination -->
@@ -1265,5 +1323,254 @@
   .empty-state-description {
     color: var(--gray-500);
     margin: 0 0 var(--spacing-4);
+  }
+
+  /* Mobile Responsive Styles */
+  .filters-row {
+    display: contents;
+  }
+
+  .clear-filters-group {
+    margin-left: auto;
+  }
+
+  .desktop-table {
+    display: block;
+  }
+
+  .mobile-card-list {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    /* Filters mobile */
+    .filters-bar {
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+
+    .filters-row {
+      display: flex;
+      width: 100%;
+      gap: var(--spacing-3);
+    }
+
+    .filter-group {
+      flex: 1;
+    }
+
+    .filter-input {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .clear-filters-group {
+      margin-left: 0;
+      width: 100%;
+    }
+
+    .clear-btn {
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    /* Table/Card toggle */
+    .desktop-table {
+      display: none;
+    }
+
+    .mobile-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+
+    .mobile-card-item {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-4);
+      text-align: left;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .ticket-card:active {
+      background: var(--gray-50);
+    }
+
+    .ticket-card.priority-highlight {
+      background: var(--warning-50);
+      border-color: var(--warning-200);
+    }
+
+    .mobile-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--spacing-2);
+      margin-bottom: var(--spacing-2);
+    }
+
+    .ticket-header-left {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-1);
+    }
+
+    .ticket-badges {
+      display: flex;
+      gap: var(--spacing-1);
+      flex-wrap: wrap;
+    }
+
+    .ticket-badges .badge {
+      font-size: 0.6875rem;
+      padding: 2px 6px;
+    }
+
+    .ticket-subject-mobile {
+      margin-bottom: var(--spacing-3);
+    }
+
+    .ticket-subject-mobile .subject-text {
+      font-weight: 600;
+      color: var(--gray-900);
+      display: block;
+      max-width: none;
+      white-space: normal;
+    }
+
+    .mobile-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-2);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .mobile-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+    }
+
+    .mobile-card-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Empty state mobile */
+    .empty-state-mobile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--spacing-8) var(--spacing-4);
+      text-align: center;
+    }
+
+    /* Pagination mobile */
+    .pagination {
+      flex-direction: column;
+      gap: var(--spacing-3);
+      text-align: center;
+    }
+
+    /* Alert items mobile */
+    .alert-item {
+      flex-direction: column;
+      gap: var(--spacing-3);
+    }
+
+    .alert-actions {
+      margin-left: 0;
+      width: 100%;
+    }
+
+    .alert-actions .btn {
+      flex: 1;
+      min-height: 44px;
+    }
+
+    /* Review items mobile */
+    .review-item {
+      flex-wrap: wrap;
+      gap: var(--spacing-3);
+    }
+
+    .review-item .btn {
+      width: 100%;
+      min-height: 44px;
+    }
+
+    /* Modal mobile */
+    .modal-overlay {
+      padding: var(--spacing-4);
+      align-items: flex-end;
+    }
+
+    .modal {
+      max-width: none;
+      width: 100%;
+      max-height: calc(100vh - var(--spacing-8));
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+
+    .modal-body {
+      max-height: calc(100vh - 150px);
+      overflow-y: auto;
+    }
+
+    .ticket-info-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .modal-actions {
+      flex-direction: column;
+      gap: var(--spacing-3);
+    }
+
+    .status-form,
+    .priority-form {
+      width: 100%;
+    }
+
+    .status-form select,
+    .priority-form select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .status-form .btn,
+    .priority-form .btn {
+      min-height: 44px;
+    }
+
+    .reply-actions {
+      flex-direction: column;
+      gap: var(--spacing-3);
+    }
+
+    .reply-actions .btn {
+      width: 100%;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .ticket-info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .filters-row {
+      flex-direction: column;
+    }
   }
 </style>

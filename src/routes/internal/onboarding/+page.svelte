@@ -1046,4 +1046,114 @@
     background: var(--gray-50);
     border-color: var(--gray-300);
   }
+
+  /* Mobile Responsive Styles */
+  @media (max-width: 768px) {
+    .page-header {
+      margin-bottom: var(--spacing-4);
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+    }
+
+    /* Pipeline horizontal scroll on mobile */
+    .pipeline-section {
+      padding: var(--spacing-4);
+    }
+
+    .pipeline-columns {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      gap: var(--spacing-3);
+      padding-bottom: var(--spacing-2);
+      margin: 0 calc(-1 * var(--spacing-4));
+      padding-left: var(--spacing-4);
+      padding-right: var(--spacing-4);
+    }
+
+    .pipeline-column {
+      flex: 0 0 280px;
+      scroll-snap-align: start;
+      min-height: 300px;
+    }
+
+    /* Onboarding card mobile */
+    .onboarding-card {
+      padding: var(--spacing-3);
+    }
+
+    .client-avatar {
+      width: 44px;
+      height: 44px;
+      font-size: 0.9375rem;
+    }
+
+    .expand-btn {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+    }
+
+    /* Task checkboxes touch targets */
+    .task-checkbox {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+    }
+
+    /* Button touch targets */
+    .btn-sm {
+      min-height: 44px;
+      padding: 10px 16px;
+    }
+
+    .card-actions {
+      flex-direction: column;
+    }
+
+    .card-actions .btn {
+      width: 100%;
+    }
+
+    /* Specialist form mobile */
+    .specialist-form {
+      flex-direction: column;
+      gap: var(--spacing-2);
+    }
+
+    .specialist-form .form-input {
+      width: 100%;
+    }
+
+    .specialist-form .btn {
+      width: 100%;
+      min-height: 44px;
+    }
+
+    /* Section header mobile */
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-2);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .pipeline-column {
+      flex: 0 0 260px;
+    }
+
+    .phase-dots {
+      gap: var(--spacing-1);
+    }
+
+    .phase-dot {
+      width: 20px;
+      height: 20px;
+      font-size: 0.625rem;
+    }
+  }
 </style>

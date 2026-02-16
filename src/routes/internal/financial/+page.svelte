@@ -245,7 +245,9 @@
     <h3 class="card-title">Clients at Risk</h3>
     <span class="card-badge danger">{data.churnRiskClients.length} at risk</span>
   </div>
-  <div class="table-container">
+
+  <!-- Desktop Table -->
+  <div class="table-container desktop-table">
     <table class="table">
       <thead>
         <tr>
@@ -334,6 +336,85 @@
         {/if}
       </tbody>
     </table>
+  </div>
+
+  <!-- Mobile Card List -->
+  <div class="mobile-card-list">
+    {#if data.churnRiskClients.length > 0}
+      {#each data.churnRiskClients as client}
+        {@const daysUntil = client.contract ? getDaysUntilExpiry(client.contract.endDate) : 999}
+        <a href="/internal/clients/{client.id}" class="mobile-card-item risk-client-card">
+          <div class="mobile-card-header">
+            <div class="client-name-cell">
+              <div class="client-avatar">{getInitials(client.name)}</div>
+              <div class="client-info">
+                <div class="client-practice-name">{client.name}</div>
+                <div class="client-contact">Since {client.clientSince ? formatDate(client.clientSince) : 'N/A'}</div>
+              </div>
+            </div>
+            <div class="health-score {getHealthClass(client.healthScore)}">
+              {client.healthScore}
+            </div>
+          </div>
+          <div class="mobile-card-content">
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Plan</span>
+              <span>{client.contract?.planName || 'N/A'}</span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">MRR</span>
+              <span class="amount">{client.contract ? formatCurrency(client.contract.monthlyCommitment) : 'N/A'}</span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Expires</span>
+              <span>
+                {#if client.contract}
+                  <span class="expiry-date {daysUntil <= 30 ? 'urgent' : daysUntil <= 90 ? 'warning' : ''}">
+                    {formatDate(client.contract.endDate)}
+                  </span>
+                  <span class="days-remaining">({daysUntil}d)</span>
+                {:else}
+                  N/A
+                {/if}
+              </span>
+            </div>
+            <div class="mobile-card-row">
+              <span class="mobile-card-label">Risk</span>
+              <div class="risk-factors">
+                {#if client.healthScore < 50}
+                  <span class="risk-badge critical">Low Health</span>
+                {/if}
+                {#if daysUntil <= 90}
+                  <span class="risk-badge warning">Expiring Soon</span>
+                {/if}
+              </div>
+            </div>
+          </div>
+          <div class="mobile-card-actions">
+            <button class="btn btn-sm btn-outline" onclick={(e) => { e.preventDefault(); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+              </svg>
+              Contact
+            </button>
+            <span class="btn btn-sm btn-primary">
+              View Details
+            </span>
+          </div>
+        </a>
+      {/each}
+    {:else}
+      <div class="empty-state-mobile">
+        <div class="empty-state-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <h3 class="empty-state-title">No clients at risk</h3>
+        <p class="empty-state-description">All clients have healthy scores and active contracts.</p>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -1036,5 +1117,172 @@
   .empty-state-small p {
     margin: 0;
     font-size: 0.875rem;
+  }
+
+  /* Mobile Responsive Styles */
+  .desktop-table {
+    display: block;
+  }
+
+  .mobile-card-list {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .desktop-table {
+      display: none;
+    }
+
+    .mobile-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+
+    .mobile-card-item {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-4);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .risk-client-card:active {
+      background: var(--gray-50);
+    }
+
+    .mobile-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--spacing-3);
+      margin-bottom: var(--spacing-3);
+    }
+
+    .mobile-card-header .client-avatar {
+      width: 44px;
+      height: 44px;
+      font-size: 0.9375rem;
+    }
+
+    .mobile-card-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-3);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+      margin-bottom: var(--spacing-3);
+    }
+
+    .mobile-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mobile-card-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .mobile-card-actions {
+      display: flex;
+      gap: var(--spacing-2);
+      padding-top: var(--spacing-3);
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .mobile-card-actions .btn {
+      flex: 1;
+      justify-content: center;
+      min-height: 44px;
+      text-align: center;
+    }
+
+    /* Empty state mobile */
+    .empty-state-mobile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--spacing-8) var(--spacing-4);
+      text-align: center;
+    }
+
+    /* MRR Chart mobile */
+    .mrr-chart {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: var(--spacing-2);
+    }
+
+    .chart-bar-wrapper {
+      flex-shrink: 0;
+    }
+
+    .chart-bar {
+      width: 36px;
+    }
+
+    .chart-value {
+      font-size: 0.6875rem;
+    }
+
+    /* Margin table mobile */
+    .margin-header,
+    .margin-row {
+      grid-template-columns: 1.2fr 1fr 1fr 0.8fr;
+      gap: var(--spacing-2);
+      font-size: 0.75rem;
+    }
+
+    /* Card adjustments */
+    .card-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-2);
+    }
+
+    .card-body {
+      padding: var(--spacing-4);
+    }
+
+    /* Stats row mini mobile */
+    .stats-row-small {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-card-mini {
+      padding: var(--spacing-3);
+    }
+
+    .stat-mini-value {
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .margin-header,
+    .margin-row {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-2);
+    }
+
+    .margin-header span:nth-child(3),
+    .margin-row span:nth-child(3) {
+      display: none;
+    }
+
+    .mrr-chart {
+      height: 160px;
+    }
+
+    .chart-bar {
+      width: 28px;
+    }
   }
 </style>
