@@ -4,7 +4,7 @@
 		CheckCircleSolid,
 		CloseCircleSolid,
 		PenSolid,
-		ArrowPathOutline,
+		RedoOutline,
 		StarSolid
 	} from 'flowbite-svelte-icons';
 
@@ -279,7 +279,7 @@
 								title="Regenerate"
 								class="ml-1"
 							>
-								<ArrowPathOutline class="h-3.5 w-3.5" />
+								<RedoOutline class="h-3.5 w-3.5" />
 							</Button>
 						</div>
 					</div>
