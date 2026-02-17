@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { fail } from '@sveltejs/kit';
 import type { TicketStatus, TicketPriority, TicketCategory, Prisma } from '@prisma/client';
+import { INTERNAL_ROLES } from '$lib/constants/roles';
 
 export const load: PageServerLoad = async ({ url }) => {
   // Parse filter parameters
@@ -184,7 +185,7 @@ export const load: PageServerLoad = async ({ url }) => {
     prisma.user.findMany({
       where: {
         role: {
-          in: ['admin', 'super_admin', 'support']
+          in: INTERNAL_ROLES
         },
         isActive: true,
         deletedAt: null

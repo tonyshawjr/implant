@@ -4,6 +4,7 @@ import {
   isIntegrationConnected,
   type IntegrationId
 } from '../integrations';
+import { ROLE_SUPER_ADMIN, ROLE_ADMIN, getRoleDisplayName, type Role } from '$lib/constants/roles';
 
 export interface EmailResult {
   success: boolean;
@@ -643,7 +644,7 @@ export async function sendTeamInviteEmail(
   loginUrl: string
 ): Promise<EmailResult> {
   const subject = 'You\'ve Been Invited to SqueezMedia';
-  const roleDisplay = role === 'super_admin' ? 'Super Admin' : role === 'admin' ? 'Admin' : 'Support';
+  const roleDisplay = getRoleDisplayName(role as Role);
 
   const htmlContent = `
 <!DOCTYPE html>

@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { prisma } from '$lib/server/db';
+import { INTERNAL_ROLES, isInternalRole } from '$lib/constants/roles';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   // Auth guard: redirect to login if not authenticated
@@ -11,8 +12,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   const user = locals.user;
 
   // Admin role guard: only internal staff can access
-  const internalRoles = ['super_admin', 'admin', 'support'];
-  if (!internalRoles.includes(user.role)) {
+  if (!isInternalRole(user.role)) {
     // Client users should go to client dashboard
     throw redirect(302, '/dashboard');
   }

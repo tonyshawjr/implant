@@ -18,6 +18,7 @@ import {
 } from '$lib/server/billing/subscriptions';
 import { getInvoicePdfUrl } from '$lib/server/billing/invoices';
 import { getSubscriptionPeriodEnd } from '$lib/server/billing/stripe-helpers';
+import { ROLE_CLIENT_OWNER, ROLE_CLIENT_ADMIN } from '$lib/constants/roles';
 
 export const load: PageServerLoad = async ({ parent, url }) => {
   const { user, organization } = await parent();
@@ -385,7 +386,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 
@@ -399,7 +400,7 @@ export const actions: Actions = {
         where: { id: user.organizationId },
         include: {
           users: {
-            where: { role: 'client_owner' },
+            where: { role: ROLE_CLIENT_OWNER },
             take: 1
           }
         }
@@ -438,7 +439,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 
@@ -460,7 +461,7 @@ export const actions: Actions = {
         where: { id: user.organizationId },
         include: {
           users: {
-            where: { role: 'client_owner' },
+            where: { role: ROLE_CLIENT_OWNER },
             take: 1
           }
         }
@@ -519,7 +520,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 
@@ -597,7 +598,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 
@@ -706,7 +707,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 
@@ -774,7 +775,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 
@@ -844,7 +845,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'Insufficient permissions' });
     }
 

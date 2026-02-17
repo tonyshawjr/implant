@@ -14,9 +14,10 @@ import {
   syncInvoiceToDatabase,
   voidStripeInvoice
 } from '$lib/server/billing/invoices';
+import { ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_CLIENT_OWNER } from '$lib/constants/roles';
 
 // Admin roles that can access billing management
-const ADMIN_ROLES = ['super_admin', 'admin'];
+const ADMIN_ROLES = [ROLE_SUPER_ADMIN, ROLE_ADMIN];
 
 /**
  * GET /api/admin/billing - Get billing overview for all organizations
@@ -211,7 +212,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     where: { id: organizationId },
     include: {
       users: {
-        where: { role: 'client_owner' },
+        where: { role: ROLE_CLIENT_OWNER },
         take: 1
       }
     }

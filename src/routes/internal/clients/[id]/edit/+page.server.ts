@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { error, fail, redirect } from '@sveltejs/kit';
+import { ROLE_ADMIN, ROLE_SUPER_ADMIN, ROLE_SUPPORT, INTERNAL_ROLES } from '$lib/constants/roles';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const { id } = params;
@@ -67,7 +68,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Get all users who can be account managers (internal staff)
 	const accountManagers = await prisma.user.findMany({
 		where: {
-			role: { in: ['admin', 'super_admin', 'support'] },
+			role: { in: INTERNAL_ROLES },
 			isActive: true,
 			deletedAt: null
 		},

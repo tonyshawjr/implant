@@ -10,6 +10,58 @@
  */
 
 import { env } from '$env/dynamic/private';
+import { prisma } from '$lib/server/db';
+
+// Cache for API keys from database (refresh every 5 minutes)
+let apiKeyCache: { keys: Record<string, string>; timestamp: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Gets an API key, checking database first then falling back to environment variable
+ */
+async function getApiKey(keyName: 'claude_api_key' | 'openai_api_key'): Promise<string | null> {
+  // Check cache first
+  if (apiKeyCache && Date.now() - apiKeyCache.timestamp < CACHE_TTL) {
+    if (apiKeyCache.keys[keyName]) {
+      return apiKeyCache.keys[keyName];
+    }
+  }
+
+  // Refresh cache from database
+  try {
+    const settings = await prisma.systemSetting.findMany({
+      where: {
+        key: { in: ['claude_api_key', 'openai_api_key'] }
+      }
+    });
+
+    const keys: Record<string, string> = {};
+    for (const setting of settings) {
+      const value = setting.value as { key?: string } | null;
+      if (value?.key) {
+        keys[setting.key] = value.key;
+      }
+    }
+    apiKeyCache = { keys, timestamp: Date.now() };
+
+    if (keys[keyName]) {
+      return keys[keyName];
+    }
+  } catch (error) {
+    console.error('Failed to fetch API keys from database:', error);
+  }
+
+  // Fall back to environment variable
+  const envKey = keyName === 'claude_api_key' ? env.CLAUDE_API_KEY : env.OPENAI_API_KEY;
+  return envKey || null;
+}
+
+/**
+ * Clears the API key cache (call after updating keys)
+ */
+export function clearApiKeyCache(): void {
+  apiKeyCache = null;
+}
 
 // =============================================================================
 // Types
@@ -88,7 +140,12 @@ const rateLimitState = {
 // Mock Responses (Development Mode)
 // =============================================================================
 
-const USE_MOCK = !env.CLAUDE_API_KEY && !env.OPENAI_API_KEY;
+// Check if we should use mock mode (no API keys available)
+async function shouldUseMock(): Promise<boolean> {
+  const claudeKey = await getApiKey('claude_api_key');
+  const openaiKey = await getApiKey('openai_api_key');
+  return !claudeKey && !openaiKey;
+}
 
 /**
  * Generates mock AI responses for development/testing
@@ -303,7 +360,7 @@ async function callClaudeAPI(
   messages: AIMessage[],
   options: AICompletionOptions
 ): Promise<AICompletionResponse> {
-  const apiKey = env.CLAUDE_API_KEY;
+  const apiKey = await getApiKey('claude_api_key');
 
   if (!apiKey) {
     return {
@@ -386,7 +443,7 @@ async function callOpenAIAPI(
   messages: AIMessage[],
   options: AICompletionOptions
 ): Promise<AICompletionResponse> {
-  const apiKey = env.OPENAI_API_KEY;
+  const apiKey = await getApiKey('openai_api_key');
 
   if (!apiKey) {
     return {
@@ -496,7 +553,7 @@ export async function complete(
   options: AICompletionOptions = {}
 ): Promise<AICompletionResponse> {
   // Use mock responses in development without API keys
-  if (USE_MOCK) {
+  if (await shouldUseMock()) {
     console.log('[AI Client] Using mock responses (no API keys configured)');
     return generateMockResponse(messages, options);
   }
@@ -513,8 +570,9 @@ export async function complete(
     };
   }
 
-  // Determine provider
-  const provider = options.provider || (env.CLAUDE_API_KEY ? 'claude' : 'openai');
+  // Determine provider based on available keys
+  const claudeKey = await getApiKey('claude_api_key');
+  const provider = options.provider || (claudeKey ? 'claude' : 'openai');
 
   // Make the API call with retry logic
   const result = await withRetry(
@@ -541,7 +599,7 @@ export async function complete(
   // Try fallback provider if primary fails
   if (!result.success && options.provider === undefined) {
     const fallbackProvider = provider === 'claude' ? 'openai' : 'claude';
-    const fallbackKey = fallbackProvider === 'claude' ? env.CLAUDE_API_KEY : env.OPENAI_API_KEY;
+    const fallbackKey = await getApiKey(fallbackProvider === 'claude' ? 'claude_api_key' : 'openai_api_key');
 
     if (fallbackKey) {
       console.log(`[AI Client] Primary provider failed, trying fallback: ${fallbackProvider}`);

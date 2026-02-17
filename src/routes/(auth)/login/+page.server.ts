@@ -3,11 +3,12 @@ import { prisma } from '$lib/server/db';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { Argon2id } from 'oslo/password';
+import { INTERNAL_ROLES, isInternalRole } from '$lib/constants/roles';
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.user) {
     // Redirect based on role
-    if (['super_admin', 'admin', 'support'].includes(locals.user.role)) {
+    if (isInternalRole(locals.user.role)) {
       throw redirect(302, '/internal');
     }
     throw redirect(302, '/');
@@ -74,8 +75,7 @@ export const actions: Actions = {
       });
 
       // Redirect based on role
-      const internalRoles = ['super_admin', 'admin', 'support'];
-      if (internalRoles.includes(user.role)) {
+      if (isInternalRole(user.role)) {
         throw redirect(302, '/internal');
       }
       throw redirect(302, '/dashboard');

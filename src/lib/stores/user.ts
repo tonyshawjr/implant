@@ -4,17 +4,25 @@
  */
 
 import { writable, derived, type Readable } from 'svelte/store';
+import {
+  ROLE_SUPER_ADMIN,
+  ROLE_ADMIN,
+  ROLE_SUPPORT,
+  ROLE_CLIENT_OWNER,
+  ROLE_CLIENT_ADMIN,
+  ROLE_CLIENT_STAFF,
+  INTERNAL_ROLES,
+  CLIENT_ROLES,
+  isInternalRole,
+  isClientRole,
+  getRoleDisplayName as getDisplayName,
+  type Role
+} from '$lib/constants/roles';
 
 /**
- * User role types matching the Prisma schema
+ * User role types - re-exported from constants for backwards compatibility
  */
-export type UserRole =
-  | 'super_admin'
-  | 'admin'
-  | 'support'
-  | 'client_owner'
-  | 'client_admin'
-  | 'client_staff';
+export type UserRole = Role;
 
 /**
  * Current user data structure
@@ -200,7 +208,7 @@ export const isInternalUser: Readable<boolean> = derived(
   userStore,
   ($userStore) => {
     if (!$userStore.user) return false;
-    return ['super_admin', 'admin', 'support'].includes($userStore.user.role);
+    return isInternalRole($userStore.user.role);
   }
 );
 
@@ -211,7 +219,7 @@ export const isClientUser: Readable<boolean> = derived(
   userStore,
   ($userStore) => {
     if (!$userStore.user) return false;
-    return ['client_owner', 'client_admin', 'client_staff'].includes($userStore.user.role);
+    return isClientRole($userStore.user.role);
   }
 );
 
@@ -222,7 +230,7 @@ export const isAdmin: Readable<boolean> = derived(
   userStore,
   ($userStore) => {
     if (!$userStore.user) return false;
-    return ['super_admin', 'admin'].includes($userStore.user.role);
+    return $userStore.user.role === ROLE_SUPER_ADMIN || $userStore.user.role === ROLE_ADMIN;
   }
 );
 
@@ -231,7 +239,7 @@ export const isAdmin: Readable<boolean> = derived(
  */
 export const isSuperAdmin: Readable<boolean> = derived(
   userStore,
-  ($userStore) => $userStore.user?.role === 'super_admin'
+  ($userStore) => $userStore.user?.role === ROLE_SUPER_ADMIN
 );
 
 /**
@@ -241,7 +249,8 @@ export const canManageOrganization: Readable<boolean> = derived(
   userStore,
   ($userStore) => {
     if (!$userStore.user) return false;
-    return ['super_admin', 'admin', 'client_owner', 'client_admin'].includes($userStore.user.role);
+    const role = $userStore.user.role;
+    return role === ROLE_SUPER_ADMIN || role === ROLE_ADMIN || role === ROLE_CLIENT_OWNER || role === ROLE_CLIENT_ADMIN;
   }
 );
 
@@ -252,7 +261,8 @@ export const canViewBilling: Readable<boolean> = derived(
   userStore,
   ($userStore) => {
     if (!$userStore.user) return false;
-    return ['super_admin', 'admin', 'client_owner', 'client_admin'].includes($userStore.user.role);
+    const role = $userStore.user.role;
+    return role === ROLE_SUPER_ADMIN || role === ROLE_ADMIN || role === ROLE_CLIENT_OWNER || role === ROLE_CLIENT_ADMIN;
   }
 );
 
@@ -264,25 +274,27 @@ export const canManageLeads: Readable<boolean> = derived(
   ($userStore) => {
     if (!$userStore.user) return false;
     // All roles can manage leads except support (read-only)
-    return $userStore.user.role !== 'support';
+    return $userStore.user.role !== ROLE_SUPPORT;
   }
 );
 
 /**
  * Role display names for UI
+ * @deprecated Use getRoleDisplayName from '$lib/constants/roles' instead
  */
 export const roleDisplayNames: Record<UserRole, string> = {
-  super_admin: 'Super Admin',
-  admin: 'Admin',
-  support: 'Support',
-  client_owner: 'Owner',
-  client_admin: 'Admin',
-  client_staff: 'Staff'
+  [ROLE_SUPER_ADMIN]: 'Super Admin',
+  [ROLE_ADMIN]: 'Admin',
+  [ROLE_SUPPORT]: 'Support',
+  [ROLE_CLIENT_OWNER]: 'Owner',
+  [ROLE_CLIENT_ADMIN]: 'Admin',
+  [ROLE_CLIENT_STAFF]: 'Staff'
 };
 
 /**
  * Get display name for a role
+ * @deprecated Use getRoleDisplayName from '$lib/constants/roles' instead
  */
 export function getRoleDisplayName(role: UserRole): string {
-  return roleDisplayNames[role] || role;
+  return getDisplayName(role);
 }

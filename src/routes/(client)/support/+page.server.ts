@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { error, fail } from '@sveltejs/kit';
+import { CLIENT_ROLES, isClientRole } from '$lib/constants/roles';
 
 export const load: PageServerLoad = async ({ parent }) => {
   const { user, organization } = await parent();
@@ -134,7 +135,7 @@ export const load: PageServerLoad = async ({ parent }) => {
       sender: {
         id: msg.sender.id,
         name: `${msg.sender.firstName} ${msg.sender.lastName}`,
-        isStaff: !['client_owner', 'client_admin', 'client_staff'].includes(msg.sender.role)
+        isStaff: !isClientRole(msg.sender.role)
       }
     })),
     createdAt: ticket.createdAt.toISOString(),

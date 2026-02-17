@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { fail } from '@sveltejs/kit';
 import type { ProspectStage, Prisma } from '@prisma/client';
+import { ROLE_SUPER_ADMIN, ROLE_ADMIN } from '$lib/constants/roles';
 
 // Define the pipeline stages in order
 const PIPELINE_STAGES: ProspectStage[] = [
@@ -173,7 +174,7 @@ export const load: PageServerLoad = async () => {
     prisma.user.findMany({
       where: {
         role: {
-          in: ['admin', 'super_admin']
+          in: [ROLE_ADMIN, ROLE_SUPER_ADMIN]
         },
         isActive: true,
         deletedAt: null

@@ -823,6 +823,12 @@ async function main() {
       }
     })
   ]);
+  createdUsers.push(
+    { email: 'drpatel@desertsmile.dental', role: 'client_owner' },
+    { email: 'maria.garcia@desertsmile.dental', role: 'client_admin' },
+    { email: 'tom.anderson@desertsmile.dental', role: 'client_staff' },
+    { email: 'jennifer.lee@desertsmile.dental', role: 'client_staff' }
+  );
 
   console.log('Client users created successfully');
 
@@ -1832,7 +1838,10 @@ async function main() {
   console.log('- 5 Knowledge Base Articles');
   console.log('- 3 Payment Methods');
   console.log('\n========================================');
-  console.log('Default password for all users: password123');
+
+  // Write credentials to file instead of console
+  writeCredentialsToFile(SEED_PASSWORD, createdUsers);
+
   console.log('========================================\n');
 }
 

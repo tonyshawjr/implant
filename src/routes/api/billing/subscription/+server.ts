@@ -16,6 +16,7 @@ import {
   getInvoiceTax,
   isProration
 } from '$lib/server/billing/stripe-helpers';
+import { ROLE_CLIENT_OWNER, ROLE_CLIENT_ADMIN } from '$lib/constants/roles';
 
 /**
  * POST /api/billing/subscription - Change subscription plan or create checkout
@@ -32,7 +33,7 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
   }
 
   // Check if user has permission
-  if (!['client_owner', 'client_admin'].includes(user.role)) {
+  if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
     throw error(403, 'Insufficient permissions');
   }
 

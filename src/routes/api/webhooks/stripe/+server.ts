@@ -13,6 +13,7 @@ import {
   getSubscriptionPeriodEnd,
   getInvoicePaymentIntent
 } from '$lib/server/billing/stripe-helpers';
+import { ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_CLIENT_OWNER, ROLE_CLIENT_ADMIN } from '$lib/constants/roles';
 
 const STRIPE_WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -241,7 +242,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
     const users = await prisma.user.findMany({
       where: {
         organizationId,
-        role: { in: ['client_owner', 'client_admin'] }
+        role: { in: [ROLE_CLIENT_OWNER, ROLE_CLIENT_ADMIN] }
       }
     });
 
@@ -399,7 +400,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
     // Create notification for internal team
     const admins = await prisma.user.findMany({
       where: {
-        role: { in: ['super_admin', 'admin'] }
+        role: { in: [ROLE_SUPER_ADMIN, ROLE_ADMIN] }
       }
     });
 
@@ -434,7 +435,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription): Promise<vo
     const users = await prisma.user.findMany({
       where: {
         organizationId,
-        role: { in: ['client_owner', 'client_admin'] }
+        role: { in: [ROLE_CLIENT_OWNER, ROLE_CLIENT_ADMIN] }
       }
     });
 

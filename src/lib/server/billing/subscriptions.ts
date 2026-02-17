@@ -1,6 +1,7 @@
 import { stripe, isStripeConfigured, type Stripe } from '$lib/server/stripe';
 import { prisma } from '$lib/server/db';
 import { getOrCreateCustomer } from './customers';
+import { ROLE_CLIENT_OWNER } from '$lib/constants/roles';
 
 export interface CreateSubscriptionInput {
   organizationId: string;
@@ -33,7 +34,7 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     include: {
       users: {
         where: {
-          role: 'client_owner'
+          role: ROLE_CLIENT_OWNER
         },
         take: 1
       }
@@ -269,7 +270,7 @@ export async function createCheckoutSession(
     include: {
       users: {
         where: {
-          role: 'client_owner'
+          role: ROLE_CLIENT_OWNER
         },
         take: 1
       }

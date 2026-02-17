@@ -1,612 +1,204 @@
 import type { PageServerLoad, Actions } from './$types';
-import { fail } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
-import { hash } from '@node-rs/argon2';
-import {
-  getIntegrations,
-  connectIntegration as connectInt,
-  disconnectIntegration as disconnectInt,
-  INTEGRATIONS_METADATA,
-  type IntegrationId
-} from '$lib/server/integrations';
+import { fail } from '@sveltejs/kit';
+import { clearApiKeyCache } from '$lib/server/ai/client';
 
-export const load: PageServerLoad = async ({ url }) => {
-  const activeTab = url.searchParams.get('tab') || 'general';
+// Mask API key for display (show only last 4 characters)
+function maskApiKey(key: string | null): string {
+	if (!key) return '';
+	if (key.length <= 8) return '••••••••';
+	return '••••••••••••' + key.slice(-4);
+}
 
-  // Platform settings (would normally come from a settings table)
-  const platformSettings = {
-    companyName: 'SqueezMedia',
-    platformName: 'Implant Lead Engine',
-    supportEmail: 'support@squeezmedia.com',
-    billingEmail: 'billing@squeezmedia.com',
-    defaultTimezone: 'America/New_York',
-    defaultCurrency: 'USD',
-    maxTerritoriesPerClient: 5,
-    defaultTrialDays: 14,
-    maintenanceMode: false,
-    debugMode: false
-  };
+export const load: PageServerLoad = async ({ locals }) => {
+	// Only super_admin can access settings
+	if (!locals.user) {
+		return { error: 'Unauthorized' };
+	}
 
-  // Notification settings
-  const notificationSettings = {
-    emailNotifications: true,
-    smsNotifications: false,
-    slackIntegration: true,
-    slackChannel: '#alerts',
-    notifyOnNewLead: true,
-    notifyOnNewClient: true,
-    notifyOnChurnRisk: true,
-    notifyOnPaymentFailed: true,
-    notifyOnTicketCreated: true,
-    notifyOnAnomalyDetected: true,
-    dailyDigest: true,
-    weeklyReport: true
-  };
+	// Get all API-related settings
+	const settings = await prisma.systemSetting.findMany({
+		where: {
+			key: {
+				in: ['claude_api_key', 'openai_api_key', 'census_api_key', 'mapbox_api_key']
+			}
+		}
+	});
 
-  // Integration status - loaded dynamically from database
-  const integrations = await getIntegrations();
+	// Convert to a map and mask keys
+	const settingsMap: Record<string, { configured: boolean; masked: string; description: string }> = {
+		claude_api_key: {
+			configured: false,
+			masked: '',
+			description: 'Required for AI voice analysis and content generation'
+		},
+		openai_api_key: {
+			configured: false,
+			masked: '',
+			description: 'Fallback AI provider (optional)'
+		},
+		census_api_key: {
+			configured: false,
+			masked: '',
+			description: 'For fetching territory demographics'
+		},
+		mapbox_api_key: {
+			configured: false,
+			masked: '',
+			description: 'For interactive territory maps'
+		}
+	};
 
-  // Get integration metadata for configuration forms
-  const integrationFields = INTEGRATIONS_METADATA.reduce((acc, meta) => {
-    acc[meta.id] = meta.fields;
-    return acc;
-  }, {} as Record<string, typeof INTEGRATIONS_METADATA[0]['fields']>);
+	for (const setting of settings) {
+		const value = setting.value as { key?: string } | null;
+		if (value?.key) {
+			settingsMap[setting.key] = {
+				...settingsMap[setting.key],
+				configured: true,
+				masked: maskApiKey(value.key)
+			};
+		}
+	}
 
-  // Team members (internal staff) - loaded from database
-  // Internal roles are: super_admin, admin, support (no organizationId or null)
-  const internalUsers = await prisma.user.findMany({
-    where: {
-      role: {
-        in: ['super_admin', 'admin', 'support']
-      },
-      deletedAt: null
-    },
-    orderBy: [
-      { role: 'asc' },
-      { firstName: 'asc' }
-    ],
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      role: true,
-      isActive: true,
-      lastLoginAt: true
-    }
-  });
-
-  const teamMembers = internalUsers.map(user => ({
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    role: user.role,
-    status: user.isActive ? 'active' : 'inactive',
-    lastLogin: user.lastLoginAt?.toISOString() || null
-  }));
-
-  // API keys (masked)
-  const apiKeys = [
-    {
-      id: '1',
-      name: 'Production API Key',
-      key: 'sk_live_****************************1234',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString(),
-      lastUsed: new Date().toISOString(),
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Development API Key',
-      key: 'sk_test_****************************5678',
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(),
-      lastUsed: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-      status: 'active'
-    }
-  ];
-
-  // Default pricing configuration
-  const defaultPricingConfig = {
-    // Score thresholds for each factor
-    scoring: {
-      senior: { weight: 30, thresholds: [{ min: 20, points: 30 }, { min: 15, points: 25 }, { min: 12, points: 20 }, { min: 8, points: 15 }, { min: 0, points: 10 }] },
-      income: { weight: 25, thresholds: [{ min: 100000, points: 25 }, { min: 75000, points: 20 }, { min: 55000, points: 15 }, { min: 40000, points: 10 }, { min: 0, points: 5 }] },
-      population: { weight: 25, thresholds: [{ min: 500000, points: 25 }, { min: 250000, points: 20 }, { min: 100000, points: 15 }, { min: 50000, points: 10 }, { min: 0, points: 5 }] },
-      homeValue: { weight: 20, thresholds: [{ min: 500000, points: 20 }, { min: 350000, points: 16 }, { min: 250000, points: 12 }, { min: 150000, points: 8 }, { min: 0, points: 4 }] }
-    },
-    // Price tiers based on total score
-    priceTiers: [
-      { minScore: 80, price: 3500, label: 'Premium' },
-      { minScore: 65, price: 2750, label: 'High' },
-      { minScore: 50, price: 2000, label: 'Standard' },
-      { minScore: 35, price: 1500, label: 'Moderate' },
-      { minScore: 0, price: 1000, label: 'Entry' }
-    ]
-  };
-
-  // Territory pricing configuration - wrapped in try/catch for robustness
-  let pricingConfig = defaultPricingConfig;
-  try {
-    const pricingConfigSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'territory_pricing' }
-    });
-    if (pricingConfigSetting?.value) {
-      pricingConfig = pricingConfigSetting.value as typeof defaultPricingConfig;
-    }
-  } catch (error) {
-    console.error('Failed to load pricing config from database:', error);
-    // Continue with default config
-  }
-
-  return {
-    activeTab,
-    platformSettings,
-    notificationSettings,
-    integrations,
-    integrationFields,
-    teamMembers,
-    apiKeys,
-    pricingConfig
-  };
+	return {
+		apiKeys: settingsMap
+	};
 };
 
 export const actions: Actions = {
-  updatePlatformSettings: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (locals.user.role !== 'super_admin') {
-      return fail(403, { message: 'Only super admins can update platform settings' });
-    }
-
-    const formData = await request.formData();
-    const companyName = formData.get('companyName') as string;
-    const platformName = formData.get('platformName') as string;
-    const supportEmail = formData.get('supportEmail') as string;
-    const billingEmail = formData.get('billingEmail') as string;
-    const defaultTimezone = formData.get('defaultTimezone') as string;
-
-    // In a real implementation, save to database
-    console.log('Updating platform settings:', {
-      companyName,
-      platformName,
-      supportEmail,
-      billingEmail,
-      defaultTimezone
-    });
-
-    return { success: true, message: 'Platform settings updated successfully' };
-  },
-
-  updateNotificationSettings: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    const formData = await request.formData();
-
-    // In a real implementation, save to database
-    console.log('Updating notification settings from form data');
-
-    return { success: true, message: 'Notification settings updated successfully' };
-  },
-
-  connectIntegration: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (!['super_admin', 'admin'].includes(locals.user.role)) {
-      return fail(403, { message: 'You do not have permission to configure integrations' });
-    }
-
-    const formData = await request.formData();
-    const integrationId = formData.get('integrationId') as IntegrationId;
-
-    if (!integrationId) {
-      return fail(400, { message: 'Integration ID is required' });
-    }
-
-    // Get all form fields for this integration
-    const meta = INTEGRATIONS_METADATA.find(m => m.id === integrationId);
-    if (!meta) {
-      return fail(400, { message: 'Unknown integration' });
-    }
-
-    // Extract credentials from form data
-    const credentials: Record<string, string> = {};
-    for (const field of meta.fields) {
-      const value = formData.get(field.key);
-      if (value) {
-        credentials[field.key] = value.toString();
-      }
-    }
-
-    // Connect the integration
-    const result = await connectInt(integrationId, credentials, locals.user.id);
-
-    if (!result.success) {
-      return fail(400, { message: result.error || 'Failed to connect integration' });
-    }
-
-    return { success: true, message: `${meta.name} connected successfully` };
-  },
-
-  disconnectIntegration: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (!['super_admin', 'admin'].includes(locals.user.role)) {
-      return fail(403, { message: 'You do not have permission to configure integrations' });
-    }
-
-    const formData = await request.formData();
-    const integrationId = formData.get('integrationId') as IntegrationId;
-
-    if (!integrationId) {
-      return fail(400, { message: 'Integration ID is required' });
-    }
-
-    const meta = INTEGRATIONS_METADATA.find(m => m.id === integrationId);
-    if (!meta) {
-      return fail(400, { message: 'Unknown integration' });
-    }
-
-    // Disconnect the integration
-    const result = await disconnectInt(integrationId, locals.user.id);
-
-    if (!result.success) {
-      return fail(400, { message: result.error || 'Failed to disconnect integration' });
-    }
-
-    return { success: true, message: `${meta.name} disconnected` };
-  },
-
-  configureIntegration: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (!['super_admin', 'admin'].includes(locals.user.role)) {
-      return fail(403, { message: 'You do not have permission to configure integrations' });
-    }
-
-    const formData = await request.formData();
-    const integrationId = formData.get('integrationId') as IntegrationId;
-
-    if (!integrationId) {
-      return fail(400, { message: 'Integration ID is required' });
-    }
-
-    // Get all form fields for this integration
-    const meta = INTEGRATIONS_METADATA.find(m => m.id === integrationId);
-    if (!meta) {
-      return fail(400, { message: 'Unknown integration' });
-    }
-
-    // Extract credentials from form data
-    const credentials: Record<string, string> = {};
-    for (const field of meta.fields) {
-      const value = formData.get(field.key);
-      if (value) {
-        credentials[field.key] = value.toString();
-      }
-    }
-
-    // Update the integration configuration
-    const result = await connectInt(integrationId, credentials, locals.user.id);
-
-    if (!result.success) {
-      return fail(400, { message: result.error || 'Failed to update integration' });
-    }
-
-    return { success: true, message: `${meta.name} configuration updated` };
-  },
-
-  inviteTeamMember: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (!['super_admin', 'admin'].includes(locals.user.role)) {
-      return fail(403, { message: 'You do not have permission to invite team members' });
-    }
-
-    const formData = await request.formData();
-    const email = formData.get('email') as string;
-    const firstName = formData.get('firstName') as string;
-    const lastName = formData.get('lastName') as string;
-    const role = formData.get('role') as string;
-
-    if (!email || !role) {
-      return fail(400, { message: 'Email and role are required' });
-    }
-
-    if (!firstName || !lastName) {
-      return fail(400, { message: 'First name and last name are required' });
-    }
-
-    // Validate role
-    if (!['super_admin', 'admin', 'support'].includes(role)) {
-      return fail(400, { message: 'Invalid role. Must be super_admin, admin, or support' });
-    }
-
-    // Only super_admin can create other super_admins
-    if (role === 'super_admin' && locals.user.role !== 'super_admin') {
-      return fail(403, { message: 'Only super admins can create other super admins' });
-    }
-
-    try {
-      // Check if user with this email already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() }
-      });
-
-      if (existingUser) {
-        if (existingUser.deletedAt) {
-          // Reactivate deleted user
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: {
-              deletedAt: null,
-              isActive: true,
-              firstName,
-              lastName,
-              role: role as any
-            }
-          });
-          return { success: true, message: `Team member ${email} has been reactivated` };
-        }
-        return fail(400, { message: 'A user with this email already exists' });
-      }
-
-      // Generate a temporary password (in production, you'd send an invite email)
-      const tempPassword = crypto.randomUUID().slice(0, 12);
-      const passwordHash = await hash(tempPassword, {
-        memoryCost: 19456,
-        timeCost: 2,
-        outputLen: 32,
-        parallelism: 1
-      });
-
-      // Create the new team member
-      await prisma.user.create({
-        data: {
-          email: email.toLowerCase(),
-          firstName,
-          lastName,
-          passwordHash,
-          role: role as any,
-          isActive: true,
-          organizationId: null // Internal staff don't belong to client organizations
-        }
-      });
-
-      // Return credentials for admin to share with the new team member
-      return {
-        success: true,
-        showCredentials: true,
-        credentials: {
-          email: email.toLowerCase(),
-          password: tempPassword,
-          name: `${firstName} ${lastName}`
-        },
-        message: `Team member created successfully`
-      };
-    } catch (error) {
-      console.error('Failed to invite team member:', error);
-      return fail(500, { message: 'Failed to create team member' });
-    }
-  },
-
-  updateTeamMember: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (!['super_admin', 'admin'].includes(locals.user.role)) {
-      return fail(403, { message: 'You do not have permission to update team members' });
-    }
-
-    const formData = await request.formData();
-    const memberId = formData.get('memberId') as string;
-    const role = formData.get('role') as string;
-    const status = formData.get('status') as string;
-    const firstName = formData.get('firstName') as string;
-    const lastName = formData.get('lastName') as string;
-
-    if (!memberId) {
-      return fail(400, { message: 'Member ID is required' });
-    }
-
-    try {
-      // Check if user exists
-      const user = await prisma.user.findUnique({
-        where: { id: memberId },
-        select: { id: true, role: true }
-      });
-
-      if (!user) {
-        return fail(404, { message: 'Team member not found' });
-      }
-
-      // Only super_admin can modify other super_admins
-      if (user.role === 'super_admin' && locals.user.role !== 'super_admin') {
-        return fail(403, { message: 'Only super admins can modify other super admins' });
-      }
-
-      // Only super_admin can promote to super_admin
-      if (role === 'super_admin' && locals.user.role !== 'super_admin') {
-        return fail(403, { message: 'Only super admins can promote users to super admin' });
-      }
-
-      // Build update data
-      const updateData: any = {};
-
-      if (role && ['super_admin', 'admin', 'support'].includes(role)) {
-        updateData.role = role;
-      }
-
-      if (status) {
-        updateData.isActive = status === 'active';
-      }
-
-      if (firstName) {
-        updateData.firstName = firstName;
-      }
-
-      if (lastName) {
-        updateData.lastName = lastName;
-      }
-
-      // Update the user
-      await prisma.user.update({
-        where: { id: memberId },
-        data: updateData
-      });
-
-      return { success: true, message: 'Team member updated successfully' };
-    } catch (error) {
-      console.error('Failed to update team member:', error);
-      return fail(500, { message: 'Failed to update team member' });
-    }
-  },
-
-  removeTeamMember: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (locals.user.role !== 'super_admin') {
-      return fail(403, { message: 'Only super admins can remove team members' });
-    }
-
-    const formData = await request.formData();
-    const memberId = formData.get('memberId') as string;
-
-    if (!memberId) {
-      return fail(400, { message: 'Member ID is required' });
-    }
-
-    // Prevent deleting yourself
-    if (memberId === locals.user.id) {
-      return fail(400, { message: 'You cannot remove yourself' });
-    }
-
-    try {
-      // Check if user exists and is internal staff
-      const user = await prisma.user.findUnique({
-        where: { id: memberId },
-        select: { id: true, role: true, email: true }
-      });
-
-      if (!user) {
-        return fail(404, { message: 'Team member not found' });
-      }
-
-      // Only allow removing internal staff roles
-      if (!['super_admin', 'admin', 'support'].includes(user.role)) {
-        return fail(400, { message: 'Cannot remove client users from this page' });
-      }
-
-      // Soft delete the user
-      await prisma.user.update({
-        where: { id: memberId },
-        data: {
-          deletedAt: new Date(),
-          isActive: false
-        }
-      });
-
-      return { success: true, message: 'Team member removed successfully' };
-    } catch (error) {
-      console.error('Failed to remove team member:', error);
-      return fail(500, { message: 'Failed to remove team member' });
-    }
-  },
-
-  generateApiKey: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (locals.user.role !== 'super_admin') {
-      return fail(403, { message: 'Only super admins can generate API keys' });
-    }
-
-    const formData = await request.formData();
-    const name = formData.get('name') as string;
-
-    // In a real implementation, generate and store API key
-    console.log('Generating API key:', name);
-
-    return { success: true, message: 'API key generated successfully' };
-  },
-
-  revokeApiKey: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (locals.user.role !== 'super_admin') {
-      return fail(403, { message: 'Only super admins can revoke API keys' });
-    }
-
-    const formData = await request.formData();
-    const keyId = formData.get('keyId') as string;
-
-    // In a real implementation, revoke API key
-    console.log('Revoking API key:', keyId);
-
-    return { success: true, message: 'API key revoked' };
-  },
-
-  updatePricingConfig: async ({ request, locals }) => {
-    if (!locals.user) {
-      return fail(401, { message: 'Unauthorized' });
-    }
-
-    if (!['super_admin', 'admin'].includes(locals.user.role)) {
-      return fail(403, { message: 'You do not have permission to update pricing configuration' });
-    }
-
-    const formData = await request.formData();
-    const pricingConfigJson = formData.get('pricingConfig') as string;
-
-    if (!pricingConfigJson) {
-      return fail(400, { message: 'Pricing configuration is required' });
-    }
-
-    try {
-      const pricingConfig = JSON.parse(pricingConfigJson);
-
-      // Validate the structure
-      if (!pricingConfig.scoring || !pricingConfig.priceTiers) {
-        return fail(400, { message: 'Invalid pricing configuration structure' });
-      }
-
-      // Upsert the pricing config
-      await prisma.systemSetting.upsert({
-        where: { key: 'territory_pricing' },
-        update: {
-          value: pricingConfig,
-          updatedBy: locals.user.id
-        },
-        create: {
-          key: 'territory_pricing',
-          value: pricingConfig,
-          description: 'Territory pricing configuration including scoring weights and price tiers',
-          updatedBy: locals.user.id
-        }
-      });
-
-      return { success: true, message: 'Pricing configuration updated successfully' };
-    } catch (error) {
-      console.error('Failed to update pricing config:', error);
-      return fail(500, { message: 'Failed to update pricing configuration' });
-    }
-  }
+	saveApiKey: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const keyName = formData.get('keyName') as string;
+		const keyValue = formData.get('keyValue') as string;
+
+		const validKeys = ['claude_api_key', 'openai_api_key', 'census_api_key', 'mapbox_api_key'];
+		if (!validKeys.includes(keyName)) {
+			return fail(400, { error: 'Invalid key name' });
+		}
+
+		if (!keyValue || keyValue.trim().length === 0) {
+			return fail(400, { error: 'API key value is required' });
+		}
+
+		try {
+			await prisma.systemSetting.upsert({
+				where: { key: keyName },
+				create: {
+					key: keyName,
+					value: { key: keyValue.trim() },
+					description: \`API key for \${keyName.replace(/_/g, ' ')}\`,
+					updatedBy: locals.user.id
+				},
+				update: {
+					value: { key: keyValue.trim() },
+					updatedBy: locals.user.id
+				}
+			});
+
+			// Clear the API key cache so the new key takes effect immediately
+			clearApiKeyCache();
+
+			return { success: true, message: 'API key saved successfully' };
+		} catch (error) {
+			console.error('Failed to save API key:', error);
+			return fail(500, { error: 'Failed to save API key' });
+		}
+	},
+
+	deleteApiKey: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const keyName = formData.get('keyName') as string;
+
+		const validKeys = ['claude_api_key', 'openai_api_key', 'census_api_key', 'mapbox_api_key'];
+		if (!validKeys.includes(keyName)) {
+			return fail(400, { error: 'Invalid key name' });
+		}
+
+		try {
+			await prisma.systemSetting.delete({
+				where: { key: keyName }
+			});
+
+			// Clear the API key cache
+			clearApiKeyCache();
+
+			return { success: true, message: 'API key removed' };
+		} catch (error) {
+			// Key might not exist, that's fine
+			clearApiKeyCache();
+			return { success: true, message: 'API key removed' };
+		}
+	},
+
+	testApiKey: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const keyName = formData.get('keyName') as string;
+
+		// Get the stored key
+		const setting = await prisma.systemSetting.findUnique({
+			where: { key: keyName }
+		});
+
+		const value = setting?.value as { key?: string } | null;
+		if (!value?.key) {
+			return fail(400, { error: 'API key not configured' });
+		}
+
+		// Test the key based on type
+		try {
+			if (keyName === 'claude_api_key') {
+				const response = await fetch('https://api.anthropic.com/v1/messages', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'x-api-key': value.key,
+						'anthropic-version': '2023-06-01'
+					},
+					body: JSON.stringify({
+						model: 'claude-3-haiku-20240307',
+						max_tokens: 10,
+						messages: [{ role: 'user', content: 'Hi' }]
+					})
+				});
+
+				if (response.ok) {
+					return { success: true, message: 'Claude API key is valid' };
+				} else {
+					const error = await response.json();
+					return fail(400, { error: \`Invalid: \${error.error?.message || 'Unknown error'}\` });
+				}
+			}
+
+			if (keyName === 'openai_api_key') {
+				const response = await fetch('https://api.openai.com/v1/models', {
+					headers: {
+						'Authorization': \`Bearer \${value.key}\`
+					}
+				});
+
+				if (response.ok) {
+					return { success: true, message: 'OpenAI API key is valid' };
+				} else {
+					return fail(400, { error: 'Invalid API key' });
+				}
+			}
+
+			return { success: true, message: 'Key saved (validation not available for this key type)' };
+		} catch (error) {
+			console.error('API key test failed:', error);
+			return fail(500, { error: 'Failed to test API key' });
+		}
+	}
 };

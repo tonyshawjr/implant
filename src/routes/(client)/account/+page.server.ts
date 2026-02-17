@@ -14,6 +14,13 @@ import {
 } from '$lib/server/notifications';
 import { sendVerificationCode as sendSmsVerificationCode, sendSMS } from '$lib/server/twilio';
 import { sendLeadEmail, isEmailConfigured } from '$lib/server/notifications/email';
+import {
+  ROLE_CLIENT_OWNER,
+  ROLE_CLIENT_ADMIN,
+  ROLE_CLIENT_STAFF,
+  CLIENT_ROLES,
+  getRoleDisplayName
+} from '$lib/constants/roles';
 
 export const load: PageServerLoad = async ({ parent }) => {
   const { user, organization } = await parent();
@@ -85,14 +92,13 @@ export const load: PageServerLoad = async ({ parent }) => {
     ]
   });
 
-  // Get role display labels
-  const roleLabels: Record<string, string> = {
-    super_admin: 'Super Admin',
-    admin: 'Admin',
-    support: 'Support',
-    client_owner: 'Owner',
-    client_admin: 'Admin',
-    client_staff: 'Staff'
+  // Get role display labels using the getRoleDisplayName helper
+  const getRoleLabel = (role: string) => {
+    try {
+      return getRoleDisplayName(role as any);
+    } catch {
+      return role;
+    }
   };
 
   // Format user profile
@@ -105,7 +111,7 @@ export const load: PageServerLoad = async ({ parent }) => {
         phone: userProfile.phone,
         avatarUrl: userProfile.avatarUrl,
         role: userProfile.role,
-        roleLabel: roleLabels[userProfile.role] || userProfile.role,
+        roleLabel: getRoleLabel(userProfile.role) || userProfile.role,
         isActive: userProfile.isActive,
         emailVerified: !!userProfile.emailVerifiedAt,
         lastLoginAt: userProfile.lastLoginAt?.toISOString() ?? null,
@@ -142,7 +148,7 @@ export const load: PageServerLoad = async ({ parent }) => {
     phone: member.phone,
     avatarUrl: member.avatarUrl,
     role: member.role,
-    roleLabel: roleLabels[member.role] || member.role,
+    roleLabel: getRoleLabel(member.role) || member.role,
     isActive: member.isActive,
     lastLoginAt: member.lastLoginAt?.toISOString() ?? null,
     createdAt: member.createdAt.toISOString(),
@@ -168,8 +174,8 @@ export const load: PageServerLoad = async ({ parent }) => {
     organization: orgData,
     teamMembers: teamData,
     timezones,
-    canManageTeam: ['client_owner', 'client_admin'].includes(user.role),
-    canEditOrganization: user.role === 'client_owner',
+    canManageTeam: user.role === ROLE_CLIENT_OWNER || user.role === ROLE_CLIENT_ADMIN,
+    canEditOrganization: user.role === ROLE_CLIENT_OWNER,
     notificationPreferences: {
       preferences: notificationPrefs.preferences,
       typeInfo: NOTIFICATION_TYPE_INFO,
@@ -268,7 +274,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (user.role !== 'client_owner') {
+    if (user.role !== ROLE_CLIENT_OWNER) {
       return fail(403, { error: 'Only organization owners can update organization settings' });
     }
 
@@ -313,7 +319,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'You do not have permission to invite team members' });
     }
 
@@ -328,8 +334,7 @@ export const actions: Actions = {
     }
 
     // Validate role
-    const allowedRoles = ['client_admin', 'client_staff'];
-    if (!allowedRoles.includes(role)) {
+    if (role !== ROLE_CLIENT_ADMIN && role !== ROLE_CLIENT_STAFF) {
       return fail(400, { error: 'Invalid role selected' });
     }
 
@@ -368,7 +373,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    if (!['client_owner', 'client_admin'].includes(user.role)) {
+    if (user.role !== ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_ADMIN) {
       return fail(403, { error: 'You do not have permission to remove team members' });
     }
 
@@ -397,7 +402,7 @@ export const actions: Actions = {
     }
 
     // Cannot remove owner if you're not owner
-    if (member.role === 'client_owner' && user.role !== 'client_owner') {
+    if (member.role === ROLE_CLIENT_OWNER && user.role !== ROLE_CLIENT_OWNER) {
       return fail(403, { error: 'Only owners can remove other owners' });
     }
 

@@ -430,49 +430,49 @@ enum ArticleVisibility {
 // ============================================================================
 
 model User {
-  id               String    @id @default(uuid())
-  email            String    @unique
-  passwordHash     String    @map("password_hash")
-  firstName        String    @map("first_name")
-  lastName         String    @map("last_name")
-  phone            String?
-  avatarUrl        String?   @map("avatar_url")
-  role             UserRole  @default(client_staff)
-  organizationId   String?   @map("organization_id")
-  isActive         Boolean   @default(true) @map("is_active")
-  emailVerifiedAt  DateTime? @map("email_verified_at")
-  lastLoginAt      DateTime? @map("last_login_at")
-  loginCount       Int       @default(0) @map("login_count")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  deletedAt        DateTime? @map("deleted_at")
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  phone           String?
+  avatarUrl       String?   @map("avatar_url")
+  role            UserRole  @default(client_staff)
+  organizationId  String?   @map("organization_id")
+  isActive        Boolean   @default(true) @map("is_active")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+  loginCount      Int       @default(0) @map("login_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
 
   // Relations
-  organization             Organization?         @relation(fields: [organizationId], references: [id])
+  organization             Organization?          @relation(fields: [organizationId], references: [id])
   sessions                 Session[]
   passwordResets           PasswordReset[]
-  managedOrganizations     Organization[]        @relation("AccountManager")
-  assignedLeads            Lead[]                @relation("AssignedTo")
-  leadActivities           LeadActivity[]        @relation("PerformedBy")
-  campaignsCreated         Campaign[]            @relation("CampaignCreator")
-  campaignsApproved        Campaign[]            @relation("CampaignApprover")
-  voiceProfilesApproved    VoiceProfile[]        @relation("VoiceApprover")
-  ticketsSubmitted         SupportTicket[]       @relation("TicketSubmitter")
-  ticketsAssigned          SupportTicket[]       @relation("TicketAssignee")
+  managedOrganizations     Organization[]         @relation("AccountManager")
+  assignedLeads            Lead[]                 @relation("AssignedTo")
+  leadActivities           LeadActivity[]         @relation("PerformedBy")
+  campaignsCreated         Campaign[]             @relation("CampaignCreator")
+  campaignsApproved        Campaign[]             @relation("CampaignApprover")
+  voiceProfilesApproved    VoiceProfile[]         @relation("VoiceApprover")
+  ticketsSubmitted         SupportTicket[]        @relation("TicketSubmitter")
+  ticketsAssigned          SupportTicket[]        @relation("TicketAssignee")
   ticketMessages           TicketMessage[]
-  prospectsAssigned        Prospect[]            @relation("ProspectAssignee")
+  prospectsAssigned        Prospect[]             @relation("ProspectAssignee")
   prospectActivities       ProspectActivity[]
-  proposalsCreated         Proposal[]            @relation("ProposalCreator")
+  proposalsCreated         Proposal[]             @relation("ProposalCreator")
   territoryReservations    TerritoryReservation[] @relation("ReservedBy")
-  onboardingsAssigned      ClientOnboarding[]    @relation("OnboardingAssignee")
+  onboardingsAssigned      ClientOnboarding[]     @relation("OnboardingAssignee")
   onboardingTasksCompleted OnboardingTask[]
   communicationLogs        CommunicationLog[]
   reviewsConducted         MonthlyReview[]
-  feedbackResponses        ClientFeedback[]      @relation("FeedbackResponder")
-  anomaliesAcknowledged    AiAnomaly[]           @relation("AnomalyAcknowledger")
-  anomaliesResolved        AiAnomaly[]           @relation("AnomalyResolver")
+  feedbackResponses        ClientFeedback[]       @relation("FeedbackResponder")
+  anomaliesAcknowledged    AiAnomaly[]            @relation("AnomalyAcknowledger")
+  anomaliesResolved        AiAnomaly[]            @relation("AnomalyResolver")
   alertsAcknowledged       ClientHealthAlert[]
-  contractsSigned          Contract[]            @relation("ContractSigner")
+  contractsSigned          Contract[]             @relation("ContractSigner")
   articlesAuthored         KnowledgeBaseArticle[]
   creativesApproved        CreativeAsset[]
   systemSettingsUpdated    SystemSetting[]
@@ -513,54 +513,54 @@ model PasswordReset {
 // ============================================================================
 
 model Organization {
-  id               String     @id @default(uuid())
+  id               String    @id @default(uuid())
   name             String
-  slug             String     @unique
-  logoUrl          String?    @map("logo_url")
+  slug             String    @unique
+  logoUrl          String?   @map("logo_url")
   website          String?
   phone            String?
   email            String?
-  addressLine1     String?    @map("address_line1")
-  addressLine2     String?    @map("address_line2")
+  addressLine1     String?   @map("address_line1")
+  addressLine2     String?   @map("address_line2")
   city             String?
   state            String?
-  postalCode       String?    @map("postal_code")
-  country          String     @default("US")
-  timezone         String     @default("America/New_York")
-  status           OrgStatus  @default(active)
-  healthScore      Decimal?   @default(0) @map("health_score") @db.Decimal(5, 2)
-  avgCaseValue     Decimal?   @default(4000) @map("avg_case_value") @db.Decimal(10, 2)
-  clientSince      DateTime?  @map("client_since")
-  accountManagerId String?    @map("account_manager_id")
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
-  deletedAt        DateTime?  @map("deleted_at")
+  postalCode       String?   @map("postal_code")
+  country          String    @default("US")
+  timezone         String    @default("America/New_York")
+  status           OrgStatus @default(active)
+  healthScore      Decimal?  @default(0) @map("health_score") @db.Decimal(5, 2)
+  avgCaseValue     Decimal?  @default(4000) @map("avg_case_value") @db.Decimal(10, 2)
+  clientSince      DateTime? @map("client_since")
+  accountManagerId String?   @map("account_manager_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
 
   // Relations
-  accountManager        User?                  @relation("AccountManager", fields: [accountManagerId], references: [id])
-  users                 User[]
-  contacts              OrganizationContact[]
-  healthScoreHistory    HealthScoreHistory[]
-  territoryAssignments  TerritoryAssignment[]
-  contracts             Contract[]
-  invoices              Invoice[]
-  paymentMethods        PaymentMethod[]
-  organizationAddons    OrganizationAddon[]
-  campaigns             Campaign[]
-  leads                 Lead[]
-  voiceProfiles         VoiceProfile[]
-  landingPages          LandingPage[]
-  creativeAssets        CreativeAsset[]
-  supportTickets        SupportTicket[]
-  clientHealthAlerts    ClientHealthAlert[]
-  clientOnboarding      ClientOnboarding?
-  communicationLogs     CommunicationLog[]
-  monthlyReviews        MonthlyReview[]
-  clientFeedback        ClientFeedback[]
-  aiAnomalies           AiAnomaly[]
-  competitorReports     CompetitorReport[]
-  auditLogs             AuditLog[]
-  notifications         Notification[]
+  accountManager       User?                 @relation("AccountManager", fields: [accountManagerId], references: [id])
+  users                User[]
+  contacts             OrganizationContact[]
+  healthScoreHistory   HealthScoreHistory[]
+  territoryAssignments TerritoryAssignment[]
+  contracts            Contract[]
+  invoices             Invoice[]
+  paymentMethods       PaymentMethod[]
+  organizationAddons   OrganizationAddon[]
+  campaigns            Campaign[]
+  leads                Lead[]
+  voiceProfiles        VoiceProfile[]
+  landingPages         LandingPage[]
+  creativeAssets       CreativeAsset[]
+  supportTickets       SupportTicket[]
+  clientHealthAlerts   ClientHealthAlert[]
+  clientOnboarding     ClientOnboarding?
+  communicationLogs    CommunicationLog[]
+  monthlyReviews       MonthlyReview[]
+  clientFeedback       ClientFeedback[]
+  aiAnomalies          AiAnomaly[]
+  competitorReports    CompetitorReport[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
 
   @@index([slug])
   @@index([status])
@@ -618,9 +618,9 @@ model Territory {
   territoryType     TerritoryType   @default(standard) @map("territory_type")
   status            TerritoryStatus @default(available)
   boundaryType      BoundaryType    @default(custom) @map("boundary_type")
-  msaCode           String?         @map("msa_code")      // Metro Statistical Area code
-  countyFips        String?         @map("county_fips")   // County FIPS code
-  placeFips         String?         @map("place_fips")    // City/Place FIPS code
+  msaCode           String?         @map("msa_code") // Metro Statistical Area code
+  countyFips        String?         @map("county_fips") // County FIPS code
+  placeFips         String?         @map("place_fips") // City/Place FIPS code
   population        Int?
   households        Int?
   medianAge         Decimal?        @map("median_age") @db.Decimal(4, 1)
@@ -638,13 +638,13 @@ model Territory {
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
   // Relations
-  zipCodes     TerritoryZipCode[]
-  assignments  TerritoryAssignment[]
-  waitlist     TerritoryWaitlist[]
-  reservations TerritoryReservation[]
-  campaigns    Campaign[]
-  leads        Lead[]
-  proposals    Proposal[]
+  zipCodes          TerritoryZipCode[]
+  assignments       TerritoryAssignment[]
+  waitlist          TerritoryWaitlist[]
+  reservations      TerritoryReservation[]
+  campaigns         Campaign[]
+  leads             Lead[]
+  proposals         Proposal[]
   competitorReports CompetitorReport[]
 
   @@index([state, city])
@@ -718,9 +718,9 @@ model TerritoryReservation {
   notes       String?
   createdAt   DateTime                   @default(now()) @map("created_at")
 
-  territory   Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
-  prospect    Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
-  reservedByUser User   @relation("ReservedBy", fields: [reservedBy], references: [id])
+  territory      Territory @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  prospect       Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  reservedByUser User      @relation("ReservedBy", fields: [reservedBy], references: [id])
 
   @@map("territory_reservations")
 }
@@ -750,24 +750,24 @@ model Plan {
 }
 
 model Contract {
-  id                String         @id @default(uuid())
-  organizationId    String         @map("organization_id")
-  planId            String         @map("plan_id")
-  contractNumber    String         @unique @map("contract_number")
-  status            ContractStatus
-  termMonths        Int            @default(12) @map("term_months")
-  startDate         DateTime       @map("start_date") @db.Date
-  endDate           DateTime       @map("end_date") @db.Date
-  monthlyCommitment Decimal        @map("monthly_commitment") @db.Decimal(10, 2)
-  annualValue       Decimal?       @map("annual_value") @db.Decimal(10, 2)
-  autoRenew         Boolean        @default(true) @map("auto_renew")
-  renewalTerms      Json?          @map("renewal_terms")
-  signedAt          DateTime?      @map("signed_at")
-  signedBy          String?        @map("signed_by")
-  cancelledAt       DateTime?      @map("cancelled_at")
-  cancellationReason String?       @map("cancellation_reason")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
+  id                 String         @id @default(uuid())
+  organizationId     String         @map("organization_id")
+  planId             String         @map("plan_id")
+  contractNumber     String         @unique @map("contract_number")
+  status             ContractStatus
+  termMonths         Int            @default(12) @map("term_months")
+  startDate          DateTime       @map("start_date") @db.Date
+  endDate            DateTime       @map("end_date") @db.Date
+  monthlyCommitment  Decimal        @map("monthly_commitment") @db.Decimal(10, 2)
+  annualValue        Decimal?       @map("annual_value") @db.Decimal(10, 2)
+  autoRenew          Boolean        @default(true) @map("auto_renew")
+  renewalTerms       Json?          @map("renewal_terms")
+  signedAt           DateTime?      @map("signed_at")
+  signedBy           String?        @map("signed_by")
+  cancelledAt        DateTime?      @map("cancelled_at")
+  cancellationReason String?        @map("cancellation_reason")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   plan         Plan         @relation(fields: [planId], references: [id])
@@ -933,10 +933,10 @@ model Campaign {
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 
-  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  territory        Territory?               @relation(fields: [territoryId], references: [id])
-  createdByUser    User?                    @relation("CampaignCreator", fields: [createdBy], references: [id])
-  approvedByUser   User?                    @relation("CampaignApprover", fields: [approvedBy], references: [id])
+  organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  territory        Territory?                @relation(fields: [territoryId], references: [id])
+  createdByUser    User?                     @relation("CampaignCreator", fields: [createdBy], references: [id])
+  approvedByUser   User?                     @relation("CampaignApprover", fields: [approvedBy], references: [id])
   creatives        CampaignCreative[]
   metrics          CampaignMetric[]
   optimizationLogs CampaignOptimizationLog[]
@@ -996,19 +996,19 @@ model CampaignMetric {
 }
 
 model CampaignOptimizationLog {
-  id               String             @id @default(uuid())
-  campaignId       String             @map("campaign_id")
-  optimizationType OptimizationType   @map("optimization_type")
+  id               String              @id @default(uuid())
+  campaignId       String              @map("campaign_id")
+  optimizationType OptimizationType    @map("optimization_type")
   title            String
   description      String?
-  previousValue    Json?              @map("previous_value")
-  newValue         Json?              @map("new_value")
+  previousValue    Json?               @map("previous_value")
+  newValue         Json?               @map("new_value")
   impact           OptimizationImpact?
-  impactMetric     String?            @map("impact_metric")
-  impactValue      Decimal?           @map("impact_value") @db.Decimal(10, 2)
-  aiConfidence     Decimal?           @map("ai_confidence") @db.Decimal(3, 2)
-  appliedAt        DateTime           @map("applied_at")
-  createdAt        DateTime           @default(now()) @map("created_at")
+  impactMetric     String?             @map("impact_metric")
+  impactValue      Decimal?            @map("impact_value") @db.Decimal(10, 2)
+  aiConfidence     Decimal?            @map("ai_confidence") @db.Decimal(3, 2)
+  appliedAt        DateTime            @map("applied_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
@@ -1019,22 +1019,22 @@ model CampaignOptimizationLog {
 }
 
 model LandingPageTemplate {
-  id             String              @id @default(uuid())
-  name           String
-  slug           String              @unique
-  description    String?
-  category       LandingPageCategory
-  thumbnailUrl   String?             @map("thumbnail_url")
-  htmlTemplate   String              @map("html_template")
-  cssTemplate    String?             @map("css_template")
-  configSchema   Json?               @map("config_schema")
-  defaultConfig  Json?               @map("default_config")
-  isActive       Boolean             @default(true) @map("is_active")
-  usageCount     Int                 @default(0) @map("usage_count")
-  conversionRateAvg Decimal?         @map("conversion_rate_avg") @db.Decimal(5, 2)
-  createdBy      String?             @map("created_by")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
+  id                String              @id @default(uuid())
+  name              String
+  slug              String              @unique
+  description       String?
+  category          LandingPageCategory
+  thumbnailUrl      String?             @map("thumbnail_url")
+  htmlTemplate      String              @map("html_template")
+  cssTemplate       String?             @map("css_template")
+  configSchema      Json?               @map("config_schema")
+  defaultConfig     Json?               @map("default_config")
+  isActive          Boolean             @default(true) @map("is_active")
+  usageCount        Int                 @default(0) @map("usage_count")
+  conversionRateAvg Decimal?            @map("conversion_rate_avg") @db.Decimal(5, 2)
+  createdBy         String?             @map("created_by")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
 
   createdByUser User?         @relation(fields: [createdBy], references: [id])
   landingPages  LandingPage[]
@@ -1067,10 +1067,10 @@ model LandingPage {
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
-  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  campaign     Campaign?            @relation(fields: [campaignId], references: [id])
-  template     LandingPageTemplate? @relation(fields: [templateId], references: [id])
-  createdByUser User?               @relation(fields: [createdBy], references: [id])
+  organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign      Campaign?            @relation(fields: [campaignId], references: [id])
+  template      LandingPageTemplate? @relation(fields: [templateId], references: [id])
+  createdByUser User?                @relation(fields: [createdBy], references: [id])
 
   @@index([organizationId])
   @@index([campaignId])
@@ -1097,8 +1097,8 @@ model CreativeAsset {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  uploadedByUser User?       @relation(fields: [uploadedBy], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedByUser User?         @relation(fields: [uploadedBy], references: [id])
 
   @@index([organizationId])
   @@index([assetType])
@@ -1142,12 +1142,12 @@ model Lead {
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
 
-  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  campaign        Campaign?         @relation(fields: [campaignId], references: [id])
-  territory       Territory?        @relation(fields: [territoryId], references: [id])
-  assignedToUser  User?             @relation("AssignedTo", fields: [assignedTo], references: [id])
-  activities      LeadActivity[]
-  scoreFactors    LeadScoreFactor[]
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaign       Campaign?         @relation(fields: [campaignId], references: [id])
+  territory      Territory?        @relation(fields: [territoryId], references: [id])
+  assignedToUser User?             @relation("AssignedTo", fields: [assignedTo], references: [id])
+  activities     LeadActivity[]
+  scoreFactors   LeadScoreFactor[]
 
   @@index([organizationId])
   @@index([campaignId])
@@ -1172,7 +1172,7 @@ model LeadActivity {
   performedBy     String?            @map("performed_by")
   createdAt       DateTime           @default(now()) @map("created_at")
 
-  lead          Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead            Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
   performedByUser User? @relation("PerformedBy", fields: [performedBy], references: [id])
 
   @@index([leadId])
@@ -1223,8 +1223,8 @@ model VoiceProfile {
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
 
-  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  approvedByUser User?                  @relation("VoiceApprover", fields: [approvedBy], references: [id])
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvedByUser User?                @relation("VoiceApprover", fields: [approvedBy], references: [id])
   sources        VoiceProfileSource[]
   creatives      CampaignCreative[]
 
@@ -1256,29 +1256,29 @@ model VoiceProfileSource {
 // ============================================================================
 
 model SupportTicket {
-  id                 String         @id @default(uuid())
-  ticketNumber       String         @unique @map("ticket_number")
-  organizationId     String         @map("organization_id")
-  submittedBy        String         @map("submitted_by")
-  assignedTo         String?        @map("assigned_to")
-  category           TicketCategory
-  priority           TicketPriority @default(medium)
-  status             TicketStatus   @default(open)
-  subject            String
-  description        String
-  resolution         String?
-  firstResponseAt    DateTime?      @map("first_response_at")
-  resolvedAt         DateTime?      @map("resolved_at")
-  closedAt           DateTime?      @map("closed_at")
-  satisfactionRating Int?           @map("satisfaction_rating")
-  satisfactionFeedback String?      @map("satisfaction_feedback")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
+  id                   String         @id @default(uuid())
+  ticketNumber         String         @unique @map("ticket_number")
+  organizationId       String         @map("organization_id")
+  submittedBy          String         @map("submitted_by")
+  assignedTo           String?        @map("assigned_to")
+  category             TicketCategory
+  priority             TicketPriority @default(medium)
+  status               TicketStatus   @default(open)
+  subject              String
+  description          String
+  resolution           String?
+  firstResponseAt      DateTime?      @map("first_response_at")
+  resolvedAt           DateTime?      @map("resolved_at")
+  closedAt             DateTime?      @map("closed_at")
+  satisfactionRating   Int?           @map("satisfaction_rating")
+  satisfactionFeedback String?        @map("satisfaction_feedback")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  submittedByUser User           @relation("TicketSubmitter", fields: [submittedBy], references: [id])
-  assignedToUser User?           @relation("TicketAssignee", fields: [assignedTo], references: [id])
-  messages       TicketMessage[]
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submittedByUser User            @relation("TicketSubmitter", fields: [submittedBy], references: [id])
+  assignedToUser  User?           @relation("TicketAssignee", fields: [assignedTo], references: [id])
+  messages        TicketMessage[]
 
   @@index([organizationId])
   @@index([status])
@@ -1326,22 +1326,22 @@ model KnowledgeBaseArticle {
 }
 
 model ClientHealthAlert {
-  id              String        @id @default(uuid())
-  organizationId  String        @map("organization_id")
-  alertType       AlertType     @map("alert_type")
-  severity        AlertSeverity
-  title           String
-  description     String
-  metricName      String?       @map("metric_name")
-  metricValue     Decimal?      @map("metric_value") @db.Decimal(10, 2)
-  thresholdValue  Decimal?      @map("threshold_value") @db.Decimal(10, 2)
-  acknowledgedBy  String?       @map("acknowledged_by")
-  acknowledgedAt  DateTime?     @map("acknowledged_at")
-  resolvedAt      DateTime?     @map("resolved_at")
-  createdAt       DateTime      @default(now()) @map("created_at")
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  alertType      AlertType     @map("alert_type")
+  severity       AlertSeverity
+  title          String
+  description    String
+  metricName     String?       @map("metric_name")
+  metricValue    Decimal?      @map("metric_value") @db.Decimal(10, 2)
+  thresholdValue Decimal?      @map("threshold_value") @db.Decimal(10, 2)
+  acknowledgedBy String?       @map("acknowledged_by")
+  acknowledgedAt DateTime?     @map("acknowledged_at")
+  resolvedAt     DateTime?     @map("resolved_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
 
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  acknowledgedByUser User?      @relation(fields: [acknowledgedBy], references: [id])
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledgedByUser User?        @relation(fields: [acknowledgedBy], references: [id])
 
   @@index([organizationId])
   @@index([alertType])
@@ -1354,34 +1354,34 @@ model ClientHealthAlert {
 // ============================================================================
 
 model Prospect {
-  id                  String         @id @default(uuid())
-  practiceName        String         @map("practice_name")
-  contactFirstName    String         @map("contact_first_name")
-  contactLastName     String         @map("contact_last_name")
-  contactEmail        String         @map("contact_email")
-  contactPhone        String?        @map("contact_phone")
-  website             String?
-  address             String?
-  city                String?
-  state               String?
-  desiredTerritoryId  String?        @map("desired_territory_id")
-  source              ProspectSource
-  sourceDetail        String?        @map("source_detail")
-  stage               ProspectStage  @default(new)
-  monthlyValue        Decimal?       @map("monthly_value") @db.Decimal(10, 2)
-  probability         Int?
-  expectedCloseDate   DateTime?      @map("expected_close_date") @db.Date
-  assignedTo          String?        @map("assigned_to")
-  lossReason          String?        @map("loss_reason")
-  notes               String?
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
-  closedAt            DateTime?      @map("closed_at")
+  id                 String         @id @default(uuid())
+  practiceName       String         @map("practice_name")
+  contactFirstName   String         @map("contact_first_name")
+  contactLastName    String         @map("contact_last_name")
+  contactEmail       String         @map("contact_email")
+  contactPhone       String?        @map("contact_phone")
+  website            String?
+  address            String?
+  city               String?
+  state              String?
+  desiredTerritoryId String?        @map("desired_territory_id")
+  source             ProspectSource
+  sourceDetail       String?        @map("source_detail")
+  stage              ProspectStage  @default(new)
+  monthlyValue       Decimal?       @map("monthly_value") @db.Decimal(10, 2)
+  probability        Int?
+  expectedCloseDate  DateTime?      @map("expected_close_date") @db.Date
+  assignedTo         String?        @map("assigned_to")
+  lossReason         String?        @map("loss_reason")
+  notes              String?
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  closedAt           DateTime?      @map("closed_at")
 
-  assignedToUser       User?                  @relation("ProspectAssignee", fields: [assignedTo], references: [id])
-  activities           ProspectActivity[]
-  proposals            Proposal[]
-  waitlistEntries      TerritoryWaitlist[]
+  assignedToUser        User?                  @relation("ProspectAssignee", fields: [assignedTo], references: [id])
+  activities            ProspectActivity[]
+  proposals             Proposal[]
+  waitlistEntries       TerritoryWaitlist[]
   territoryReservations TerritoryReservation[]
 
   @@index([stage])
@@ -1403,8 +1403,8 @@ model ProspectActivity {
   performedBy     String            @map("performed_by")
   createdAt       DateTime          @default(now()) @map("created_at")
 
-  prospect      Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
-  performedByUser User   @relation(fields: [performedBy], references: [id])
+  prospect        Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  performedByUser User     @relation(fields: [performedBy], references: [id])
 
   @@map("prospect_activities")
 }
@@ -1445,18 +1445,18 @@ model Proposal {
 }
 
 model CompetitorReport {
-  id              String   @id @default(uuid())
-  organizationId  String   @map("organization_id")
-  territoryId     String   @map("territory_id")
-  reportMonth     DateTime @map("report_month") @db.Date
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  territoryId     String    @map("territory_id")
+  reportMonth     DateTime  @map("report_month") @db.Date
   competitors     Json
-  marketTrends    Json?    @map("market_trends")
-  adActivity      Json?    @map("ad_activity")
+  marketTrends    Json?     @map("market_trends")
+  adActivity      Json?     @map("ad_activity")
   recommendations String?
-  generatedAt     DateTime @map("generated_at")
+  generatedAt     DateTime  @map("generated_at")
   viewedAt        DateTime? @map("viewed_at")
-  pdfUrl          String?  @map("pdf_url")
-  createdAt       DateTime @default(now()) @map("created_at")
+  pdfUrl          String?   @map("pdf_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   territory    Territory    @relation(fields: [territoryId], references: [id])
@@ -1471,24 +1471,24 @@ model CompetitorReport {
 // ============================================================================
 
 model ClientOnboarding {
-  id                  String      @id @default(uuid())
-  organizationId      String      @unique @map("organization_id")
-  assignedTo          String?     @map("assigned_to")
-  currentPhase        Int         @default(1) @map("current_phase")
-  phase1Status        PhaseStatus @default(pending) @map("phase_1_status")
-  phase1CompletedAt   DateTime?   @map("phase_1_completed_at")
-  phase2Status        PhaseStatus @default(pending) @map("phase_2_status")
-  phase2CompletedAt   DateTime?   @map("phase_2_completed_at")
-  phase3Status        PhaseStatus @default(pending) @map("phase_3_status")
-  phase3CompletedAt   DateTime?   @map("phase_3_completed_at")
-  phase4Status        PhaseStatus @default(pending) @map("phase_4_status")
-  phase4CompletedAt   DateTime?   @map("phase_4_completed_at")
-  overallProgress     Int         @default(0) @map("overall_progress")
-  notes               String?
-  startedAt           DateTime    @map("started_at")
-  completedAt         DateTime?   @map("completed_at")
-  createdAt           DateTime    @default(now()) @map("created_at")
-  updatedAt           DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(uuid())
+  organizationId    String      @unique @map("organization_id")
+  assignedTo        String?     @map("assigned_to")
+  currentPhase      Int         @default(1) @map("current_phase")
+  phase1Status      PhaseStatus @default(pending) @map("phase_1_status")
+  phase1CompletedAt DateTime?   @map("phase_1_completed_at")
+  phase2Status      PhaseStatus @default(pending) @map("phase_2_status")
+  phase2CompletedAt DateTime?   @map("phase_2_completed_at")
+  phase3Status      PhaseStatus @default(pending) @map("phase_3_status")
+  phase3CompletedAt DateTime?   @map("phase_3_completed_at")
+  phase4Status      PhaseStatus @default(pending) @map("phase_4_status")
+  phase4CompletedAt DateTime?   @map("phase_4_completed_at")
+  overallProgress   Int         @default(0) @map("overall_progress")
+  notes             String?
+  startedAt         DateTime    @map("started_at")
+  completedAt       DateTime?   @map("completed_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   assignedToUser User?            @relation("OnboardingAssignee", fields: [assignedTo], references: [id])
@@ -1498,20 +1498,20 @@ model ClientOnboarding {
 }
 
 model OnboardingTask {
-  id            String      @id @default(uuid())
-  onboardingId  String      @map("onboarding_id")
-  phase         Int
-  taskOrder     Int         @map("task_order")
-  title         String
-  description   String?
-  isRequired    Boolean     @default(true) @map("is_required")
-  status        PhaseStatus @default(pending)
-  completedBy   String?     @map("completed_by")
-  completedAt   DateTime?   @map("completed_at")
-  createdAt     DateTime    @default(now()) @map("created_at")
+  id           String      @id @default(uuid())
+  onboardingId String      @map("onboarding_id")
+  phase        Int
+  taskOrder    Int         @map("task_order")
+  title        String
+  description  String?
+  isRequired   Boolean     @default(true) @map("is_required")
+  status       PhaseStatus @default(pending)
+  completedBy  String?     @map("completed_by")
+  completedAt  DateTime?   @map("completed_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
 
-  onboarding    ClientOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
-  completedByUser User?          @relation(fields: [completedBy], references: [id])
+  onboarding      ClientOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  completedByUser User?            @relation(fields: [completedBy], references: [id])
 
   @@map("onboarding_tasks")
 }
@@ -1521,19 +1521,19 @@ model OnboardingTask {
 // ============================================================================
 
 model CommunicationLog {
-  id             String                 @id @default(uuid())
-  organizationId String                 @map("organization_id")
-  entryType      CommunicationEntryType @map("entry_type")
+  id             String                  @id @default(uuid())
+  organizationId String                  @map("organization_id")
+  entryType      CommunicationEntryType  @map("entry_type")
   title          String
   body           String?
   direction      CommunicationDirection?
   participants   Json?
   attachments    Json?
-  createdBy      String                 @map("created_by")
-  createdAt      DateTime               @default(now()) @map("created_at")
+  createdBy      String                  @map("created_by")
+  createdAt      DateTime                @default(now()) @map("created_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdByUser User        @relation(fields: [createdBy], references: [id])
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByUser User         @relation(fields: [createdBy], references: [id])
 
   @@index([organizationId])
   @@index([entryType])
@@ -1559,8 +1559,8 @@ model MonthlyReview {
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  conductedByUser User?      @relation(fields: [conductedBy], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conductedByUser User?        @relation(fields: [conductedBy], references: [id])
 
   @@map("monthly_reviews")
 }
@@ -1580,8 +1580,8 @@ model ClientFeedback {
   respondedAt    DateTime?      @map("responded_at")
   createdAt      DateTime       @default(now()) @map("created_at")
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  respondedByUser User?       @relation("FeedbackResponder", fields: [respondedBy], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  respondedByUser User?        @relation("FeedbackResponder", fields: [respondedBy], references: [id])
 
   @@map("client_feedback")
 }
@@ -1610,9 +1610,9 @@ model AiAnomaly {
   resolutionNotes     String?       @map("resolution_notes")
   createdAt           DateTime      @default(now()) @map("created_at")
 
-  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  acknowledgedByUser User?       @relation("AnomalyAcknowledger", fields: [acknowledgedBy], references: [id])
-  resolvedByUser   User?         @relation("AnomalyResolver", fields: [resolvedBy], references: [id])
+  organization       Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledgedByUser User?         @relation("AnomalyAcknowledger", fields: [acknowledgedBy], references: [id])
+  resolvedByUser     User?         @relation("AnomalyResolver", fields: [resolvedBy], references: [id])
 
   @@map("ai_anomalies")
 }
@@ -1716,11 +1716,11 @@ model Notification {
 model PlatformSettings {
   id          String   @id @default(cuid())
   key         String   @unique
-  value       String   // JSON stringified
-  type        String   // 'string' | 'number' | 'boolean' | 'json'
-  category    String   // 'branding' | 'contact' | 'business' | 'feature_flags'
-  label       String   // Human-readable label for UI
-  description String?  // Help text for UI
+  value       String // JSON stringified
+  type        String // 'string' | 'number' | 'boolean' | 'json'
+  category    String // 'branding' | 'contact' | 'business' | 'feature_flags'
+  label       String // Human-readable label for UI
+  description String? // Help text for UI
   updatedAt   DateTime @updatedAt @map("updated_at")
   updatedBy   String?  @map("updated_by")
 
@@ -1730,12 +1730,12 @@ model PlatformSettings {
 // Task 1.2: Pricing tiers (Starter $1,500, Growth $2,500, Enterprise $4,000+)
 model PricingTier {
   id               String   @id @default(cuid())
-  name             String   @unique  // 'starter', 'growth', 'enterprise'
+  name             String   @unique // 'starter', 'growth', 'enterprise'
   displayName      String   @map("display_name") // 'Starter', 'Growth', 'Enterprise'
   monthlyPrice     Int      @map("monthly_price") // In cents: 150000 = $1,500
   territorySize    String   @map("territory_size") // 'Single city / 15-mile', etc.
   commitmentMonths Int      @map("commitment_months") // 6, 12, etc.
-  features         Json     // Array of feature strings
+  features         Json // Array of feature strings
   isActive         Boolean  @default(true) @map("is_active")
   sortOrder        Int      @default(0) @map("sort_order")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -1748,11 +1748,11 @@ model PricingTier {
 model ScoringThreshold {
   id        String   @id @default(cuid())
   scoreType String   @map("score_type") // 'health_score', 'lead_temperature'
-  level     String   // 'excellent', 'good', 'warning', 'critical' OR 'hot', 'warm', 'cold'
+  level     String // 'excellent', 'good', 'warning', 'critical' OR 'hot', 'warm', 'cold'
   minValue  Int      @map("min_value") // Minimum score for this level
   maxValue  Int?     @map("max_value") // Maximum score (null = no upper limit)
-  color     String   // Tailwind color class
-  label     String   // Display label
+  color     String // Tailwind color class
+  label     String // Display label
   sortOrder Int      @default(0) @map("sort_order")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -1766,7 +1766,7 @@ model EmailTemplate {
   subject     String
   htmlContent String   @map("html_content") @db.Text
   textContent String?  @map("text_content") @db.Text
-  variables   Json     // Available template variables
+  variables   Json // Available template variables
   isActive    Boolean  @default(true) @map("is_active")
   updatedAt   DateTime @updatedAt @map("updated_at")
   updatedBy   String?  @map("updated_by")
@@ -1781,7 +1781,7 @@ model OnboardingPhase {
   name        String
   description String?
   defaultDays Int      @map("default_days")
-  tasks       Json     // Array of task objects
+  tasks       Json // Array of task objects
   sortOrder   Int      @default(0) @map("sort_order")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -1792,12 +1792,12 @@ model OnboardingPhase {
 model BusinessBenchmark {
   id        String   @id @default(cuid())
   vertical  String   @default("dental_implants")
-  metric    String   // 'ctr', 'cpl', 'conversion_rate', 'case_value'
+  metric    String // 'ctr', 'cpl', 'conversion_rate', 'case_value'
   poor      Float
   average   Float
   good      Float
   excellent Float
-  unit      String?  // '%', '$', etc.
+  unit      String? // '%', '$', etc.
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("business_benchmarks")
@@ -1810,7 +1810,7 @@ model OptimizationSetting {
   value       Float
   label       String
   description String?
-  unit        String?  // '%', 'days', 'impressions'
+  unit        String? // '%', 'days', 'impressions'
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("optimization_settings")
