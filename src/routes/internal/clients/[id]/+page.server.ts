@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { error, fail, redirect } from '@sveltejs/kit';
+import { hash } from '@node-rs/argon2';
 import { scrapeWebsite, scrapeMultipleSources, type ScrapedContent } from '$lib/server/ai/scraper';
 import { analyzeVoice, analyzeMultipleSources, prepareContentForAnalysis, type ToneType } from '$lib/server/ai/voice-analyzer';
 import { generateVoiceProfile, generateInitialContent, type VoiceProfile } from '$lib/server/ai/voice-generator';
@@ -1674,6 +1675,70 @@ export const actions: Actions = {
     } catch (err) {
       console.error('Failed to regenerate creative:', err);
       return fail(500, { error: 'Failed to regenerate creative. Please try again.' });
+    }
+  },
+
+  createUserAccount: async ({ params, request }) => {
+    const formData = await request.formData();
+    const email = formData.get('email') as string;
+    const firstName = formData.get('firstName') as string;
+    const lastName = formData.get('lastName') as string;
+
+    if (!email) {
+      return fail(400, { error: 'Email is required' });
+    }
+
+    try {
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
+
+      if (existingUser) {
+        return fail(400, { error: 'A user with this email already exists' });
+      }
+
+      // Get the organization
+      const organization = await prisma.organization.findUnique({
+        where: { id: params.id }
+      });
+
+      if (!organization) {
+        return fail(404, { error: 'Organization not found' });
+      }
+
+      // Generate temporary password
+      const tempPassword = crypto.randomUUID().slice(0, 12);
+      const passwordHash = await hash(tempPassword, {
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1
+      });
+
+      // Create user account
+      await prisma.user.create({
+        data: {
+          email: email.toLowerCase(),
+          firstName: firstName || organization.name.split(' ')[0] || 'Client',
+          lastName: lastName || organization.name.split(' ').slice(1).join(' ') || 'Owner',
+          passwordHash,
+          role: 'client_owner',
+          isActive: true,
+          organizationId: organization.id
+        }
+      });
+
+      return {
+        success: true,
+        credentials: {
+          email: email.toLowerCase(),
+          password: tempPassword
+        }
+      };
+    } catch (err) {
+      console.error('Failed to create user account:', err);
+      return fail(500, { error: 'Failed to create user account' });
     }
   }
 };

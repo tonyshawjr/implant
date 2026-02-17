@@ -62,6 +62,12 @@
 	let showVoiceProfileDetailModal = $state(false);
 	let showGenerateContentModal = $state(false);
 	let showEditCreativeModal = $state(false);
+	let showCreateUserModal = $state(false);
+	let showUserCredentialsModal = $state(false);
+	let newUserCredentials = $state<{ email: string; password: string } | null>(null);
+	let createUserEmail = $state('');
+	let createUserFirstName = $state('');
+	let createUserLastName = $state('');
 
 	// Form states
 	let noteType = $state('note');
@@ -1073,10 +1079,21 @@
 		<div class="card">
 			<div class="card-header">
 				<h2 class="card-title">Team ({data.teamMembers.length})</h2>
+				<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.client.email || ''; showCreateUserModal = true; }}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 5v14M5 12h14"/>
+					</svg>
+					Add User
+				</button>
 			</div>
 			<div class="card-body">
 				{#if data.teamMembers.length === 0}
-					<p class="empty-text">No team members</p>
+					<div class="empty-state-small">
+						<p class="empty-text">No login accounts yet</p>
+						<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.client.email || ''; showCreateUserModal = true; }}>
+							Create Login Account
+						</button>
+					</div>
 				{:else}
 					<div class="team-list">
 						{#each data.teamMembers as member}
@@ -1299,6 +1316,116 @@
 			<Button type="submit" color="primary">Create Profile</Button>
 		</div>
 	</form>
+</Modal>
+
+<!-- Create User Account Modal -->
+<Modal title="Create Login Account" bind:open={showCreateUserModal} size="md" class="w-full">
+	<form
+		method="POST"
+		action="?/createUserAccount"
+		use:enhance={() => {
+			return async ({ result }) => {
+				if (result.type === 'success') {
+					showCreateUserModal = false;
+					const resultData = result.data as { credentials?: { email: string; password: string } };
+					if (resultData?.credentials) {
+						newUserCredentials = resultData.credentials;
+						showUserCredentialsModal = true;
+					}
+					createUserEmail = '';
+					createUserFirstName = '';
+					createUserLastName = '';
+				}
+			};
+		}}
+		class="space-y-4"
+	>
+		<p class="text-sm text-gray-500 dark:text-gray-400">
+			Create a login account for this client. They'll be able to access their portal and view leads, campaigns, and billing.
+		</p>
+
+		<div>
+			<Label for="userEmail" class="mb-2">Email <span class="text-red-500">*</span></Label>
+			<Input
+				type="email"
+				id="userEmail"
+				name="email"
+				bind:value={createUserEmail}
+				placeholder="client@example.com"
+				required
+			/>
+		</div>
+
+		<div class="grid grid-cols-2 gap-4">
+			<div>
+				<Label for="userFirstName" class="mb-2">First Name</Label>
+				<Input
+					type="text"
+					id="userFirstName"
+					name="firstName"
+					bind:value={createUserFirstName}
+					placeholder="John"
+				/>
+			</div>
+			<div>
+				<Label for="userLastName" class="mb-2">Last Name</Label>
+				<Input
+					type="text"
+					id="userLastName"
+					name="lastName"
+					bind:value={createUserLastName}
+					placeholder="Smith"
+				/>
+			</div>
+		</div>
+
+		<div class="flex justify-end gap-3 pt-4">
+			<Button color="alternative" onclick={() => (showCreateUserModal = false)}>Cancel</Button>
+			<Button type="submit" color="primary">Create Account</Button>
+		</div>
+	</form>
+</Modal>
+
+<!-- User Credentials Modal -->
+<Modal title="Account Created" bind:open={showUserCredentialsModal} size="md" class="w-full">
+	<div class="space-y-4">
+		<p class="text-sm text-gray-500 dark:text-gray-400">
+			Share these login credentials with the client:
+		</p>
+
+		{#if newUserCredentials}
+			<div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 space-y-3">
+				<div>
+					<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</div>
+					<div class="font-mono text-sm text-gray-900 dark:text-white mt-1">{newUserCredentials.email}</div>
+				</div>
+				<div>
+					<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Temporary Password</div>
+					<div class="font-mono text-sm text-gray-900 dark:text-white mt-1">{newUserCredentials.password}</div>
+				</div>
+			</div>
+		{/if}
+
+		<p class="text-xs text-gray-500 dark:text-gray-400">
+			The client should change their password after first login.
+		</p>
+
+		<div class="flex justify-end gap-3 pt-4">
+			<Button
+				color="alternative"
+				onclick={() => {
+					if (newUserCredentials) {
+						navigator.clipboard.writeText(`Email: ${newUserCredentials.email}\nPassword: ${newUserCredentials.password}`);
+					}
+				}}
+			>
+				Copy to Clipboard
+			</Button>
+			<Button color="primary" onclick={() => { showUserCredentialsModal = false; newUserCredentials = null; }}>
+				Done
+			</Button>
+		</div>
+	</div>
 </Modal>
 
 <style>
@@ -2015,6 +2142,14 @@
 	.empty-text {
 		color: var(--gray-500);
 		text-align: center;
+	}
+
+	.empty-state-small {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--spacing-3);
+		padding: var(--spacing-4);
 	}
 
 	.confirm-text {
