@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button, Card, Input, Label, Badge, Alert, Spinner } from 'flowbite-svelte';
-	import { CheckCircleSolid, ExclamationCircleSolid, KeyOutline, TrashBinOutline, ArrowPathOutline } from 'flowbite-svelte-icons';
+	import { CheckCircleSolid, ExclamationCircleSolid, LockSolid, TrashBinSolid, RedoOutline } from 'flowbite-svelte-icons';
 	import { enhance } from '$app/forms';
 
 	let { data, form } = $props();
@@ -78,7 +78,7 @@
 
 	<Card size="xl" class="mb-6">
 		<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-			<KeyOutline class="w-5 h-5" />
+			<LockSolid class="w-5 h-5" />
 			API Keys
 		</h2>
 		<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
@@ -123,7 +123,7 @@
 										{#if testing === config.key}
 											<Spinner size="4" class="mr-1" />
 										{:else}
-											<ArrowPathOutline class="w-4 h-4 mr-1" />
+											<RedoOutline class="w-4 h-4 mr-1" />
 										{/if}
 										Test
 									</Button>
@@ -132,7 +132,7 @@
 								<form method="POST" action="?/deleteApiKey" use:enhance>
 									<input type="hidden" name="keyName" value={config.key} />
 									<Button type="submit" color="red" size="xs" outline>
-										<TrashBinOutline class="w-4 h-4" />
+										<TrashBinSolid class="w-4 h-4" />
 									</Button>
 								</form>
 							{/if}
