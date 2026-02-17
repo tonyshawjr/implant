@@ -66,6 +66,9 @@
 	let showUserCredentialsModal = $state(false);
 	let showDeleteClientModal = $state(false);
 	let isDeleting = $state(false);
+	let deleteError = $state('');
+	let isCreatingUser = $state(false);
+	let createUserError = $state('');
 	let newUserCredentials = $state<{ email: string; password: string } | null>(null);
 	let createUserEmail = $state('');
 	let createUserFirstName = $state('');
@@ -74,10 +77,12 @@
 	// Helper functions for modals
 	function openCreateUserModal() {
 		createUserEmail = data.organization.email || '';
+		createUserError = '';
 		showCreateUserModal = true;
 	}
 
 	function openDeleteModal() {
+		deleteError = '';
 		showDeleteClientModal = true;
 	}
 
@@ -1354,7 +1359,10 @@
 			method="POST"
 			action="?/createUserAccount"
 			use:enhance={() => {
+				isCreatingUser = true;
+				createUserError = '';
 				return async ({ result }) => {
+					isCreatingUser = false;
 					if (result.type === 'success') {
 						showCreateUserModal = false;
 						const resultData = result.data as { credentials?: { email: string; password: string } };
@@ -1365,6 +1373,11 @@
 						createUserEmail = '';
 						createUserFirstName = '';
 						createUserLastName = '';
+					} else if (result.type === 'failure') {
+						const errorData = result.data as { error?: string };
+						createUserError = errorData?.error || 'Failed to create account. Please try again.';
+					} else if (result.type === 'error') {
+						createUserError = 'An unexpected error occurred. Please try again.';
 					}
 				};
 			}}
@@ -1373,6 +1386,12 @@
 				<p style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
 					Create a login account for this client. They'll be able to access their portal and view leads, campaigns, and billing.
 				</p>
+
+				{#if createUserError}
+					<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+						<p style="color: #dc2626; font-size: 14px; margin: 0;">{createUserError}</p>
+					</div>
+				{/if}
 
 				<div class="form-group">
 					<label for="userEmail" class="form-label">Email <span style="color: var(--danger-500);">*</span></label>
@@ -1384,6 +1403,7 @@
 						bind:value={createUserEmail}
 						placeholder="client@example.com"
 						required
+						disabled={isCreatingUser}
 					/>
 				</div>
 
@@ -1397,6 +1417,7 @@
 							class="form-input"
 							bind:value={createUserFirstName}
 							placeholder="John"
+							disabled={isCreatingUser}
 						/>
 					</div>
 					<div class="form-group">
@@ -1408,13 +1429,20 @@
 							class="form-input"
 							bind:value={createUserLastName}
 							placeholder="Smith"
+							disabled={isCreatingUser}
 						/>
 					</div>
 				</div>
 			</div>
 			<div class="modal-footer">
-				<button type="button" class="btn btn-secondary" onclick={() => (showCreateUserModal = false)}>Cancel</button>
-				<button type="submit" class="btn btn-primary">Create Account</button>
+				<button type="button" class="btn btn-secondary" onclick={() => (showCreateUserModal = false)} disabled={isCreatingUser}>Cancel</button>
+				<button type="submit" class="btn btn-primary" disabled={isCreatingUser}>
+					{#if isCreatingUser}
+						Creating...
+					{:else}
+						Create Account
+					{/if}
+				</button>
 			</div>
 		</form>
 	</div>
@@ -1493,17 +1521,26 @@
 			action="?/deleteClient"
 			use:enhance={() => {
 				isDeleting = true;
+				deleteError = '';
 				return async ({ result }) => {
 					isDeleting = false;
-					alert('Delete result: ' + result.type);
 					if (result.type === 'success' || result.type === 'redirect') {
-						alert('Redirecting to /internal...');
 						window.location.href = '/internal';
+					} else if (result.type === 'failure') {
+						const errorData = result.data as { error?: string };
+						deleteError = errorData?.error || 'Failed to delete client. Please try again.';
+					} else if (result.type === 'error') {
+						deleteError = 'An unexpected error occurred. Please try again.';
 					}
 				};
 			}}
 		>
 			<div class="modal-body">
+				{#if deleteError}
+					<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+						<p style="color: #dc2626; font-size: 14px; margin: 0;">{deleteError}</p>
+					</div>
+				{/if}
 				<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px;">
 					<p style="color: #991b1b; font-weight: 500; margin: 0 0 8px 0;">
 						Are you sure you want to delete {data.organization.name}?

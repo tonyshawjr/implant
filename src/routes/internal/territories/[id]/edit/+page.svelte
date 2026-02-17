@@ -957,6 +957,11 @@
         </svg>
         <span>Assigned to: <strong>{data.territory.assignedTo}</strong></span>
       </div>
+      <form method="POST" action="?/releaseTerritory" style="display: inline;">
+        <button type="submit" class="btn btn-warning btn-sm" onclick={(e) => { if (!confirm('Are you sure you want to release this territory? The client will lose access to this territory.')) e.preventDefault(); }}>
+          Release Territory
+        </button>
+      </form>
     {/if}
     <span class="status-badge {data.territory.status}">{data.territory.status}</span>
   </div>

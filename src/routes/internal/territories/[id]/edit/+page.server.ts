@@ -317,5 +317,31 @@ export const actions: Actions = {
 			console.error('Failed to delete territory:', error);
 			return fail(500, { error: 'Failed to delete territory' });
 		}
+	},
+
+	/**
+	 * Release a territory from its current client assignment
+	 */
+	releaseTerritory: async ({ params }) => {
+		const { id } = params;
+
+		try {
+			// Terminate all active assignments for this territory
+			await prisma.territoryAssignment.updateMany({
+				where: { territoryId: id, status: 'active' },
+				data: { status: 'terminated' }
+			});
+
+			// Set territory status back to available
+			await prisma.territory.update({
+				where: { id },
+				data: { status: 'available' }
+			});
+
+			return { success: true, message: 'Territory released successfully' };
+		} catch (error) {
+			console.error('Failed to release territory:', error);
+			return fail(500, { error: 'Failed to release territory' });
+		}
 	}
 };
