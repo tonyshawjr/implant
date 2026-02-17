@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { fail } from '@sveltejs/kit';
+import { hash } from '@node-rs/argon2';
 
 export const load: PageServerLoad = async ({ url }) => {
   // Get query parameters for filtering
@@ -382,6 +383,33 @@ export const actions: Actions = {
         }
       });
 
+      // Generate a temporary password for the client user
+      const tempPassword = crypto.randomUUID().slice(0, 12);
+      const passwordHash = await hash(tempPassword, {
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1
+      });
+
+      // Extract first/last name from business name (best effort)
+      const nameParts = name.split(' ');
+      const firstName = nameParts[0] || 'Client';
+      const lastName = nameParts.slice(1).join(' ') || 'Owner';
+
+      // Create the client owner user account
+      await prisma.user.create({
+        data: {
+          email: email.toLowerCase(),
+          firstName,
+          lastName,
+          passwordHash,
+          role: 'client_owner',
+          isActive: true,
+          organizationId: organization.id
+        }
+      });
+
       // If territory is available, assign it and create contract
       if (territory.status === 'available') {
         // Assign territory to client
@@ -435,7 +463,15 @@ export const actions: Actions = {
           }
         });
 
-        return { success: true, organizationId: organization.id, message: 'Client created and territory assigned' };
+        return {
+          success: true,
+          organizationId: organization.id,
+          message: 'Client created and territory assigned',
+          credentials: {
+            email: email.toLowerCase(),
+            password: tempPassword
+          }
+        };
       } else {
         // Territory is not available - add to waitlist
         const nextPosition = (territory.waitlist[0]?.position ?? 0) + 1;
@@ -457,7 +493,11 @@ export const actions: Actions = {
           success: true,
           organizationId: organization.id,
           waitlisted: true,
-          message: `Client created and added to waitlist (position #${nextPosition}) for ${territory.name}`
+          message: `Client created and added to waitlist (position #${nextPosition}) for ${territory.name}`,
+          credentials: {
+            email: email.toLowerCase(),
+            password: tempPassword
+          }
         };
       }
     } catch (error) {

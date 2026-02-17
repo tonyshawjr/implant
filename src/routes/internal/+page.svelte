@@ -6,9 +6,11 @@
 
   // Modal state
   let showAddClientModal = $state(false);
+  let showCredentialsModal = $state(false);
   let isSubmitting = $state(false);
   let formError = $state('');
   let selectedTerritoryId = $state('');
+  let newClientCredentials = $state<{ email: string; password: string } | null>(null);
 
   // Derived: selected territory details
   let selectedTerritory = $derived(
@@ -305,6 +307,12 @@
           if (result.type === 'success') {
             showAddClientModal = false;
             formError = '';
+            // Show credentials modal if credentials were returned
+            const data = result.data as { credentials?: { email: string; password: string } };
+            if (data?.credentials) {
+              newClientCredentials = data.credentials;
+              showCredentialsModal = true;
+            }
           } else if (result.type === 'failure') {
             formError = (result.data as { error?: string })?.error || 'Failed to create client';
           } else if (result.type === 'error') {
@@ -406,6 +414,54 @@
         </button>
       </div>
     </form>
+  </div>
+</div>
+{/if}
+
+<!-- Credentials Modal -->
+{#if showCredentialsModal && newClientCredentials}
+<div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (showCredentialsModal = false)}>
+  <div class="modal" style="max-width: 450px;">
+    <div class="modal-header">
+      <h2 class="modal-title">Client Created Successfully</h2>
+      <button class="modal-close" onclick={() => showCredentialsModal = false}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom: 16px; color: var(--gray-600);">
+        Share these login credentials with the client:
+      </p>
+      <div style="background: var(--gray-100); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; font-weight: 500; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em;">Email</label>
+          <div style="font-family: monospace; font-size: 14px; color: var(--gray-900); margin-top: 4px;">{newClientCredentials.email}</div>
+        </div>
+        <div>
+          <label style="font-size: 12px; font-weight: 500; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em;">Temporary Password</label>
+          <div style="font-family: monospace; font-size: 14px; color: var(--gray-900); margin-top: 4px;">{newClientCredentials.password}</div>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: var(--gray-500);">
+        The client should change their password after first login.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        onclick={() => {
+          navigator.clipboard.writeText(`Email: ${newClientCredentials?.email}\nPassword: ${newClientCredentials?.password}`);
+        }}
+      >
+        Copy to Clipboard
+      </button>
+      <button type="button" class="btn btn-primary" onclick={() => { showCredentialsModal = false; newClientCredentials = null; }}>
+        Done
+      </button>
+    </div>
   </div>
 </div>
 {/if}
