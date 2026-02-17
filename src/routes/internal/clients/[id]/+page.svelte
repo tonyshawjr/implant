@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData, ActionData } from './$types';
 	import { Modal, Button, Label, Input, Helper } from 'flowbite-svelte';
 	import VoiceCharacteristicsDisplay from '$lib/components/ai/VoiceCharacteristicsDisplay.svelte';
@@ -1134,6 +1135,24 @@
 									{:else}
 										<span class="badge gray">Never logged in</span>
 									{/if}
+									<form method="POST" action="?/resetPassword" use:enhance={() => {
+										return async ({ result }) => {
+											if (result.type === 'success') {
+												const resultData = result.data as { credentials?: { email: string; password: string } };
+												if (resultData?.credentials) {
+													newUserCredentials = resultData.credentials;
+													showUserCredentialsModal = true;
+												}
+											}
+										};
+									}}>
+										<input type="hidden" name="userId" value={member.id} />
+										<button type="submit" class="btn-icon-secondary" title="Reset Password">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+											</svg>
+										</button>
+									</form>
 									<form method="POST" action="?/deleteUser" use:enhance={() => {
 										return async ({ result }) => {
 											if (result.type === 'success') {
@@ -1379,14 +1398,19 @@
 			use:enhance={() => {
 				isCreatingUser = true;
 				createUserError = '';
-				return async ({ result }) => {
+				return async ({ result, update }) => {
 					isCreatingUser = false;
 					if (result.type === 'success') {
 						showCreateUserModal = false;
 						const resultData = result.data as { credentials?: { email: string; password: string } };
+						console.log('Create user result:', resultData);
 						if (resultData?.credentials) {
 							newUserCredentials = resultData.credentials;
 							showUserCredentialsModal = true;
+							// Don't call update() yet - wait for modal to be dismissed
+						} else {
+							// No credentials returned, just refresh the page
+							await update();
 						}
 						createUserEmail = '';
 						createUserFirstName = '';
@@ -1513,7 +1537,7 @@
 			>
 				Copy to Clipboard
 			</button>
-			<button type="button" class="btn btn-primary" onclick={() => { showUserCredentialsModal = false; newUserCredentials = null; }}>
+			<button type="button" class="btn btn-primary" onclick={async () => { showUserCredentialsModal = false; newUserCredentials = null; await invalidateAll(); }}>
 				Done
 			</button>
 		</div>
@@ -2073,6 +2097,25 @@
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-3);
+	}
+
+	.btn-icon-secondary {
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: transparent;
+		color: var(--gray-400);
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+		transition: all 0.15s ease;
+	}
+
+	.btn-icon-secondary:hover {
+		background: var(--primary-100);
+		color: var(--primary-600);
 	}
 
 	.btn-icon-danger {

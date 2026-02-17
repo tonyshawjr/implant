@@ -166,7 +166,7 @@
           </div>
 
           <!-- Tasks Card -->
-          <Card class="mt-3" padding="sm">
+          <Card class="mt-3 p-4">
             <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
               Tasks ({phase.tasks.filter(t => t.completed).length}/{phase.tasks.length})
             </h4>
@@ -182,7 +182,7 @@
                           {phase.status === 'in_progress'
                           ? 'border-primary-400 dark:border-primary-500'
                           : 'border-gray-300 dark:border-gray-600'}"
-                      />
+                      ></div>
                     {/if}
                   </div>
                   <div class="flex-1 min-w-0">

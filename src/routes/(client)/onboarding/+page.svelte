@@ -104,7 +104,9 @@
   {#if !data.onboarding}
     <!-- No onboarding record -->
     <Alert color="yellow">
-      <InfoCircleOutline slot="icon" class="h-5 w-5" />
+      {#snippet icon()}
+        <InfoCircleOutline class="h-5 w-5" />
+      {/snippet}
       <span class="font-medium">Onboarding not started.</span>
       Your onboarding process has not been initiated yet. Please contact support if you believe this is an error.
     </Alert>

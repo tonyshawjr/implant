@@ -1790,6 +1790,47 @@ export const actions: Actions = {
     }
   },
 
+  resetPassword: async ({ request }) => {
+    const formData = await request.formData();
+    const userId = formData.get('userId') as string;
+
+    if (!userId) {
+      return fail(400, { error: 'User ID is required', actionType: 'resetPassword' });
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return fail(404, { error: 'User not found', actionType: 'resetPassword' });
+      }
+
+      // Generate new temporary password
+      const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash }
+      });
+
+      return {
+        success: true,
+        actionType: 'resetPassword',
+        credentials: {
+          email: user.email,
+          password: tempPassword
+        }
+      };
+    } catch (err) {
+      console.error('Failed to reset password:', err);
+      return fail(500, { error: 'Failed to reset password', actionType: 'resetPassword' });
+    }
+  },
+
   deleteClient: async ({ params }) => {
     const { id } = params;
 

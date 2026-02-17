@@ -51,7 +51,12 @@
   }
 
   let { data }: Props = $props();
-  let searchInput = $state(data.searchQuery);
+  let searchInput = $state('')
+
+  // Initialize searchInput from data.searchQuery on mount
+  $effect(() => {
+    searchInput = data.searchQuery;
+  });
 
   const iconMap: Record<string, typeof RocketOutline> = {
     rocket: RocketOutline,
@@ -176,7 +181,7 @@
         <div class="space-y-4">
           {#each data.categories as category (category.slug)}
             {@const IconComponent = getIcon(category.icon)}
-            <Card padding="none">
+            <Card class="p-0">
               <Accordion flush>
                 <AccordionItem open={data.categories.length === 1 || data.searchQuery !== ''}>
                   {#snippet header()}
