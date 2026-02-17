@@ -73,13 +73,11 @@
 
 	// Helper functions for modals
 	function openCreateUserModal() {
-		alert('Opening create user modal');
 		createUserEmail = data.organization.email || '';
 		showCreateUserModal = true;
 	}
 
 	function openDeleteModal() {
-		alert('Opening delete modal');
 		showDeleteClientModal = true;
 	}
 
@@ -1497,9 +1495,9 @@
 				isDeleting = true;
 				return async ({ result }) => {
 					isDeleting = false;
-					if (result.type === 'success') {
-						// Show alert and redirect
-						alert('Client deleted successfully');
+					alert('Delete result: ' + result.type);
+					if (result.type === 'success' || result.type === 'redirect') {
+						alert('Redirecting to /internal...');
 						window.location.href = '/internal';
 					}
 				};
