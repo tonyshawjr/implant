@@ -1328,114 +1328,142 @@
 </Modal>
 
 <!-- Create User Account Modal -->
-<Modal title="Create Login Account" bind:open={showCreateUserModal} size="md" class="w-full">
-	<form
-		method="POST"
-		action="?/createUserAccount"
-		use:enhance={() => {
-			return async ({ result }) => {
-				if (result.type === 'success') {
-					showCreateUserModal = false;
-					const resultData = result.data as { credentials?: { email: string; password: string } };
-					if (resultData?.credentials) {
-						newUserCredentials = resultData.credentials;
-						showUserCredentialsModal = true;
+{#if showCreateUserModal}
+<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && (showCreateUserModal = false)}>
+	<div class="modal" style="max-width: 450px;">
+		<div class="modal-header">
+			<h2 class="modal-title">Create Login Account</h2>
+			<button type="button" class="modal-close" onclick={() => (showCreateUserModal = false)}>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18" />
+					<line x1="6" y1="6" x2="18" y2="18" />
+				</svg>
+			</button>
+		</div>
+		<form
+			method="POST"
+			action="?/createUserAccount"
+			use:enhance={() => {
+				return async ({ result }) => {
+					if (result.type === 'success') {
+						showCreateUserModal = false;
+						const resultData = result.data as { credentials?: { email: string; password: string } };
+						if (resultData?.credentials) {
+							newUserCredentials = resultData.credentials;
+							showUserCredentialsModal = true;
+						}
+						createUserEmail = '';
+						createUserFirstName = '';
+						createUserLastName = '';
 					}
-					createUserEmail = '';
-					createUserFirstName = '';
-					createUserLastName = '';
-				}
-			};
-		}}
-		class="space-y-4"
-	>
-		<p class="text-sm text-gray-500 dark:text-gray-400">
-			Create a login account for this client. They'll be able to access their portal and view leads, campaigns, and billing.
-		</p>
+				};
+			}}
+		>
+			<div class="modal-body">
+				<p style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
+					Create a login account for this client. They'll be able to access their portal and view leads, campaigns, and billing.
+				</p>
 
-		<div>
-			<Label for="userEmail" class="mb-2">Email <span class="text-red-500">*</span></Label>
-			<Input
-				type="email"
-				id="userEmail"
-				name="email"
-				bind:value={createUserEmail}
-				placeholder="client@example.com"
-				required
-			/>
-		</div>
+				<div class="form-group">
+					<label for="userEmail" class="form-label">Email <span style="color: var(--danger-500);">*</span></label>
+					<input
+						type="email"
+						id="userEmail"
+						name="email"
+						class="form-input"
+						bind:value={createUserEmail}
+						placeholder="client@example.com"
+						required
+					/>
+				</div>
 
-		<div class="grid grid-cols-2 gap-4">
-			<div>
-				<Label for="userFirstName" class="mb-2">First Name</Label>
-				<Input
-					type="text"
-					id="userFirstName"
-					name="firstName"
-					bind:value={createUserFirstName}
-					placeholder="John"
-				/>
+				<div class="form-grid-2">
+					<div class="form-group">
+						<label for="userFirstName" class="form-label">First Name</label>
+						<input
+							type="text"
+							id="userFirstName"
+							name="firstName"
+							class="form-input"
+							bind:value={createUserFirstName}
+							placeholder="John"
+						/>
+					</div>
+					<div class="form-group">
+						<label for="userLastName" class="form-label">Last Name</label>
+						<input
+							type="text"
+							id="userLastName"
+							name="lastName"
+							class="form-input"
+							bind:value={createUserLastName}
+							placeholder="Smith"
+						/>
+					</div>
+				</div>
 			</div>
-			<div>
-				<Label for="userLastName" class="mb-2">Last Name</Label>
-				<Input
-					type="text"
-					id="userLastName"
-					name="lastName"
-					bind:value={createUserLastName}
-					placeholder="Smith"
-				/>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" onclick={() => (showCreateUserModal = false)}>Cancel</button>
+				<button type="submit" class="btn btn-primary">Create Account</button>
 			</div>
-		</div>
-
-		<div class="flex justify-end gap-3 pt-4">
-			<Button color="alternative" onclick={() => (showCreateUserModal = false)}>Cancel</Button>
-			<Button type="submit" color="primary">Create Account</Button>
-		</div>
-	</form>
-</Modal>
+		</form>
+	</div>
+</div>
+{/if}
 
 <!-- User Credentials Modal -->
-<Modal title="Account Created" bind:open={showUserCredentialsModal} size="md" class="w-full">
-	<div class="space-y-4">
-		<p class="text-sm text-gray-500 dark:text-gray-400">
-			Share these login credentials with the client:
-		</p>
+{#if showUserCredentialsModal && newUserCredentials}
+<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && (showUserCredentialsModal = false)}>
+	<div class="modal" style="max-width: 450px;">
+		<div class="modal-header">
+			<h2 class="modal-title">Account Created</h2>
+			<button type="button" class="modal-close" onclick={() => { showUserCredentialsModal = false; newUserCredentials = null; }}>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18" />
+					<line x1="6" y1="6" x2="18" y2="18" />
+				</svg>
+			</button>
+		</div>
+		<div class="modal-body">
+			<p style="color: var(--gray-500); font-size: 14px; margin-bottom: 16px;">
+				Share these login credentials with the client:
+			</p>
 
-		{#if newUserCredentials}
-			<div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 space-y-3">
-				<div>
-					<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</div>
-					<div class="font-mono text-sm text-gray-900 dark:text-white mt-1">{newUserCredentials.email}</div>
+			<div style="background: var(--gray-100); border-radius: 8px; padding: 16px;">
+				<div style="margin-bottom: 12px;">
+					<div style="font-size: 11px; font-weight: 500; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em;">Email</div>
+					<div style="font-family: monospace; font-size: 14px; color: var(--gray-900); margin-top: 4px;">{newUserCredentials.email}</div>
 				</div>
 				<div>
-					<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Temporary Password</div>
-					<div class="font-mono text-sm text-gray-900 dark:text-white mt-1">{newUserCredentials.password}</div>
+					<div style="font-size: 11px; font-weight: 500; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em;">Temporary Password</div>
+					<div style="font-family: monospace; font-size: 14px; color: var(--gray-900); margin-top: 4px;">{newUserCredentials.password}</div>
 				</div>
 			</div>
-		{/if}
 
-		<p class="text-xs text-gray-500 dark:text-gray-400">
-			The client should change their password after first login.
-		</p>
-
-		<div class="flex justify-end gap-3 pt-4">
-			<Button
-				color="alternative"
+			<p style="font-size: 12px; color: var(--gray-500); margin-top: 12px;">
+				The client should change their password after first login.
+			</p>
+		</div>
+		<div class="modal-footer">
+			<button
+				type="button"
+				class="btn btn-secondary"
 				onclick={() => {
 					if (newUserCredentials) {
 						navigator.clipboard.writeText(`Email: ${newUserCredentials.email}\nPassword: ${newUserCredentials.password}`);
+						alert('Credentials copied to clipboard!');
 					}
 				}}
 			>
 				Copy to Clipboard
-			</Button>
-			<Button color="primary" onclick={() => { showUserCredentialsModal = false; newUserCredentials = null; }}>
+			</button>
+			<button type="button" class="btn btn-primary" onclick={() => { showUserCredentialsModal = false; newUserCredentials = null; }}>
 				Done
-			</Button>
+			</button>
 		</div>
 	</div>
-</Modal>
+</div>
+{/if}
 
 <!-- Delete Client Modal -->
 {#if showDeleteClientModal}
