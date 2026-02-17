@@ -43,3 +43,20 @@ export {
   type NotificationPreference,
   type UserNotificationPreferences
 } from './preferences';
+
+// Lead Notifications (new lead capture alerts)
+export {
+  sendLeadNotifications,
+  dispatchLeadNotifications,
+  type LeadNotificationData,
+  type OrganizationNotificationData,
+  type NotificationDispatchResult
+} from './lead-notifications';
+
+// Stale Lead Reminders
+export {
+  findStaleLeads,
+  sendStaleLeadReminders,
+  getStaleLeadsSummary,
+  type ReminderJobResult
+} from './reminders';

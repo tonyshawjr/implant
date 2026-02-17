@@ -40,6 +40,7 @@
       { label: 'Onboarding', href: '/internal/onboarding', icon: 'clipboard' }
     ],
     system: [
+      { label: 'Users', href: '/internal/users', icon: 'user-cog' },
       { label: 'Settings', href: '/internal/settings', icon: 'settings' }
     ]
   };
@@ -157,7 +158,17 @@
         {#each internalNavItems.system as item}
           <a href={item.href} class="nav-item {isActive(item.href) ? 'active' : ''}" onclick={handleNavClick}>
             <svg class="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              {#if item.icon === 'settings'}
+              {#if item.icon === 'user-cog'}
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <circle cx="18" cy="16" r="2"/>
+                <path d="M18 12v1.5"/>
+                <path d="M18 18.5V20"/>
+                <path d="M14.5 15.5l1.3.7"/>
+                <path d="M20.2 17.8l1.3.7"/>
+                <path d="M14.5 18.5l1.3-.7"/>
+                <path d="M20.2 14.2l1.3-.7"/>
+              {:else if item.icon === 'settings'}
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               {/if}

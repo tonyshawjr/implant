@@ -3,7 +3,7 @@
   import {
     PlusOutline,
     TrashBinOutline,
-    PencilOutline,
+    EditOutline,
     BarsOutline
   } from 'flowbite-svelte-icons';
   import { dndzone } from 'svelte-dnd-action';
@@ -185,7 +185,7 @@
               color="light"
               onclick={() => openEditModal(field, index)}
             >
-              <PencilOutline class="w-4 h-4" />
+              <EditOutline class="w-4 h-4" />
             </Button>
             <Button
               size="xs"
@@ -266,7 +266,7 @@
           bind:value={fieldOptions}
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           rows="4"
-          placeholder="Yes&#10;No&#10;Not sure"
+          placeholder="Yes, No, Not sure (one per line)"
         ></textarea>
       </div>
     {/if}

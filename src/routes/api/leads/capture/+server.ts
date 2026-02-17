@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 import type { LeadSource, LeadTemperature, InsuranceStatus } from '@prisma/client';
+import { dispatchLeadNotifications } from '$lib/server/notifications/lead-notifications';
 
 interface LeadCaptureRequest {
   organization_id: string;
@@ -143,7 +144,8 @@ export const POST: RequestHandler = async ({ request }) => {
       },
       select: {
         id: true,
-        name: true
+        name: true,
+        slug: true
       }
     });
 
@@ -236,9 +238,24 @@ export const POST: RequestHandler = async ({ request }) => {
       console.error('Failed to increment submission count:', err);
     });
 
-    // TODO: Trigger lead notification webhook
-    // This would call the /api/webhooks/lead-notification endpoint
-    // to send SMS and email notifications to the organization's team
+    // Send lead notifications (fire and forget - won't block API response)
+    dispatchLeadNotifications(
+      {
+        id: lead.id,
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        phone: lead.phone,
+        email: lead.email,
+        source: lead.source,
+        temperature: lead.temperature,
+        score: lead.score
+      },
+      {
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug || organization.id
+      }
+    );
 
     // Log to audit trail
     await prisma.auditLog.create({

@@ -134,11 +134,13 @@
 {#if toastVisible}
   <div class="toast-container">
     <Toast color={toastType === 'success' ? 'green' : 'red'} dismissable bind:toastStatus={toastVisible}>
-      {#if toastType === 'success'}
-        <CheckCircleSolid slot="icon" class="w-5 h-5" />
-      {:else}
-        <CloseCircleSolid slot="icon" class="w-5 h-5" />
-      {/if}
+      {#snippet icon()}
+        {#if toastType === 'success'}
+          <CheckCircleSolid class="w-5 h-5" />
+        {:else}
+          <CloseCircleSolid class="w-5 h-5" />
+        {/if}
+      {/snippet}
       {toastMessage}
     </Toast>
   </div>

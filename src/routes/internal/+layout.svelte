@@ -47,6 +47,10 @@
     '/internal/settings': {
       title: 'Settings',
       breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Settings' }]
+    },
+    '/internal/users': {
+      title: 'User Management',
+      breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Users' }]
     }
   };
 

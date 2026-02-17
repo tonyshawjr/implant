@@ -184,7 +184,7 @@
             value={cssTemplate}
             oninput={handleCssInput}
             class="w-full h-96 px-4 py-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-y"
-            placeholder="/* Add your custom CSS styles here */&#10;&#10;.landing-page {&#10;  font-family: system-ui, sans-serif;&#10;}"
+            placeholder="/* Add your custom CSS styles here */"
             spellcheck="false"
           ></textarea>
         </div>

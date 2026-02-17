@@ -11,6 +11,15 @@
 
   let { data }: { data: PageData } = $props();
 
+  // Helper function to check if lead is stale
+  function isLeadStale(lead: { lastActivityAt?: string | null; createdAt: string }): boolean {
+    const checkDate = lead.lastActivityAt || lead.createdAt;
+    const dateToCheck = new Date(checkDate);
+    const now = new Date();
+    const diffDays = (now.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays >= 3;
+  }
+
   // View mode state
   let viewMode = $state<'list' | 'kanban'>('kanban');
 
@@ -476,15 +485,6 @@
   </div>
 {/if}
 
-<script context="module" lang="ts">
-  function isLeadStale(lead: { lastActivityAt?: string | null; createdAt: string }): boolean {
-    const checkDate = lead.lastActivityAt || lead.createdAt;
-    const dateToCheck = new Date(checkDate);
-    const now = new Date();
-    const diffDays = (now.getTime() - dateToCheck.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays >= 3;
-  }
-</script>
 
 <style>
   .page-header {
