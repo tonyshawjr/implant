@@ -1115,10 +1115,11 @@
         <!-- Zip Code Input -->
         {#if addMode === 'zipcode'}
           <div class="form-group">
-            <label class="form-label">Enter Zip Code</label>
+            <label class="form-label" for="zipcode-input">Enter Zip Code</label>
             <div class="input-with-button">
               <input
                 type="text"
+                id="zipcode-input"
                 class="form-input"
                 placeholder="e.g., 28401"
                 bind:value={zipCodeInput}
@@ -1138,10 +1139,11 @@
         {:else}
           <!-- State Selection - Searchable -->
           <div class="form-group">
-            <label class="form-label">Select State</label>
+            <label class="form-label" for="state-search">Select State</label>
             <div class="searchable-select">
               <input
                 type="text"
+                id="state-search"
                 class="form-input"
                 placeholder="Type to search states..."
                 bind:value={stateSearch}
@@ -1183,7 +1185,7 @@
           <!-- Metro/County/City Selection - Searchable -->
           {#if selectedState}
             <div class="form-group">
-              <label class="form-label">
+              <label class="form-label" for="territory-option-search">
                 Select {addMode === 'metro' ? 'Metro Area' : addMode === 'county' ? 'County' : 'City'}
               </label>
               {#if isLoading}
@@ -1196,6 +1198,7 @@
                   <div class="searchable-select flex-1">
                     <input
                       type="text"
+                      id="territory-option-search"
                       class="form-input"
                       placeholder="Type to search..."
                       bind:value={optionSearch}
@@ -1309,9 +1312,10 @@
       </div>
       <div class="card-body">
         <div class="form-group">
-          <label class="form-label">Territory Name</label>
+          <label class="form-label" for="territory-name">Territory Name</label>
           <input
             type="text"
+            id="territory-name"
             class="form-input"
             placeholder="e.g., Greater Wilmington"
             bind:value={territoryName}
@@ -1320,7 +1324,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">
+          <label class="form-label" for="monthly-base-price">
             Monthly Base Price
             {#if priceAutoCalculated && demographics}
               <span class="price-auto-badge">Auto</span>
@@ -1330,6 +1334,7 @@
             <span class="input-prefix">$</span>
             <input
               type="number"
+              id="monthly-base-price"
               class="form-input"
               bind:value={monthlyBasePrice}
               oninput={handlePriceChange}
