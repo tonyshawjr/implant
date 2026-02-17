@@ -72,6 +72,10 @@
 	let reviewDate = $state('');
 	let reviewLink = $state('');
 
+	// Voice profile form states
+	let voiceProfileName = $state('Primary');
+	let voiceProfileWebsiteUrl = $state('');
+
 	// AI/Voice Profile states
 	let activeAiTab = $state(data.activeAiTab || 'voice-profile');
 	let websiteUrl = $state(data.organization.website || '');
@@ -1242,6 +1246,70 @@
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" onclick={() => (showPauseCampaignsModal = false)}>Cancel</button>
 					<button type="submit" class="btn btn-warning">Pause Campaigns</button>
+				</div>
+			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- Create Voice Profile Modal -->
+{#if showCreateVoiceProfileModal}
+	<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && (showCreateVoiceProfileModal = false)}>
+		<div class="modal">
+			<div class="modal-header">
+				<h2 class="modal-title">Create Voice Profile</h2>
+				<button type="button" class="modal-close" onclick={() => (showCreateVoiceProfileModal = false)}>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="18" y1="6" x2="6" y2="18" />
+						<line x1="6" y1="6" x2="18" y2="18" />
+					</svg>
+				</button>
+			</div>
+			<form
+				method="POST"
+				action="?/createVoiceProfile"
+				use:enhance={() => {
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							showCreateVoiceProfileModal = false;
+							voiceProfileName = 'Primary';
+							voiceProfileWebsiteUrl = '';
+						}
+					};
+				}}
+			>
+				<div class="modal-body">
+					<p class="modal-description">
+						Create a voice profile by providing the client's website. Our AI will analyze the content to understand their brand voice.
+					</p>
+					<div class="form-group">
+						<label for="profileName" class="form-label">Profile Name</label>
+						<input
+							type="text"
+							id="profileName"
+							name="profileName"
+							class="form-input"
+							bind:value={voiceProfileName}
+							placeholder="e.g., Primary, Marketing, Sales"
+						/>
+					</div>
+					<div class="form-group">
+						<label for="websiteUrl" class="form-label">Website URL <span class="required">*</span></label>
+						<input
+							type="url"
+							id="websiteUrl"
+							name="websiteUrl"
+							class="form-input"
+							bind:value={voiceProfileWebsiteUrl}
+							placeholder="https://example.com"
+							required
+						/>
+						<p class="form-help">Enter the main website URL. We'll analyze the content to capture the brand voice.</p>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick={() => (showCreateVoiceProfileModal = false)}>Cancel</button>
+					<button type="submit" class="btn btn-primary">Create Profile</button>
 				</div>
 			</form>
 		</div>
