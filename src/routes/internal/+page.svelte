@@ -151,9 +151,10 @@
           <th>Client</th>
           <th>Territory</th>
           <th>Health</th>
+          <th>MRR</th>
           <th>Leads/Mo</th>
           <th>CPL</th>
-          <th>Status</th>
+          <th>Contract</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -176,6 +177,7 @@
                   {client.healthScore || 0}
                 </div>
               </td>
+              <td>{formatCurrency(client.contract?.mrr || 0)}</td>
               <td>{client.leadsThisMonth || 0}</td>
               <td class="cpl-value {(client.cpl || 0) <= 50 ? 'good' : (client.cpl || 0) <= 75 ? 'average' : 'poor'}">
                 {formatCurrency(client.cpl || 0)}
@@ -243,6 +245,10 @@
           </div>
         </div>
         <div class="mobile-card-content">
+          <div class="mobile-card-row">
+            <span class="mobile-card-label">MRR</span>
+            <span class="mobile-card-value">{formatCurrency(client.contract?.mrr || 0)}</span>
+          </div>
           <div class="mobile-card-row">
             <span class="mobile-card-label">Leads/Mo</span>
             <span class="mobile-card-value">{client.leadsThisMonth || 0}</span>
