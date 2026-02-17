@@ -1438,52 +1438,65 @@
 </Modal>
 
 <!-- Delete Client Modal -->
-<Modal title="Delete Client" bind:open={showDeleteClientModal} size="md" class="w-full">
-	<form
-		method="POST"
-		action="?/deleteClient"
-		use:enhance={() => {
-			isDeleting = true;
-			return async ({ result }) => {
-				isDeleting = false;
-				if (result.type === 'success') {
-					// Redirect to clients list
-					window.location.href = '/internal';
-				}
-			};
-		}}
-	>
-		<div class="space-y-4">
-			<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-				<p class="text-red-800 dark:text-red-200 font-medium">
-					Are you sure you want to delete {data.organization.name}?
-				</p>
-				<p class="text-red-600 dark:text-red-300 text-sm mt-2">
-					This will:
-				</p>
-				<ul class="text-red-600 dark:text-red-300 text-sm mt-1 list-disc list-inside">
-					<li>Remove the client from your dashboard</li>
-					<li>Deactivate all user accounts</li>
-					<li>Release any assigned territories</li>
-					<li>This action cannot be undone</li>
-				</ul>
+{#if showDeleteClientModal}
+<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && (showDeleteClientModal = false)}>
+	<div class="modal" style="max-width: 450px;">
+		<div class="modal-header">
+			<h2 class="modal-title">Delete Client</h2>
+			<button type="button" class="modal-close" onclick={() => (showDeleteClientModal = false)}>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18" />
+					<line x1="6" y1="6" x2="18" y2="18" />
+				</svg>
+			</button>
+		</div>
+		<form
+			method="POST"
+			action="?/deleteClient"
+			use:enhance={() => {
+				isDeleting = true;
+				return async ({ result }) => {
+					isDeleting = false;
+					if (result.type === 'success') {
+						// Show alert and redirect
+						alert('Client deleted successfully');
+						window.location.href = '/internal';
+					}
+				};
+			}}
+		>
+			<div class="modal-body">
+				<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px;">
+					<p style="color: #991b1b; font-weight: 500; margin: 0 0 8px 0;">
+						Are you sure you want to delete {data.organization.name}?
+					</p>
+					<p style="color: #dc2626; font-size: 14px; margin: 0 0 8px 0;">
+						This will:
+					</p>
+					<ul style="color: #dc2626; font-size: 14px; margin: 0; padding-left: 20px;">
+						<li>Remove the client from your dashboard</li>
+						<li>Deactivate all user accounts</li>
+						<li>Release any assigned territories</li>
+						<li>This action cannot be undone</li>
+					</ul>
+				</div>
 			</div>
-
-			<div class="flex justify-end gap-3 pt-4">
-				<Button color="alternative" onclick={() => (showDeleteClientModal = false)} disabled={isDeleting}>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" onclick={() => (showDeleteClientModal = false)} disabled={isDeleting}>
 					Cancel
-				</Button>
-				<Button type="submit" color="red" disabled={isDeleting}>
+				</button>
+				<button type="submit" class="btn btn-danger" disabled={isDeleting}>
 					{#if isDeleting}
 						Deleting...
 					{:else}
 						Delete Client
 					{/if}
-				</Button>
+				</button>
 			</div>
-		</div>
-	</form>
-</Modal>
+		</form>
+	</div>
+</div>
+{/if}
 
 <style>
 	/* Utility */
