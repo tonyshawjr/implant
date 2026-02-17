@@ -212,6 +212,11 @@
 		showVoiceProfileDetailModal = true;
 	}
 
+	function openCreateVoiceProfileModal() {
+		voiceProfileWebsiteUrl = data.organization.website || '';
+		showCreateVoiceProfileModal = true;
+	}
+
 	function openEditCreative(creative: typeof data.pendingCreatives[0]) {
 		selectedCreative = creative;
 		editHeadline = creative.headline || '';
@@ -506,7 +511,7 @@
 							<p class="empty-state-description-ai">
 								Create a voice profile to enable AI-powered content generation that matches this client's brand voice.
 							</p>
-							<button type="button" class="btn btn-primary" onclick={() => (showCreateVoiceProfileModal = true)}>
+							<button type="button" class="btn btn-primary" onclick={openCreateVoiceProfileModal}>
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19" />
 									<line x1="5" y1="12" x2="19" y2="12" />
@@ -624,7 +629,7 @@
 
 						<!-- Add Another Profile Button -->
 						<div class="add-profile-action">
-							<button type="button" class="btn btn-sm btn-secondary" onclick={() => (showCreateVoiceProfileModal = true)}>
+							<button type="button" class="btn btn-sm btn-secondary" onclick={openCreateVoiceProfileModal}>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19" />
 									<line x1="5" y1="12" x2="19" y2="12" />
