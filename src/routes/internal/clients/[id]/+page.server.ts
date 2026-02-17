@@ -1685,7 +1685,7 @@ export const actions: Actions = {
     const lastName = formData.get('lastName') as string;
 
     if (!email) {
-      return fail(400, { error: 'Email is required' });
+      return fail(400, { error: 'Email is required', actionType: 'createUserAccount' });
     }
 
     try {
@@ -1695,7 +1695,7 @@ export const actions: Actions = {
       });
 
       if (existingUser) {
-        return fail(400, { error: 'A user with this email already exists' });
+        return fail(400, { error: 'A user with this email already exists', actionType: 'createUserAccount' });
       }
 
       // Get the organization
@@ -1704,7 +1704,7 @@ export const actions: Actions = {
       });
 
       if (!organization) {
-        return fail(404, { error: 'Organization not found' });
+        return fail(404, { error: 'Organization not found', actionType: 'createUserAccount' });
       }
 
       // Generate temporary password
@@ -1731,6 +1731,7 @@ export const actions: Actions = {
 
       return {
         success: true,
+        actionType: 'createUserAccount',
         credentials: {
           email: email.toLowerCase(),
           password: tempPassword
@@ -1738,7 +1739,48 @@ export const actions: Actions = {
       };
     } catch (err) {
       console.error('Failed to create user account:', err);
-      return fail(500, { error: 'Failed to create user account' });
+      return fail(500, { error: 'Failed to create user account', actionType: 'createUserAccount' });
+    }
+  },
+
+  deleteClient: async ({ params }) => {
+    try {
+      // Soft delete the organization
+      await prisma.organization.update({
+        where: { id: params.id },
+        data: { deletedAt: new Date() }
+      });
+
+      // Also soft delete associated users
+      await prisma.user.updateMany({
+        where: { organizationId: params.id },
+        data: { deletedAt: new Date(), isActive: false }
+      });
+
+      // Release any territory assignments
+      await prisma.territoryAssignment.updateMany({
+        where: { organizationId: params.id, status: 'active' },
+        data: { status: 'terminated' }
+      });
+
+      // Get the territory IDs to unlock them
+      const assignments = await prisma.territoryAssignment.findMany({
+        where: { organizationId: params.id },
+        select: { territoryId: true }
+      });
+
+      // Unlock territories
+      for (const assignment of assignments) {
+        await prisma.territory.update({
+          where: { id: assignment.territoryId },
+          data: { status: 'available' }
+        });
+      }
+
+      return { success: true, deleted: true };
+    } catch (err) {
+      console.error('Failed to delete client:', err);
+      return fail(500, { error: 'Failed to delete client' });
     }
   }
 };

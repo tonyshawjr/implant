@@ -64,6 +64,8 @@
 	let showEditCreativeModal = $state(false);
 	let showCreateUserModal = $state(false);
 	let showUserCredentialsModal = $state(false);
+	let showDeleteClientModal = $state(false);
+	let isDeleting = $state(false);
 	let newUserCredentials = $state<{ email: string; password: string } | null>(null);
 	let createUserEmail = $state('');
 	let createUserFirstName = $state('');
@@ -337,6 +339,13 @@
 				Pause Campaigns
 			</button>
 		{/if}
+		<button type="button" class="btn btn-danger" onclick={() => (showDeleteClientModal = true)}>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<polyline points="3 6 5 6 21 6" />
+				<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+			</svg>
+			Delete
+		</button>
 	</div>
 </div>
 
@@ -1428,6 +1437,54 @@
 	</div>
 </Modal>
 
+<!-- Delete Client Modal -->
+<Modal title="Delete Client" bind:open={showDeleteClientModal} size="md" class="w-full">
+	<form
+		method="POST"
+		action="?/deleteClient"
+		use:enhance={() => {
+			isDeleting = true;
+			return async ({ result }) => {
+				isDeleting = false;
+				if (result.type === 'success') {
+					// Redirect to clients list
+					window.location.href = '/internal';
+				}
+			};
+		}}
+	>
+		<div class="space-y-4">
+			<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+				<p class="text-red-800 dark:text-red-200 font-medium">
+					Are you sure you want to delete {data.organization.name}?
+				</p>
+				<p class="text-red-600 dark:text-red-300 text-sm mt-2">
+					This will:
+				</p>
+				<ul class="text-red-600 dark:text-red-300 text-sm mt-1 list-disc list-inside">
+					<li>Remove the client from your dashboard</li>
+					<li>Deactivate all user accounts</li>
+					<li>Release any assigned territories</li>
+					<li>This action cannot be undone</li>
+				</ul>
+			</div>
+
+			<div class="flex justify-end gap-3 pt-4">
+				<Button color="alternative" onclick={() => (showDeleteClientModal = false)} disabled={isDeleting}>
+					Cancel
+				</Button>
+				<Button type="submit" color="red" disabled={isDeleting}>
+					{#if isDeleting}
+						Deleting...
+					{:else}
+						Delete Client
+					{/if}
+				</Button>
+			</div>
+		</div>
+	</form>
+</Modal>
+
 <style>
 	/* Utility */
 	.hidden {
@@ -2198,6 +2255,15 @@
 
 	.btn-warning:hover {
 		background: var(--warning-600);
+	}
+
+	.btn-danger {
+		background: var(--danger-500);
+		color: white;
+	}
+
+	.btn-danger:hover {
+		background: var(--danger-600);
 	}
 
 	.btn-sm {
