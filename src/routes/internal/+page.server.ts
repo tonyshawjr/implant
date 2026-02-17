@@ -360,11 +360,12 @@ export const actions: Actions = {
         return fail(400, { error: 'Territory not found' });
       }
 
-      // Generate a slug from the name
-      const slug = name
+      // Generate a unique slug from the name
+      const baseSlug = name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
+      const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
       // Create the organization
       const organization = await prisma.organization.create({
@@ -383,32 +384,41 @@ export const actions: Actions = {
         }
       });
 
-      // Generate a temporary password for the client user
-      const tempPassword = crypto.randomUUID().slice(0, 12);
-      const passwordHash = await hash(tempPassword, {
-        memoryCost: 19456,
-        timeCost: 2,
-        outputLen: 32,
-        parallelism: 1
+      // Check if user with this email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
       });
 
-      // Extract first/last name from business name (best effort)
-      const nameParts = name.split(' ');
-      const firstName = nameParts[0] || 'Client';
-      const lastName = nameParts.slice(1).join(' ') || 'Owner';
+      let tempPassword: string | null = null;
 
-      // Create the client owner user account
-      await prisma.user.create({
-        data: {
-          email: email.toLowerCase(),
-          firstName,
-          lastName,
-          passwordHash,
-          role: 'client_owner',
-          isActive: true,
-          organizationId: organization.id
-        }
-      });
+      if (!existingUser) {
+        // Generate a temporary password for the client user
+        tempPassword = crypto.randomUUID().slice(0, 12);
+        const passwordHash = await hash(tempPassword, {
+          memoryCost: 19456,
+          timeCost: 2,
+          outputLen: 32,
+          parallelism: 1
+        });
+
+        // Extract first/last name from business name (best effort)
+        const nameParts = name.split(' ');
+        const firstName = nameParts[0] || 'Client';
+        const lastName = nameParts.slice(1).join(' ') || 'Owner';
+
+        // Create the client owner user account
+        await prisma.user.create({
+          data: {
+            email: email.toLowerCase(),
+            firstName,
+            lastName,
+            passwordHash,
+            role: 'client_owner',
+            isActive: true,
+            organizationId: organization.id
+          }
+        });
+      }
 
       // If territory is available, assign it and create contract
       if (territory.status === 'available') {
@@ -467,10 +477,10 @@ export const actions: Actions = {
           success: true,
           organizationId: organization.id,
           message: 'Client created and territory assigned',
-          credentials: {
+          credentials: tempPassword ? {
             email: email.toLowerCase(),
             password: tempPassword
-          }
+          } : null
         };
       } else {
         // Territory is not available - add to waitlist
@@ -494,10 +504,10 @@ export const actions: Actions = {
           organizationId: organization.id,
           waitlisted: true,
           message: `Client created and added to waitlist (position #${nextPosition}) for ${territory.name}`,
-          credentials: {
+          credentials: tempPassword ? {
             email: email.toLowerCase(),
             password: tempPassword
-          }
+          } : null
         };
       }
     } catch (error) {
