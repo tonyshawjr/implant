@@ -5,7 +5,7 @@
 		CloseCircleSolid,
 		PenSolid,
 		ArrowPathOutline,
-		SparklesSolid
+		StarSolid
 	} from 'flowbite-svelte-icons';
 
 	interface Creative {
@@ -179,7 +179,7 @@
 	<!-- Grid of Content Cards -->
 	{#if creatives.length === 0}
 		<div class="empty-state">
-			<SparklesSolid class="h-12 w-12 text-gray-300 dark:text-gray-600" />
+			<StarSolid class="h-12 w-12 text-gray-300 dark:text-gray-600" />
 			<p class="mt-2 text-gray-500 dark:text-gray-400">No content variants to review</p>
 		</div>
 	{:else}
@@ -200,7 +200,7 @@
 						<div class="header-badges">
 							{#if creative.aiGenerated}
 								<Badge color="purple" class="text-xs">
-									<SparklesSolid class="me-1 h-3 w-3" />
+									<StarSolid class="me-1 h-3 w-3" />
 									AI
 								</Badge>
 							{/if}
