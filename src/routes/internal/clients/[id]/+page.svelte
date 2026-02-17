@@ -58,11 +58,6 @@
 	let showScheduleReviewModal = $state(false);
 	let showPauseCampaignsModal = $state(false);
 	let showCreateVoiceProfileModal = $state(false);
-
-	// Debug effect
-	$effect(() => {
-		console.log('showCreateVoiceProfileModal changed to:', showCreateVoiceProfileModal);
-	});
 	let showVoiceProfileDetailModal = $state(false);
 	let showGenerateContentModal = $state(false);
 	let showEditCreativeModal = $state(false);
@@ -516,7 +511,7 @@
 							<p class="empty-state-description-ai">
 								Create a voice profile to enable AI-powered content generation that matches this client's brand voice.
 							</p>
-							<button type="button" class="btn btn-primary" onclick={() => { console.log('Button clicked, setting modal to true'); showCreateVoiceProfileModal = true; console.log('showCreateVoiceProfileModal is now:', showCreateVoiceProfileModal); }}>
+							<button type="button" class="btn btn-primary" onclick={() => (showCreateVoiceProfileModal = true)}>
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19" />
 									<line x1="5" y1="12" x2="19" y2="12" />
@@ -634,7 +629,7 @@
 
 						<!-- Add Another Profile Button -->
 						<div class="add-profile-action">
-							<button type="button" class="btn btn-sm btn-secondary" onclick={() => { console.log('Add Profile clicked'); showCreateVoiceProfileModal = true; }}>
+							<button type="button" class="btn btn-sm btn-secondary" onclick={() => (showCreateVoiceProfileModal = true)}>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<line x1="12" y1="5" x2="12" y2="19" />
 									<line x1="5" y1="12" x2="19" y2="12" />
@@ -919,12 +914,8 @@
 							<span class="status-badge {data.contract.status}">{data.contract.status}</span>
 						</div>
 						<div class="info-row">
-							<span class="info-label">Plan</span>
+							<span class="info-label">Tier</span>
 							<span class="info-value">{data.contract.plan}</span>
-						</div>
-						<div class="info-row">
-							<span class="info-label">Monthly</span>
-							<span class="info-value">{formatCurrency(data.contract.monthlyCommitment)}</span>
 						</div>
 						<div class="info-row">
 							<span class="info-label">Term</span>
