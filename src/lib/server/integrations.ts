@@ -11,6 +11,7 @@ export type IntegrationId =
   | 'google-ads'
   | 'slack'
   | 'openai'
+  | 'claude'
   | 'calendly'
   | 'smtp';
 
@@ -436,7 +437,7 @@ export const INTEGRATIONS_METADATA: IntegrationMeta[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    description: 'AI content generation',
+    description: 'AI content generation (alternative)',
     icon: 'sparkles',
     category: 'ai',
     fields: [
@@ -466,6 +467,34 @@ export const INTEGRATIONS_METADATA: IntegrationMeta[] = [
           { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Faster)' },
           { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
           { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Cheapest)' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'claude',
+    name: 'Claude (Anthropic)',
+    description: 'AI voice analysis and content generation (recommended)',
+    icon: 'sparkles',
+    category: 'ai',
+    fields: [
+      {
+        key: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        required: true,
+        placeholder: 'sk-ant-api03-...',
+        helpText: 'Get your API key from console.anthropic.com'
+      },
+      {
+        key: 'defaultModel',
+        label: 'Default Model',
+        type: 'select',
+        required: false,
+        options: [
+          { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Recommended)' },
+          { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Most Capable)' },
+          { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Fastest)' }
         ]
       }
     ]

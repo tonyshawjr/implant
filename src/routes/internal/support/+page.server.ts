@@ -185,7 +185,7 @@ export const load: PageServerLoad = async ({ url }) => {
     prisma.user.findMany({
       where: {
         role: {
-          in: INTERNAL_ROLES
+          in: [...INTERNAL_ROLES]
         },
         isActive: true,
         deletedAt: null

@@ -17,7 +17,7 @@ let apiKeyCache: { keys: Record<string, string>; timestamp: number } | null = nu
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Gets an API key, checking database first then falling back to environment variable
+ * Gets an API key, checking integrations system first, then legacy settings, then env vars
  */
 async function getApiKey(keyName: 'claude_api_key' | 'openai_api_key'): Promise<string | null> {
   // Check cache first
@@ -29,16 +29,27 @@ async function getApiKey(keyName: 'claude_api_key' | 'openai_api_key'): Promise<
 
   // Refresh cache from database
   try {
+    // Check both the integrations system (integration:claude, integration:openai)
+    // and legacy settings (claude_api_key, openai_api_key)
+    const integrationKey = keyName === 'claude_api_key' ? 'integration:claude' : 'integration:openai';
+
     const settings = await prisma.systemSetting.findMany({
       where: {
-        key: { in: ['claude_api_key', 'openai_api_key'] }
+        key: { in: ['claude_api_key', 'openai_api_key', 'integration:claude', 'integration:openai'] }
       }
     });
 
     const keys: Record<string, string> = {};
     for (const setting of settings) {
-      const value = setting.value as { key?: string } | null;
-      if (value?.key) {
+      const value = setting.value as { key?: string; apiKey?: string } | null;
+
+      // Integration settings use 'apiKey' field
+      if (setting.key.startsWith('integration:') && value?.apiKey) {
+        const legacyKey = setting.key === 'integration:claude' ? 'claude_api_key' : 'openai_api_key';
+        keys[legacyKey] = value.apiKey;
+      }
+      // Legacy settings use 'key' field
+      else if (value?.key) {
         keys[setting.key] = value.key;
       }
     }

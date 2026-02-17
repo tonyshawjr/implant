@@ -68,7 +68,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Get all users who can be account managers (internal staff)
 	const accountManagers = await prisma.user.findMany({
 		where: {
-			role: { in: INTERNAL_ROLES },
+			role: { in: [...INTERNAL_ROLES] },
 			isActive: true,
 			deletedAt: null
 		},

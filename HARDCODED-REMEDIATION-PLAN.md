@@ -1,7 +1,22 @@
 # SqueezMedia Platform - Hardcoded Values Remediation Plan
 
 **Generated:** 2026-02-16
+**Last Updated:** 2026-02-17
 **Purpose:** Fix all hardcoded values and make everything configurable from Settings UI
+
+---
+
+## Progress Summary
+
+| Wave | Status | Completed |
+|------|--------|-----------|
+| Wave 0: Security | ❌ Not Started | 0/3 |
+| Wave 1: Database Schema | ✅ Complete | 8/8 |
+| Wave 2: Services | ✅ Complete | 8/8 |
+| Wave 3A: Settings UI | ❌ Not Started | 0/8 |
+| Wave 3B: Replace Hardcodes | ❌ Not Started | 0/20 |
+| Wave 4: Roles | ✅ Complete | 2/2 |
+| Wave 5: Cleanup | ❌ Not Started | 0/4 |
 
 ---
 
@@ -60,8 +75,8 @@ model PlatformSettings {
   updatedBy     String?
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Create seed data for initial settings
 - **Dependencies:** None
 
@@ -81,8 +96,8 @@ model PricingTier {
   updatedAt         DateTime @updatedAt
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Seed with current pricing: Starter $1,500, Growth $2,500, Enterprise $4,000
 - **Dependencies:** None
 
@@ -100,8 +115,8 @@ model ScoringThreshold {
   updatedAt   DateTime @updatedAt
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Seed with current thresholds: Health (85/70/50), Lead Temp (80/50)
 - **Dependencies:** None
 
@@ -119,8 +134,8 @@ model EmailTemplate {
   updatedBy   String?
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Migrate existing email content to templates
 - **Dependencies:** None
 
@@ -137,8 +152,8 @@ model OnboardingPhase {
   updatedAt    DateTime @updatedAt
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Seed with current phases: Account Setup (2), Voice Analysis (4), Campaign Build (4), Launch (4)
 - **Dependencies:** None
 
@@ -156,8 +171,8 @@ model BusinessBenchmark {
   updatedAt   DateTime @updatedAt
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Seed with current benchmarks
 - **Dependencies:** None
 
@@ -173,8 +188,8 @@ model OptimizationSetting {
   updatedAt   DateTime @updatedAt
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Seed: ctrDropPercent=20, cplIncreasePercent=25, budgetUtilizationMin=80, creativeFatigueImpressions=50000, daysSinceOptimization=7
 - **Dependencies:** None
 
@@ -190,8 +205,8 @@ model StateDemographics {
   updatedAt            DateTime @updatedAt
 }
 ```
-- [ ] Add model to `prisma/schema.prisma`
-- [ ] Run `npx prisma db push`
+- [x] Add model to `prisma/schema.prisma`
+- [x] Run `npx prisma db push`
 - [ ] Seed with all 50 states + DC from current hardcoded values
 - **Dependencies:** None
 
@@ -202,67 +217,67 @@ model StateDemographics {
 Create the server-side services to read/write configuration.
 
 ### Task 2.1: Create Settings Service
-- [ ] Create file: `src/lib/server/settings/index.ts`
-- [ ] Implement `getSetting(key: string): Promise<any>`
-- [ ] Implement `setSetting(key: string, value: any): Promise<void>`
-- [ ] Implement `getSettingsByCategory(category: string): Promise<Record<string, any>>`
-- [ ] Add caching with 5-minute TTL
-- [ ] Export typed getters: `getCompanyName()`, `getSupportEmail()`, `getBillingEmail()`, etc.
+- [x] Create file: `src/lib/server/settings/index.ts`
+- [x] Implement `getSetting(key: string): Promise<any>`
+- [x] Implement `setSetting(key: string, value: any): Promise<void>`
+- [x] Implement `getSettingsByCategory(category: string): Promise<Record<string, any>>`
+- [x] Add caching with 5-minute TTL
+- [x] Export typed getters: `getCompanyName()`, `getSupportEmail()`, `getBillingEmail()`, etc.
 - **Dependencies:** Task 1.1
 
 ### Task 2.2: Create Pricing Service
-- [ ] Create file: `src/lib/server/settings/pricing.ts`
-- [ ] Implement `getPricingTiers(): Promise<PricingTier[]>`
-- [ ] Implement `getPricingTier(name: string): Promise<PricingTier>`
-- [ ] Implement `updatePricingTier(id: string, data: Partial<PricingTier>): Promise<void>`
-- [ ] Implement `createPricingTier(data: CreatePricingTierInput): Promise<PricingTier>`
+- [x] Create file: `src/lib/server/settings/pricing.ts`
+- [x] Implement `getPricingTiers(): Promise<PricingTier[]>`
+- [x] Implement `getPricingTier(name: string): Promise<PricingTier>`
+- [x] Implement `updatePricingTier(id: string, data: Partial<PricingTier>): Promise<void>`
+- [x] Implement `createPricingTier(data: CreatePricingTierInput): Promise<PricingTier>`
 - **Dependencies:** Task 1.2
 
 ### Task 2.3: Create Scoring Service
-- [ ] Create file: `src/lib/server/settings/scoring.ts`
-- [ ] Implement `getHealthScoreThresholds(): Promise<ScoringThreshold[]>`
-- [ ] Implement `getLeadTemperatureThresholds(): Promise<ScoringThreshold[]>`
-- [ ] Implement `getHealthScoreLevel(score: number): Promise<string>`
-- [ ] Implement `getLeadTemperature(score: number): Promise<string>`
-- [ ] Implement `updateThreshold(id: string, data: Partial<ScoringThreshold>): Promise<void>`
+- [x] Create file: `src/lib/server/settings/scoring.ts`
+- [x] Implement `getHealthScoreThresholds(): Promise<ScoringThreshold[]>`
+- [x] Implement `getLeadTemperatureThresholds(): Promise<ScoringThreshold[]>`
+- [x] Implement `getHealthScoreLevel(score: number): Promise<string>`
+- [x] Implement `getLeadTemperature(score: number): Promise<string>`
+- [x] Implement `updateThreshold(id: string, data: Partial<ScoringThreshold>): Promise<void>`
 - **Dependencies:** Task 1.3
 
 ### Task 2.4: Create Email Template Service
-- [ ] Create file: `src/lib/server/settings/email-templates.ts`
-- [ ] Implement `getEmailTemplate(type: string): Promise<EmailTemplate>`
-- [ ] Implement `renderEmailTemplate(type: string, variables: Record<string, any>): Promise<{subject: string, html: string, text: string}>`
-- [ ] Implement `updateEmailTemplate(type: string, data: Partial<EmailTemplate>): Promise<void>`
-- [ ] Support variable substitution: `{{companyName}}`, `{{supportEmail}}`, etc.
+- [x] Create file: `src/lib/server/settings/email-templates.ts`
+- [x] Implement `getEmailTemplate(type: string): Promise<EmailTemplate>`
+- [x] Implement `renderEmailTemplate(type: string, variables: Record<string, any>): Promise<{subject: string, html: string, text: string}>`
+- [x] Implement `updateEmailTemplate(type: string, data: Partial<EmailTemplate>): Promise<void>`
+- [x] Support variable substitution: `{{companyName}}`, `{{supportEmail}}`, etc.
 - **Dependencies:** Task 1.4
 
 ### Task 2.5: Create Onboarding Config Service
-- [ ] Create file: `src/lib/server/settings/onboarding.ts`
-- [ ] Implement `getOnboardingPhases(): Promise<OnboardingPhase[]>`
-- [ ] Implement `getOnboardingPhase(phase: number): Promise<OnboardingPhase>`
-- [ ] Implement `updateOnboardingPhase(id: string, data: Partial<OnboardingPhase>): Promise<void>`
-- [ ] Implement `getTotalOnboardingDays(): Promise<number>`
+- [x] Create file: `src/lib/server/settings/onboarding.ts`
+- [x] Implement `getOnboardingPhases(): Promise<OnboardingPhase[]>`
+- [x] Implement `getOnboardingPhase(phase: number): Promise<OnboardingPhase>`
+- [x] Implement `updateOnboardingPhase(id: string, data: Partial<OnboardingPhase>): Promise<void>`
+- [x] Implement `getTotalOnboardingDays(): Promise<number>`
 - **Dependencies:** Task 1.5
 
 ### Task 2.6: Create Benchmarks Service
-- [ ] Create file: `src/lib/server/settings/benchmarks.ts`
-- [ ] Implement `getBenchmarks(vertical?: string): Promise<BusinessBenchmark[]>`
-- [ ] Implement `getCaseValue(vertical?: string): Promise<number>`
-- [ ] Implement `getConversionRate(vertical?: string): Promise<number>`
-- [ ] Implement `updateBenchmark(id: string, data: Partial<BusinessBenchmark>): Promise<void>`
+- [x] Create file: `src/lib/server/settings/benchmarks.ts`
+- [x] Implement `getBenchmarks(vertical?: string): Promise<BusinessBenchmark[]>`
+- [x] Implement `getCaseValue(vertical?: string): Promise<number>`
+- [x] Implement `getConversionRate(vertical?: string): Promise<number>`
+- [x] Implement `updateBenchmark(id: string, data: Partial<BusinessBenchmark>): Promise<void>`
 - **Dependencies:** Task 1.6
 
 ### Task 2.7: Create Optimization Config Service
-- [ ] Create file: `src/lib/server/settings/optimization.ts`
-- [ ] Implement `getOptimizationSettings(): Promise<Record<string, number>>`
-- [ ] Implement `getOptimizationSetting(key: string): Promise<number>`
-- [ ] Implement `updateOptimizationSetting(key: string, value: number): Promise<void>`
+- [x] Create file: `src/lib/server/settings/optimization.ts`
+- [x] Implement `getOptimizationSettings(): Promise<Record<string, number>>`
+- [x] Implement `getOptimizationSetting(key: string): Promise<number>`
+- [x] Implement `updateOptimizationSetting(key: string, value: number): Promise<void>`
 - **Dependencies:** Task 1.7
 
 ### Task 2.8: Create Demographics Service
-- [ ] Create file: `src/lib/server/settings/demographics.ts`
-- [ ] Implement `getStateDemographics(stateCode: string): Promise<StateDemographics>`
-- [ ] Implement `getAllStateDemographics(): Promise<StateDemographics[]>`
-- [ ] Implement `updateStateDemographics(stateCode: string, data: Partial<StateDemographics>): Promise<void>`
+- [x] Create file: `src/lib/server/settings/demographics.ts`
+- [x] Implement `getStateDemographics(stateCode: string): Promise<StateDemographics>`
+- [x] Implement `getAllStateDemographics(): Promise<StateDemographics[]>`
+- [x] Implement `updateStateDemographics(stateCode: string, data: Partial<StateDemographics>): Promise<void>`
 - **Dependencies:** Task 1.8
 
 ---
@@ -486,21 +501,33 @@ Update all files to use database configuration instead of hardcoded values.
 ## WAVE 4: Role Constants Centralization (Can Parallelize After Wave 3B.16)
 
 ### Task 4.1: Create Roles Constants (Code Only - Not Settings)
-- [ ] Create file: `src/lib/constants/roles.ts`
-- [ ] Define: `INTERNAL_ROLES`, `CLIENT_ROLES`, `ALL_ROLES`
-- [ ] Export type: `Role`
-- [ ] This stays in code (roles are structural, not business config)
+- [x] Create file: `src/lib/constants/roles.ts`
+- [x] Define: `INTERNAL_ROLES`, `CLIENT_ROLES`, `ALL_ROLES`
+- [x] Export type: `Role`
+- [x] This stays in code (roles are structural, not business config)
 - **Dependencies:** None
 
 ### Task 4.2: Replace Role String Hardcodes
-- [ ] Search all files for `'super_admin'`, `'admin'`, `'support'`, `'client_owner'`, `'client_admin'`, `'client_staff'`
-- [ ] Replace with imports from `$lib/constants/roles`
-- [ ] Files to update (partial list):
-  - `src/routes/(client)/billing/+page.server.ts`
-  - `src/routes/(client)/account/+page.server.ts`
+- [x] Search all files for `'super_admin'`, `'admin'`, `'support'`, `'client_owner'`, `'client_admin'`, `'client_staff'`
+- [x] Replace with imports from `$lib/constants/roles`
+- [x] Files updated (21 total):
+  - `src/lib/server/billing/subscriptions.ts`
+  - `src/lib/server/notifications/email.ts`
   - `src/lib/stores/user.ts`
   - `src/routes/(auth)/login/+page.server.ts`
-  - `src/routes/internal/settings/+page.server.ts`
+  - `src/routes/(client)/+layout.server.ts`
+  - `src/routes/(client)/account/+page.server.ts`
+  - `src/routes/(client)/billing/+page.server.ts`
+  - `src/routes/(client)/support/+page.server.ts`
+  - `src/routes/api/admin/billing/+server.ts`
+  - `src/routes/api/billing/payment-methods/+server.ts`
+  - `src/routes/api/billing/subscription/+server.ts`
+  - `src/routes/api/webhooks/stripe/+server.ts`
+  - `src/routes/internal/+layout.server.ts`
+  - `src/routes/internal/clients/[id]/edit/+page.server.ts`
+  - `src/routes/internal/onboarding/+page.server.ts`
+  - `src/routes/internal/sales/+page.server.ts`
+  - `src/routes/internal/support/+page.server.ts`
 - **Dependencies:** Task 4.1
 
 ---

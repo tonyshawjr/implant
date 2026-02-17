@@ -90,7 +90,7 @@ export const actions: Actions = {
 				create: {
 					key: keyName,
 					value: { key: keyValue.trim() },
-					description: \`API key for \${keyName.replace(/_/g, ' ')}\`,
+					description: `API key for ${keyName.replace(/_/g, ' ')}`,
 					updatedBy: locals.user.id
 				},
 				update: {
@@ -177,14 +177,14 @@ export const actions: Actions = {
 					return { success: true, message: 'Claude API key is valid' };
 				} else {
 					const error = await response.json();
-					return fail(400, { error: \`Invalid: \${error.error?.message || 'Unknown error'}\` });
+					return fail(400, { error: `Invalid: ${error.error?.message || 'Unknown error'}` });
 				}
 			}
 
 			if (keyName === 'openai_api_key') {
 				const response = await fetch('https://api.openai.com/v1/models', {
 					headers: {
-						'Authorization': \`Bearer \${value.key}\`
+						'Authorization': `Bearer ${value.key}`
 					}
 				});
 
