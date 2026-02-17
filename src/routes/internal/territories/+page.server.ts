@@ -397,7 +397,7 @@ export const actions: Actions = {
           name,
           city,
           state,
-          territoryType: territoryType || 'city',
+          territoryType: (territoryType as 'standard' | 'premium' | 'metro') || 'standard',
           radiusMiles,
           centerLat,
           centerLng,
@@ -437,7 +437,7 @@ export const actions: Actions = {
           name,
           city,
           state,
-          territoryType: territoryType || 'city',
+          territoryType: (territoryType as 'standard' | 'premium' | 'metro') || 'standard',
           radiusMiles,
           monthlyBasePrice,
           population

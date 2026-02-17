@@ -21,7 +21,7 @@ export function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY is not configured');
     }
     stripeClient = new Stripe(secretKey, {
-      apiVersion: '2025-01-27.acacia',
+      apiVersion: '2026-01-28.clover',
       typescript: true,
       appInfo: {
         name: 'SqueezMedia Platform',

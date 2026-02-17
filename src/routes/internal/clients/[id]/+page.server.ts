@@ -1160,7 +1160,7 @@ export const actions: Actions = {
         state: territory?.state || voiceProfile.organization.state || 'ST',
         radiusMiles: territory?.radiusMiles || 25,
         population: territory?.population || undefined,
-        medianIncome: territory?.medianIncome?.toNumber() || undefined
+        medianIncome: territory?.medianIncome || undefined
       };
 
       // Convert database voice profile to BrandVoiceProfile type for AI generator
@@ -1295,7 +1295,7 @@ export const actions: Actions = {
         state: territory?.state || voiceProfile.organization.state || 'ST',
         radiusMiles: territory?.radiusMiles || 25,
         population: territory?.population || undefined,
-        medianIncome: territory?.medianIncome?.toNumber() || undefined
+        medianIncome: territory?.medianIncome || undefined
       };
 
       // Convert database voice profile to BrandVoiceProfile type for AI generator
@@ -1352,7 +1352,7 @@ export const actions: Actions = {
         const creative = await prisma.campaignCreative.create({
           data: {
             campaignId,
-            creativeType: 'text_ad',
+            creativeType: 'text',
             voiceProfileId,
             aiGenerated: true,
             status: 'pending_review',
@@ -1587,7 +1587,7 @@ export const actions: Actions = {
         state: territory?.state || organization.state || 'ST',
         radiusMiles: territory?.radiusMiles || 25,
         population: territory?.population || undefined,
-        medianIncome: territory?.medianIncome?.toNumber() || undefined
+        medianIncome: territory?.medianIncome || undefined
       };
 
       // Convert database voice profile to BrandVoiceProfile type

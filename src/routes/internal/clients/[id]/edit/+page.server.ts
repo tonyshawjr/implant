@@ -394,13 +394,13 @@ export const actions: Actions = {
 		try {
 			// If this is primary, unset other primary contacts
 			if (isPrimary) {
-				await prisma.contact.updateMany({
+				await prisma.organizationContact.updateMany({
 					where: { organizationId: id, isPrimary: true },
 					data: { isPrimary: false }
 				});
 			}
 
-			await prisma.contact.create({
+			await prisma.organizationContact.create({
 				data: {
 					organizationId: id,
 					firstName,
@@ -429,7 +429,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await prisma.contact.delete({
+			await prisma.organizationContact.delete({
 				where: { id: contactId }
 			});
 

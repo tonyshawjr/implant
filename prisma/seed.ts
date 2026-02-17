@@ -1,10 +1,53 @@
 import { PrismaClient } from '@prisma/client';
 import { Argon2id } from 'oslo/password';
+import { randomBytes } from 'crypto';
+import { writeFileSync, appendFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 const prisma = new PrismaClient();
 
-// Default password for all test users
-const DEFAULT_PASSWORD = 'password123';
+// Generate a secure random password
+function generateSecurePassword(length: number = 16): string {
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  const bytes = randomBytes(length);
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += charset[bytes[i] % charset.length];
+  }
+  return password;
+}
+
+// Get password from environment or generate a secure one
+function getSeedPassword(): string {
+  const envPassword = process.env.SEED_PASSWORD;
+  if (envPassword && envPassword.length >= 8) {
+    return envPassword;
+  }
+  return generateSecurePassword();
+}
+
+// Write credentials to file (outside of git-tracked location or gitignored)
+function writeCredentialsToFile(password: string, users: { email: string; role: string }[]): void {
+  const credentialsPath = join(__dirname, 'seed-credentials.txt');
+  const timestamp = new Date().toISOString();
+
+  let content = `# Seed Credentials - Generated ${timestamp}\n`;
+  content += `# WARNING: This file contains sensitive credentials. Keep it secure and delete after use.\n\n`;
+  content += `Password for all seeded users: ${password}\n\n`;
+  content += `Users created:\n`;
+
+  for (const user of users) {
+    content += `  - ${user.email} (${user.role})\n`;
+  }
+
+  content += `\n# Delete this file after noting the credentials!\n`;
+
+  writeFileSync(credentialsPath, content, { mode: 0o600 }); // Restrictive permissions
+  console.log(`\nCredentials written to: ${credentialsPath}`);
+  console.log('WARNING: Delete this file after noting the credentials!\n');
+}
+
+const SEED_PASSWORD = getSeedPassword();
 
 // Helper function to generate unique IDs
 function generateId(): string {
@@ -37,9 +80,12 @@ function randomItem<T>(arr: T[]): T {
 async function main() {
   console.log('Starting seed...');
 
-  // Hash the default password
+  // Hash the seed password
   const hasher = new Argon2id();
-  const passwordHash = await hasher.hash(DEFAULT_PASSWORD);
+  const passwordHash = await hasher.hash(SEED_PASSWORD);
+
+  // Track users for credentials output
+  const createdUsers: { email: string; role: string }[] = [];
 
   // ============================================================================
   // 1. PLANS
@@ -432,6 +478,7 @@ async function main() {
       loginCount: 156
     }
   });
+  createdUsers.push({ email: 'superadmin@squeez.media', role: 'super_admin' });
 
   const adminUsers = await Promise.all([
     prisma.user.create({
@@ -465,6 +512,10 @@ async function main() {
       }
     })
   ]);
+  createdUsers.push(
+    { email: 'admin@squeez.media', role: 'admin' },
+    { email: 'jessica.rodriguez@squeez.media', role: 'admin' }
+  );
 
   const supportUsers = await Promise.all([
     prisma.user.create({
@@ -498,6 +549,10 @@ async function main() {
       }
     })
   ]);
+  createdUsers.push(
+    { email: 'support@squeez.media', role: 'support' },
+    { email: 'emily.parker@squeez.media', role: 'support' }
+  );
 
   console.log('Internal users created successfully');
 
@@ -638,6 +693,11 @@ async function main() {
       }
     })
   ]);
+  createdUsers.push(
+    { email: 'drjohnson@austindentalimplants.com', role: 'client_owner' },
+    { email: 'lisa.martinez@austindentalimplants.com', role: 'client_admin' },
+    { email: 'james.wilson@austindentalimplants.com', role: 'client_staff' }
+  );
 
   // Org 2 users
   const org2Users = await Promise.all([
@@ -690,6 +750,11 @@ async function main() {
       }
     })
   ]);
+  createdUsers.push(
+    { email: 'drsmith@milehighimplants.com', role: 'client_owner' },
+    { email: 'kevin.brown@milehighimplants.com', role: 'client_admin' },
+    { email: 'sarah.davis@milehighimplants.com', role: 'client_staff' }
+  );
 
   // Org 3 users
   const org3Users = await Promise.all([

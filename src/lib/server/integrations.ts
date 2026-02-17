@@ -52,7 +52,25 @@ export interface Integration extends IntegrationMeta {
 
 // Simple encryption using AES-256-GCM
 // In production, use a proper secrets manager like AWS Secrets Manager or HashiCorp Vault
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-me!';
+
+// Validate encryption key at startup - fail fast if not configured
+function validateEncryptionKey(): string {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error(
+      'ENCRYPTION_KEY environment variable is required but not set.\n' +
+      'This key is used to encrypt sensitive integration credentials.\n\n' +
+      'To generate a secure key, run:\n' +
+      '  openssl rand -hex 32\n\n' +
+      'Then add it to your .env file:\n' +
+      '  ENCRYPTION_KEY=<your-generated-key>'
+    );
+  }
+  return key;
+}
+
+// Validate on module load to fail fast at startup
+const ENCRYPTION_KEY = validateEncryptionKey();
 
 function getEncryptionKey(): Buffer {
   // Ensure key is 32 bytes for AES-256
