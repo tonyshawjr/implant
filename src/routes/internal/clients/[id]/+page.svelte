@@ -73,11 +73,13 @@
 
 	// Helper functions for modals
 	function openCreateUserModal() {
+		alert('Opening create user modal');
 		createUserEmail = data.organization.email || '';
 		showCreateUserModal = true;
 	}
 
 	function openDeleteModal() {
+		alert('Opening delete modal');
 		showDeleteClientModal = true;
 	}
 
