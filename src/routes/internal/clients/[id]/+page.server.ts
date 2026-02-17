@@ -1744,43 +1744,70 @@ export const actions: Actions = {
   },
 
   deleteClient: async ({ params }) => {
+    const { id } = params;
+
+    // Check if organization exists first
+    const organization = await prisma.organization.findUnique({
+      where: { id }
+    });
+
+    if (!organization) {
+      return fail(404, { error: 'Client not found' });
+    }
+
+    if (organization.deletedAt) {
+      return fail(400, { error: 'Client has already been deleted' });
+    }
+
     try {
       // Soft delete the organization
       await prisma.organization.update({
-        where: { id: params.id },
+        where: { id },
         data: { deletedAt: new Date() }
       });
+    } catch (err) {
+      console.error('Failed to soft delete organization:', err);
+      return fail(500, { error: 'Failed to delete client organization' });
+    }
 
+    try {
       // Also soft delete associated users
       await prisma.user.updateMany({
-        where: { organizationId: params.id },
+        where: { organizationId: id },
         data: { deletedAt: new Date(), isActive: false }
       });
+    } catch (err) {
+      console.error('Failed to soft delete users:', err);
+      // Continue anyway - org is already deleted
+    }
 
+    try {
       // Get the territory IDs FIRST before updating assignments
       const assignments = await prisma.territoryAssignment.findMany({
-        where: { organizationId: params.id, status: 'active' },
+        where: { organizationId: id, status: 'active' },
         select: { territoryId: true }
       });
 
       // Release any territory assignments
-      await prisma.territoryAssignment.updateMany({
-        where: { organizationId: params.id, status: 'active' },
-        data: { status: 'terminated' }
-      });
-
-      // Unlock territories - set back to available
-      for (const assignment of assignments) {
-        await prisma.territory.update({
-          where: { id: assignment.territoryId },
-          data: { status: 'available' }
+      if (assignments.length > 0) {
+        await prisma.territoryAssignment.updateMany({
+          where: { organizationId: id, status: 'active' },
+          data: { status: 'terminated' }
         });
-      }
 
-      return { success: true, deleted: true };
+        // Unlock territories - set back to available
+        for (const assignment of assignments) {
+          await prisma.territory.update({
+            where: { id: assignment.territoryId },
+            data: { status: 'available' }
+          });
+        }
+      }
     } catch (err) {
-      console.error('Failed to delete client:', err);
-      return fail(500, { error: 'Failed to delete client' });
+      console.error('Failed to release territories:', err);
+      // Continue anyway - org is already deleted
     }
+
+    return { success: true, deleted: true };
   }
 };
