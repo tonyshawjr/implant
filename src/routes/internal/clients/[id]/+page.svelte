@@ -1341,10 +1341,10 @@
 
 <!-- Create User Account Modal -->
 {#if showCreateUserModal}
-<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && (showCreateUserModal = false)}>
-	<div class="modal" style="max-width: 450px;">
-		<div class="modal-header">
-			<h2 class="modal-title">Create Login Account</h2>
+<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;" onclick={(e) => e.target === e.currentTarget && (showCreateUserModal = false)}>
+	<div style="background: white; border-radius: 8px; max-width: 450px; width: 90%; max-height: 90vh; overflow: auto;">
+		<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #e5e7eb;">
+			<h2 style="margin: 0; font-size: 18px; font-weight: 600;">Create Login Account</h2>
 			<button type="button" class="modal-close" onclick={() => (showCreateUserModal = false)}>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="18" y1="6" x2="6" y2="18" />
@@ -1479,11 +1479,11 @@
 
 <!-- Delete Client Modal -->
 {#if showDeleteClientModal}
-<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && (showDeleteClientModal = false)}>
-	<div class="modal" style="max-width: 450px;">
-		<div class="modal-header">
-			<h2 class="modal-title">Delete Client</h2>
-			<button type="button" class="modal-close" onclick={() => (showDeleteClientModal = false)}>
+<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;" onclick={(e) => e.target === e.currentTarget && (showDeleteClientModal = false)}>
+	<div style="background: white; border-radius: 8px; max-width: 450px; width: 90%; max-height: 90vh; overflow: auto;">
+		<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #e5e7eb;">
+			<h2 style="margin: 0; font-size: 18px; font-weight: 600;">Delete Client</h2>
+			<button type="button" style="background: none; border: none; cursor: pointer; padding: 4px;" onclick={() => (showDeleteClientModal = false)}>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="18" y1="6" x2="6" y2="18" />
 					<line x1="6" y1="6" x2="18" y2="18" />
