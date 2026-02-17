@@ -8,6 +8,10 @@
 	let showAddNoteModal = $state(false);
 	let showScheduleReviewModal = $state(false);
 	let showPauseCampaignsModal = $state(false);
+	let showCreateVoiceProfileModal = $state(false);
+	let showVoiceProfileDetailModal = $state(false);
+	let showGenerateContentModal = $state(false);
+	let showEditCreativeModal = $state(false);
 
 	// Form states
 	let noteType = $state('note');
@@ -18,6 +22,21 @@
 	let reviewType = $state('monthly_performance');
 	let reviewDate = $state('');
 	let reviewLink = $state('');
+
+	// AI/Voice Profile states
+	let activeAiTab = $state(data.activeAiTab || 'voice-profile');
+	let websiteUrl = $state(data.organization.website || '');
+	let profileName = $state('Primary');
+	let selectedVoiceProfile = $state<typeof data.voiceProfiles[0] | null>(null);
+	let selectedCreative = $state<typeof data.pendingCreatives[0] | null>(null);
+	let generateCampaignId = $state('');
+	let generateVoiceProfileId = $state('');
+	let generateCreativeType = $state('text_ad');
+	let generateTopic = $state('');
+	let generateCount = $state(3);
+	let editHeadline = $state('');
+	let editBody = $state('');
+	let editCtaText = $state('');
 
 	// Helper functions
 	function formatCurrency(value: number): string {
@@ -112,6 +131,65 @@
 		reviewDate = '';
 		reviewLink = '';
 	}
+
+	// AI helper functions
+	function getVoiceStatusClass(status: string): string {
+		switch (status) {
+			case 'approved':
+				return 'success';
+			case 'in_review':
+				return 'primary';
+			case 'analyzing':
+				return 'info';
+			case 'pending':
+				return 'warning';
+			case 'rejected':
+				return 'danger';
+			default:
+				return 'gray';
+		}
+	}
+
+	function getVoiceStatusLabel(status: string): string {
+		return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	}
+
+	function openVoiceProfileDetail(profile: typeof data.voiceProfiles[0]) {
+		selectedVoiceProfile = profile;
+		showVoiceProfileDetailModal = true;
+	}
+
+	function openEditCreative(creative: typeof data.pendingCreatives[0]) {
+		selectedCreative = creative;
+		editHeadline = creative.headline || '';
+		editBody = creative.body || '';
+		editCtaText = creative.ctaText || '';
+		showEditCreativeModal = true;
+	}
+
+	function resetVoiceProfileForm() {
+		websiteUrl = data.organization.website || '';
+		profileName = 'Primary';
+	}
+
+	function resetGenerateForm() {
+		generateCampaignId = '';
+		generateVoiceProfileId = data.voiceProfiles.find((v) => v.status === 'approved')?.id || '';
+		generateCreativeType = 'text_ad';
+		generateTopic = '';
+		generateCount = 3;
+	}
+
+	// Get the primary/active voice profile
+	let primaryVoiceProfile = $derived(
+		data.voiceProfiles.find((v) => v.status === 'approved') || data.voiceProfiles[0] || null
+	);
+
+	// Get approved voice profiles for content generation
+	let approvedVoiceProfiles = $derived(data.voiceProfiles.filter((v) => v.status === 'approved'));
+
+	// Active campaigns for content generation dropdown
+	let campaignsForGeneration = $derived(data.campaigns.filter((c) => c.status === 'active' || c.status === 'draft'));
 </script>
 
 <!-- Breadcrumb -->
@@ -329,6 +407,273 @@
 					<p class="empty-text">No health score data available</p>
 				{/if}
 			</div>
+		</div>
+
+		<!-- AI Operations Card -->
+		<div class="card ai-operations-card">
+			<div class="card-header">
+				<h2 class="card-title">AI Operations</h2>
+				<div class="ai-tabs">
+					<button
+						type="button"
+						class="ai-tab"
+						class:active={activeAiTab === 'voice-profile'}
+						onclick={() => (activeAiTab = 'voice-profile')}
+					>
+						Voice Profile
+					</button>
+					<button
+						type="button"
+						class="ai-tab"
+						class:active={activeAiTab === 'content'}
+						onclick={() => (activeAiTab = 'content')}
+					>
+						Content
+						{#if data.pendingCreatives.length > 0}
+							<span class="ai-tab-badge">{data.pendingCreatives.length}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<!-- Voice Profile Tab -->
+			{#if activeAiTab === 'voice-profile'}
+				<div class="card-body">
+					{#if data.voiceProfiles.length === 0}
+						<!-- No Voice Profile Yet -->
+						<div class="empty-state-ai">
+							<div class="empty-state-icon-ai">
+								<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+									<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+									<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+									<line x1="12" y1="19" x2="12" y2="22" />
+								</svg>
+							</div>
+							<h3 class="empty-state-title-ai">No Voice Profile Yet</h3>
+							<p class="empty-state-description-ai">
+								Create a voice profile to enable AI-powered content generation that matches this client's brand voice.
+							</p>
+							<button type="button" class="btn btn-primary" onclick={() => (showCreateVoiceProfileModal = true)}>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<line x1="12" y1="5" x2="12" y2="19" />
+									<line x1="5" y1="12" x2="19" y2="12" />
+								</svg>
+								Create Voice Profile
+							</button>
+						</div>
+					{:else}
+						<!-- Voice Profile List -->
+						<div class="voice-profile-list">
+							{#each data.voiceProfiles as profile}
+								<div class="voice-profile-item" class:primary={profile.status === 'approved'}>
+									<div class="voice-profile-header">
+										<div class="voice-profile-info">
+											<span class="voice-profile-name">{profile.name}</span>
+											<span class="status-badge {getVoiceStatusClass(profile.status)}">
+												{getVoiceStatusLabel(profile.status)}
+											</span>
+										</div>
+										<button
+											type="button"
+											class="btn btn-sm btn-secondary"
+											onclick={() => openVoiceProfileDetail(profile)}
+										>
+											View
+										</button>
+									</div>
+
+									{#if profile.status === 'approved'}
+										<div class="voice-profile-details">
+											{#if profile.tone}
+												<div class="voice-detail-item">
+													<span class="voice-detail-label">Tone:</span>
+													<span class="voice-detail-value">{profile.tone}</span>
+												</div>
+											{/if}
+											{#if profile.formalityLevel}
+												<div class="voice-detail-item">
+													<span class="voice-detail-label">Formality:</span>
+													<span class="voice-detail-value capitalize">{profile.formalityLevel}</span>
+												</div>
+											{/if}
+											{#if profile.personality}
+												<div class="voice-detail-item">
+													<span class="voice-detail-label">Personality:</span>
+													<span class="voice-detail-value">{profile.personality}</span>
+												</div>
+											{/if}
+											{#if profile.qualityScore}
+												<div class="voice-detail-item">
+													<span class="voice-detail-label">Quality:</span>
+													<span class="quality-score-badge" class:high={profile.qualityScore >= 80} class:medium={profile.qualityScore >= 60 && profile.qualityScore < 80} class:low={profile.qualityScore < 60}>
+														{profile.qualityScore}
+													</span>
+												</div>
+											{/if}
+										</div>
+									{:else if profile.status === 'pending'}
+										<div class="voice-profile-actions">
+											<form method="POST" action="?/startVoiceAnalysis" use:enhance>
+												<input type="hidden" name="voiceProfileId" value={profile.id} />
+												<button type="submit" class="btn btn-sm btn-primary">Start Analysis</button>
+											</form>
+											<span class="voice-source-count">{profile.sources.length} source(s)</span>
+										</div>
+									{:else if profile.status === 'analyzing'}
+										<div class="voice-profile-status">
+											<div class="analyzing-indicator">
+												<div class="spinner-sm"></div>
+												<span>Analysis in progress...</span>
+											</div>
+											<form method="POST" action="?/completeVoiceAnalysis" use:enhance>
+												<input type="hidden" name="voiceProfileId" value={profile.id} />
+												<input type="hidden" name="tone" value="Professional and Caring" />
+												<input type="hidden" name="personality" value="Expert yet approachable" />
+												<input type="hidden" name="formalityLevel" value="professional" />
+												<input type="hidden" name="targetAudience" value="Adults 35-65 considering dental implants" />
+												<button type="submit" class="btn btn-sm btn-success">Complete Analysis</button>
+											</form>
+										</div>
+									{:else if profile.status === 'in_review'}
+										<div class="voice-profile-review">
+											<p class="review-text">Ready for approval</p>
+											<div class="review-actions">
+												<form method="POST" action="?/approveVoiceProfile" use:enhance>
+													<input type="hidden" name="voiceProfileId" value={profile.id} />
+													<button type="submit" class="btn btn-sm btn-success">Approve</button>
+												</form>
+												<form method="POST" action="?/rejectVoiceProfile" use:enhance>
+													<input type="hidden" name="voiceProfileId" value={profile.id} />
+													<button type="submit" class="btn btn-sm btn-danger">Reject</button>
+												</form>
+											</div>
+										</div>
+									{:else if profile.status === 'rejected'}
+										<div class="voice-profile-rejected">
+											<p class="rejection-text">Rejected: {profile.rejectionReason || 'No reason provided'}</p>
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
+
+						<!-- Add Another Profile Button -->
+						<div class="add-profile-action">
+							<button type="button" class="btn btn-sm btn-secondary" onclick={() => (showCreateVoiceProfileModal = true)}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<line x1="12" y1="5" x2="12" y2="19" />
+									<line x1="5" y1="12" x2="19" y2="12" />
+								</svg>
+								Add Profile
+							</button>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Content Generation Tab -->
+			{#if activeAiTab === 'content'}
+				<div class="card-body">
+					{#if approvedVoiceProfiles.length === 0}
+						<!-- No Approved Voice Profile -->
+						<div class="empty-state-ai">
+							<div class="empty-state-icon-ai warning">
+								<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+									<line x1="12" y1="9" x2="12" y2="13" />
+									<line x1="12" y1="17" x2="12.01" y2="17" />
+								</svg>
+							</div>
+							<h3 class="empty-state-title-ai">Voice Profile Required</h3>
+							<p class="empty-state-description-ai">
+								An approved voice profile is required before generating AI content. Please create and approve a voice profile first.
+							</p>
+							<button type="button" class="btn btn-secondary" onclick={() => (activeAiTab = 'voice-profile')}>
+								Go to Voice Profile
+							</button>
+						</div>
+					{:else}
+						<!-- Content Generation Available -->
+						<div class="content-generation-section">
+							<!-- Generate Button -->
+							<div class="generate-header">
+								<h4 class="generate-title">Generate AI Content</h4>
+								<button type="button" class="btn btn-primary" onclick={() => (showGenerateContentModal = true)}>
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+									</svg>
+									Generate Content
+								</button>
+							</div>
+
+							<!-- Pending Review Section -->
+							{#if data.pendingCreatives.length > 0}
+								<div class="pending-creatives-section">
+									<h5 class="section-subtitle">Pending Review ({data.pendingCreatives.length})</h5>
+									<div class="creatives-grid">
+										{#each data.pendingCreatives as creative}
+											<div class="creative-card-mini">
+												<div class="creative-card-header-mini">
+													<span class="badge gray">{creative.creativeType.replace('_', ' ')}</span>
+													<span class="badge primary">AI</span>
+												</div>
+												<div class="creative-card-content">
+													{#if creative.headline}
+														<p class="creative-headline-mini">{creative.headline}</p>
+													{/if}
+													{#if creative.body}
+														<p class="creative-body-mini">{creative.body.substring(0, 100)}...</p>
+													{/if}
+												</div>
+												<div class="creative-card-meta">
+													<span class="creative-campaign">{creative.campaign.name}</span>
+												</div>
+												<div class="creative-card-actions">
+													<form method="POST" action="?/approveCreative" use:enhance>
+														<input type="hidden" name="creativeId" value={creative.id} />
+														<button type="submit" class="btn btn-xs btn-success">Approve</button>
+													</form>
+													<button
+														type="button"
+														class="btn btn-xs btn-secondary"
+														onclick={() => openEditCreative(creative)}
+													>
+														Edit
+													</button>
+													<form method="POST" action="?/rejectCreative" use:enhance>
+														<input type="hidden" name="creativeId" value={creative.id} />
+														<button type="submit" class="btn btn-xs btn-outline-danger">Reject</button>
+													</form>
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+
+							<!-- Recent Creatives Section -->
+							{#if data.recentCreatives.length > 0}
+								<div class="recent-creatives-section">
+									<h5 class="section-subtitle">Recent Creatives</h5>
+									<div class="recent-creatives-list">
+										{#each data.recentCreatives as creative}
+											<div class="recent-creative-item">
+												<div class="recent-creative-info">
+													<span class="recent-creative-headline">{creative.headline || 'No headline'}</span>
+													<span class="recent-creative-campaign">{creative.campaign.name}</span>
+												</div>
+												<span class="status-badge {creative.status === 'approved' ? 'success' : 'danger'}">
+													{creative.status}
+												</span>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<!-- Campaigns Card -->

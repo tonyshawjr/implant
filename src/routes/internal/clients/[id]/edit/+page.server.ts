@@ -220,6 +220,20 @@ export const actions: Actions = {
 		}
 
 		try {
+			// Get the territory to get its pricing
+			const territory = await prisma.territory.findUnique({
+				where: { id: territoryId }
+			});
+
+			if (!territory) {
+				return fail(400, { error: 'Territory not found' });
+			}
+
+			// Use the territory's monthlyBasePrice if no custom rate provided
+			const finalMonthlyRate = isNaN(monthlyRate) || monthlyRate === 0
+				? (territory.monthlyBasePrice?.toNumber() ?? 0)
+				: monthlyRate;
+
 			// End any existing active assignments for this organization
 			await prisma.territoryAssignment.updateMany({
 				where: {
@@ -237,7 +251,7 @@ export const actions: Actions = {
 				data: {
 					organizationId: id,
 					territoryId,
-					monthlyRate: isNaN(monthlyRate) ? 0 : monthlyRate,
+					monthlyRate: finalMonthlyRate,
 					status: 'active',
 					assignedAt: new Date()
 				}
@@ -248,6 +262,58 @@ export const actions: Actions = {
 				where: { id: territoryId },
 				data: { status: 'locked' }
 			});
+
+			// Find or create a default plan for contract (territory-based)
+			let planRecord = await prisma.plan.findFirst({
+				where: { slug: 'territory-standard' }
+			});
+
+			if (!planRecord) {
+				planRecord = await prisma.plan.create({
+					data: {
+						name: 'Territory Standard',
+						slug: 'territory-standard',
+						basePrice: finalMonthlyRate,
+						features: ['Lead generation', 'Territory exclusivity', 'AI brand voice'],
+						isActive: true
+					}
+				});
+			}
+
+			// Check if organization has an existing active contract
+			const existingContract = await prisma.contract.findFirst({
+				where: {
+					organizationId: id,
+					status: 'active'
+				}
+			});
+
+			if (existingContract) {
+				// Update existing contract with new territory pricing
+				await prisma.contract.update({
+					where: { id: existingContract.id },
+					data: {
+						monthlyCommitment: finalMonthlyRate
+					}
+				});
+			} else {
+				// Generate unique contract number
+				const contractNumber = `CNT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+				// Create new contract with territory pricing
+				await prisma.contract.create({
+					data: {
+						organizationId: id,
+						planId: planRecord.id,
+						contractNumber,
+						status: 'active',
+						monthlyCommitment: finalMonthlyRate,
+						startDate: new Date(),
+						endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+						autoRenew: true
+					}
+				});
+			}
 
 			return { success: true, message: 'Territory assigned successfully' };
 		} catch (err) {
@@ -288,6 +354,18 @@ export const actions: Actions = {
 			await prisma.territory.update({
 				where: { id: assignment.territoryId },
 				data: { status: 'available' }
+			});
+
+			// Set contract MRR to 0 since territory is unassigned
+			// (Client no longer has an active territory, so no monthly commitment)
+			await prisma.contract.updateMany({
+				where: {
+					organizationId: id,
+					status: 'active'
+				},
+				data: {
+					monthlyCommitment: 0
+				}
 			});
 
 			return { success: true, message: 'Territory unassigned successfully' };
