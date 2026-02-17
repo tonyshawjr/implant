@@ -71,6 +71,16 @@
 	let createUserFirstName = $state('');
 	let createUserLastName = $state('');
 
+	// Helper functions for modals
+	function openCreateUserModal() {
+		createUserEmail = data.organization.email || '';
+		showCreateUserModal = true;
+	}
+
+	function openDeleteModal() {
+		showDeleteClientModal = true;
+	}
+
 	// Form states
 	let noteType = $state('note');
 	let noteTitle = $state('');
@@ -339,7 +349,7 @@
 				Pause Campaigns
 			</button>
 		{/if}
-		<button type="button" class="btn btn-danger" onclick={() => { showDeleteClientModal = true; }}>
+		<button type="button" class="btn btn-danger" onclick={openDeleteModal}>
 			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<polyline points="3 6 5 6 21 6" />
 				<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -1088,7 +1098,7 @@
 		<div class="card">
 			<div class="card-header">
 				<h2 class="card-title">Team ({data.teamMembers.length})</h2>
-				<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.organization.email || ''; showCreateUserModal = true; }}>
+				<button class="btn btn-sm btn-primary" onclick={openCreateUserModal}>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M12 5v14M5 12h14"/>
 					</svg>
@@ -1099,7 +1109,7 @@
 				{#if data.teamMembers.length === 0}
 					<div class="empty-state-small">
 						<p class="empty-text">No login accounts yet</p>
-						<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.organization.email || ''; showCreateUserModal = true; }}>
+						<button class="btn btn-sm btn-primary" onclick={openCreateUserModal}>
 							Create Login Account
 						</button>
 					</div>
