@@ -1079,7 +1079,7 @@
 		<div class="card">
 			<div class="card-header">
 				<h2 class="card-title">Team ({data.teamMembers.length})</h2>
-				<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.client.email || ''; showCreateUserModal = true; }}>
+				<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.organization.email || ''; showCreateUserModal = true; }}>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M12 5v14M5 12h14"/>
 					</svg>
@@ -1090,7 +1090,7 @@
 				{#if data.teamMembers.length === 0}
 					<div class="empty-state-small">
 						<p class="empty-text">No login accounts yet</p>
-						<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.client.email || ''; showCreateUserModal = true; }}>
+						<button class="btn btn-sm btn-primary" onclick={() => { createUserEmail = data.organization.email || ''; showCreateUserModal = true; }}>
 							Create Login Account
 						</button>
 					</div>
