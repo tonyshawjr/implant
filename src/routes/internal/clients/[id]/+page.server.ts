@@ -1757,19 +1757,19 @@ export const actions: Actions = {
         data: { deletedAt: new Date(), isActive: false }
       });
 
+      // Get the territory IDs FIRST before updating assignments
+      const assignments = await prisma.territoryAssignment.findMany({
+        where: { organizationId: params.id, status: 'active' },
+        select: { territoryId: true }
+      });
+
       // Release any territory assignments
       await prisma.territoryAssignment.updateMany({
         where: { organizationId: params.id, status: 'active' },
         data: { status: 'terminated' }
       });
 
-      // Get the territory IDs to unlock them
-      const assignments = await prisma.territoryAssignment.findMany({
-        where: { organizationId: params.id },
-        select: { territoryId: true }
-      });
-
-      // Unlock territories
+      // Unlock territories - set back to available
       for (const assignment of assignments) {
         await prisma.territory.update({
           where: { id: assignment.territoryId },

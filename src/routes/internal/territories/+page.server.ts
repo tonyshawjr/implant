@@ -60,7 +60,12 @@ export const load: PageServerLoad = async ({ url }) => {
       take: limit,
       include: {
         assignments: {
-          where: { status: 'active' },
+          where: {
+            status: 'active',
+            organization: {
+              deletedAt: null
+            }
+          },
           include: {
             organization: {
               select: {
