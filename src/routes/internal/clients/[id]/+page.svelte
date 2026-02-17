@@ -1125,13 +1125,31 @@
 								<div class="team-avatar">{getInitials(member.name.split(' ')[0], member.name.split(' ')[1] || '')}</div>
 								<div class="team-info">
 									<div class="team-name">{member.name}</div>
+									<div class="team-email">{member.email}</div>
 									<div class="team-role">{member.role.replace('_', ' ')}</div>
 								</div>
-								{#if member.lastLoginAt}
-									<span class="team-login">{formatDate(member.lastLoginAt, 'relative')}</span>
-								{:else}
-									<span class="badge gray">Never</span>
-								{/if}
+								<div class="team-actions">
+									{#if member.lastLoginAt}
+										<span class="team-login">{formatDate(member.lastLoginAt, 'relative')}</span>
+									{:else}
+										<span class="badge gray">Never logged in</span>
+									{/if}
+									<form method="POST" action="?/deleteUser" use:enhance={() => {
+										return async ({ result }) => {
+											if (result.type === 'success') {
+												// Reload page to refresh data
+												window.location.reload();
+											}
+										};
+									}}>
+										<input type="hidden" name="userId" value={member.id} />
+										<button type="submit" class="btn-icon-danger" title="Delete user" onclick={(e) => { if (!confirm(`Delete ${member.name}? This cannot be undone.`)) e.preventDefault(); }}>
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+											</svg>
+										</button>
+									</form>
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -2044,6 +2062,36 @@
 	.team-login {
 		font-size: 0.75rem;
 		color: var(--gray-500);
+	}
+
+	.team-email {
+		font-size: 0.75rem;
+		color: var(--gray-500);
+	}
+
+	.team-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-3);
+	}
+
+	.btn-icon-danger {
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: transparent;
+		color: var(--gray-400);
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+		transition: all 0.15s ease;
+	}
+
+	.btn-icon-danger:hover {
+		background: var(--danger-100);
+		color: var(--danger-600);
 	}
 
 	/* Timeline */

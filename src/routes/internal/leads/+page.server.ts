@@ -2,34 +2,26 @@ import type { PageServerLoad } from './$types';
 import { prisma } from '$lib/server/db';
 import type { LeadStatus, LeadSource, Prisma } from '@prisma/client';
 
-export const load: PageServerLoad = async ({ parent, url }) => {
-  const { organization } = await parent();
-
-  if (!organization) {
-    return {
-      leads: [],
-      pagination: { page: 1, pageSize: 20, totalCount: 0, totalPages: 0 },
-      filters: { search: '', status: '', source: '', dateFrom: '', dateTo: '' }
-    };
-  }
-
-  const organizationId = organization.id;
-
+export const load: PageServerLoad = async ({ url }) => {
   // Parse query parameters
   const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1'));
-  const pageSize = Math.min(100, Math.max(10, parseInt(url.searchParams.get('pageSize') ?? '20')));
+  const pageSize = Math.min(200, Math.max(20, parseInt(url.searchParams.get('pageSize') ?? '100')));
   const search = url.searchParams.get('search') ?? '';
   const status = url.searchParams.get('status') ?? '';
   const source = url.searchParams.get('source') ?? '';
+  const organizationId = url.searchParams.get('organization') ?? '';
   const dateFrom = url.searchParams.get('dateFrom') ?? '';
   const dateTo = url.searchParams.get('dateTo') ?? '';
   const sortBy = url.searchParams.get('sortBy') ?? 'createdAt';
   const sortOrder = url.searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
 
   // Build where clause
-  const where: Prisma.LeadWhereInput = {
-    organizationId
-  };
+  const where: Prisma.LeadWhereInput = {};
+
+  // Organization filter
+  if (organizationId) {
+    where.organizationId = organizationId;
+  }
 
   // Search filter (name, email, phone)
   if (search) {
@@ -72,8 +64,8 @@ export const load: PageServerLoad = async ({ parent, url }) => {
   const orderByField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
   const orderBy = { [orderByField]: sortOrder };
 
-  // Get total count and leads
-  const [totalCount, leads] = await Promise.all([
+  // Get total count, leads, and organizations
+  const [totalCount, leads, organizations] = await Promise.all([
     prisma.lead.count({ where }),
     prisma.lead.findMany({
       where,
@@ -89,6 +81,14 @@ export const load: PageServerLoad = async ({ parent, url }) => {
         source: true,
         createdAt: true,
         updatedAt: true,
+        organizationId: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        },
         campaign: {
           select: {
             id: true,
@@ -116,6 +116,21 @@ export const load: PageServerLoad = async ({ parent, url }) => {
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize
+    }),
+    // Get all organizations for filter dropdown
+    prisma.organization.findMany({
+      where: {
+        deletedAt: null,
+        status: 'active'
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
     })
   ]);
 
@@ -132,6 +147,9 @@ export const load: PageServerLoad = async ({ parent, url }) => {
       temperature: lead.temperature,
       score: lead.score,
       source: lead.source,
+      organizationId: lead.organizationId,
+      organizationName: lead.organization?.name ?? 'Unknown',
+      organizationSlug: lead.organization?.slug ?? null,
       campaignName: lead.campaign?.name ?? null,
       createdAt: lead.createdAt.toISOString(),
       lastActivityAt: lead.activities[0]?.createdAt?.toISOString() ?? null,
@@ -142,6 +160,7 @@ export const load: PageServerLoad = async ({ parent, url }) => {
         avatarUrl: lead.assignedToUser.avatarUrl
       } : null
     })),
+    organizations,
     pagination: {
       page,
       pageSize,
@@ -152,6 +171,7 @@ export const load: PageServerLoad = async ({ parent, url }) => {
       search,
       status,
       source,
+      organizationId,
       dateFrom,
       dateTo,
       sortBy: orderByField,

@@ -5,3 +5,6 @@ export { default as LeadActivityTimeline } from './LeadActivityTimeline.svelte';
 export { default as LeadNotes } from './LeadNotes.svelte';
 export { default as LeadStatusBadge } from './LeadStatusBadge.svelte';
 export { default as UpdateStatusModal } from './UpdateStatusModal.svelte';
+export { default as LeadKanban } from './LeadKanban.svelte';
+export { default as LeadKanbanColumn } from './LeadKanbanColumn.svelte';
+export { default as LeadKanbanCard } from './LeadKanbanCard.svelte';

@@ -2,8 +2,33 @@
   import type { PageData } from './$types';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import { browser } from '$app/environment';
+  import { ButtonGroup, Button } from 'flowbite-svelte';
+  import { TableColumnOutline, GridPlusOutline } from 'flowbite-svelte-icons';
+  import { LeadKanban } from '$lib/components/leads';
 
   let { data }: { data: PageData } = $props();
+
+  // View mode state - load from localStorage
+  let viewMode = $state<'list' | 'kanban'>('list');
+
+  // Load view preference from localStorage on mount
+  $effect(() => {
+    if (browser) {
+      const savedView = localStorage.getItem('leads-view-mode');
+      if (savedView === 'kanban' || savedView === 'list') {
+        viewMode = savedView;
+      }
+    }
+  });
+
+  // Save view preference when it changes
+  function setViewMode(mode: 'list' | 'kanban') {
+    viewMode = mode;
+    if (browser) {
+      localStorage.setItem('leads-view-mode', mode);
+    }
+  }
 
   // Local filter state
   let searchValue = $state(data.filters.search);
@@ -71,8 +96,10 @@
     return source.charAt(0).toUpperCase() + source.slice(1);
   }
 
-  function getInitials(firstName: string, lastName: string): string {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  function getInitials(firstName: string | null, lastName: string | null): string {
+    const first = firstName?.charAt(0) || '';
+    const last = lastName?.charAt(0) || '';
+    return (first + last).toUpperCase() || '?';
   }
 
   // Filter and navigation functions
@@ -106,6 +133,13 @@
     if (event.key === 'Enter') {
       applyFilters();
     }
+  }
+
+  // Handle lead update from Kanban
+  function handleLeadUpdated(lead: any) {
+    // Refresh the page data to reflect changes
+    // In a more sophisticated setup, we'd update the local state
+    goto($page.url.pathname + $page.url.search, { invalidateAll: true });
   }
 </script>
 
@@ -193,7 +227,7 @@
   </div>
 </div>
 
-<!-- Filters Bar -->
+<!-- Filters Bar with View Toggle -->
 <div class="filters-bar">
   <div class="filter-group search-filter">
     <label class="filter-label">Search</label>
@@ -271,165 +305,194 @@
   </div>
 </div>
 
-<!-- Leads Table -->
-<div class="card">
-  <div class="table-container">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Contact</th>
-          <th>Source</th>
-          <th>Score/Temp</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#if data.leads && data.leads.length > 0}
-          {#each data.leads as lead}
+<!-- View Toggle -->
+<div class="view-toggle-bar">
+  <div class="view-toggle-label">View:</div>
+  <ButtonGroup>
+    <Button
+      color={viewMode === 'list' ? 'primary' : 'alternative'}
+      size="sm"
+      onclick={() => setViewMode('list')}
+    >
+      <TableColumnOutline class="w-4 h-4 me-1.5" />
+      List
+    </Button>
+    <Button
+      color={viewMode === 'kanban' ? 'primary' : 'alternative'}
+      size="sm"
+      onclick={() => setViewMode('kanban')}
+    >
+      <GridPlusOutline class="w-4 h-4 me-1.5" />
+      Kanban
+    </Button>
+  </ButtonGroup>
+</div>
+
+<!-- Conditional View Rendering -->
+{#if viewMode === 'kanban'}
+  <!-- Kanban View -->
+  <LeadKanban leads={data.leads} onLeadUpdated={handleLeadUpdated} />
+{:else}
+  <!-- List View -->
+  <div class="card">
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Contact</th>
+            <th>Source</th>
+            <th>Score/Temp</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#if data.leads && data.leads.length > 0}
+            {#each data.leads as lead}
+              <tr>
+                <td>
+                  <div class="lead-name-cell">
+                    <div class="lead-avatar">{getInitials(lead.firstName, lead.lastName)}</div>
+                    <div class="lead-info">
+                      <div class="lead-full-name">{lead.firstName} {lead.lastName}</div>
+                      {#if lead.campaignName}
+                        <div class="lead-campaign">{lead.campaignName}</div>
+                      {/if}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="lead-contact">
+                    <div class="lead-email">{lead.email || '-'}</div>
+                    <div class="lead-phone">{lead.phone || '-'}</div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge badge-gray">
+                    {formatSource(lead.source)}
+                  </span>
+                </td>
+                <td>
+                  <div class="lead-score-cell">
+                    <div class="lead-score {getTemperatureClass(lead.temperature, lead.score)}">
+                      {lead.score ?? '-'}
+                    </div>
+                    <span class="temperature-label">{getTemperatureLabel(lead.temperature, lead.score)}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge {getStatusBadgeClass(lead.status)}">
+                    {formatStatus(lead.status)}
+                  </span>
+                </td>
+                <td>
+                  <div class="lead-date">{formatDate(lead.createdAt)}</div>
+                </td>
+                <td>
+                  <div class="quick-actions">
+                    <a href="/leads/{lead.id}" class="action-btn" title="View Details">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </a>
+                    <button class="action-btn primary" title="Contact Lead">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                    </button>
+                    <button class="action-btn" title="Add Note">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          {:else}
             <tr>
-              <td>
-                <div class="lead-name-cell">
-                  <div class="lead-avatar">{getInitials(lead.firstName, lead.lastName)}</div>
-                  <div class="lead-info">
-                    <div class="lead-full-name">{lead.firstName} {lead.lastName}</div>
-                    {#if lead.campaignName}
-                      <div class="lead-campaign">{lead.campaignName}</div>
+              <td colspan="7">
+                <div class="empty-state">
+                  <div class="empty-state-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  </div>
+                  <h3 class="empty-state-title">No leads found</h3>
+                  <p class="empty-state-description">
+                    {#if searchValue || statusFilter || sourceFilter || dateFrom || dateTo}
+                      Try adjusting your filters to find leads.
+                    {:else}
+                      Leads will appear here when your campaigns start generating results.
                     {/if}
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="lead-contact">
-                  <div class="lead-email">{lead.email || '-'}</div>
-                  <div class="lead-phone">{lead.phone || '-'}</div>
-                </div>
-              </td>
-              <td>
-                <span class="badge badge-gray">
-                  {formatSource(lead.source)}
-                </span>
-              </td>
-              <td>
-                <div class="lead-score-cell">
-                  <div class="lead-score {getTemperatureClass(lead.temperature, lead.score)}">
-                    {lead.score ?? '-'}
-                  </div>
-                  <span class="temperature-label">{getTemperatureLabel(lead.temperature, lead.score)}</span>
-                </div>
-              </td>
-              <td>
-                <span class="badge {getStatusBadgeClass(lead.status)}">
-                  {formatStatus(lead.status)}
-                </span>
-              </td>
-              <td>
-                <div class="lead-date">{formatDate(lead.createdAt)}</div>
-              </td>
-              <td>
-                <div class="quick-actions">
-                  <a href="/leads/{lead.id}" class="action-btn" title="View Details">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                  </a>
-                  <button class="action-btn primary" title="Contact Lead">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                  </button>
-                  <button class="action-btn" title="Add Note">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
+                  </p>
+                  {#if searchValue || statusFilter || sourceFilter || dateFrom || dateTo}
+                    <button class="btn btn-primary" onclick={clearFilters}>Clear Filters</button>
+                  {/if}
                 </div>
               </td>
             </tr>
-          {/each}
-        {:else}
-          <tr>
-            <td colspan="7">
-              <div class="empty-state">
-                <div class="empty-state-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                </div>
-                <h3 class="empty-state-title">No leads found</h3>
-                <p class="empty-state-description">
-                  {#if searchValue || statusFilter || sourceFilter || dateFrom || dateTo}
-                    Try adjusting your filters to find leads.
-                  {:else}
-                    Leads will appear here when your campaigns start generating results.
-                  {/if}
-                </p>
-                {#if searchValue || statusFilter || sourceFilter || dateFrom || dateTo}
-                  <button class="btn btn-primary" onclick={clearFilters}>Clear Filters</button>
-                {/if}
-              </div>
-            </td>
-          </tr>
-        {/if}
-      </tbody>
-    </table>
-  </div>
+          {/if}
+        </tbody>
+      </table>
+    </div>
 
-  <!-- Pagination -->
-  {#if data.pagination.totalPages > 1}
-    <div class="card-footer">
-      <div class="pagination">
-        <div class="pagination-info">
-          Showing {(data.pagination.page - 1) * data.pagination.pageSize + 1} to {Math.min(data.pagination.page * data.pagination.pageSize, data.pagination.totalCount)} of {data.pagination.totalCount} leads
-        </div>
-        <div class="pagination-controls">
-          <button
-            class="btn btn-secondary btn-sm"
-            disabled={data.pagination.page <= 1}
-            onclick={() => goToPage(data.pagination.page - 1)}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-            Previous
-          </button>
-
-          <div class="pagination-pages">
-            {#each Array.from({ length: Math.min(5, data.pagination.totalPages) }, (_, i) => {
-              const startPage = Math.max(1, Math.min(data.pagination.page - 2, data.pagination.totalPages - 4));
-              return startPage + i;
-            }) as pageNum}
-              <button
-                class="btn btn-sm {pageNum === data.pagination.page ? 'btn-primary' : 'btn-secondary'}"
-                onclick={() => goToPage(pageNum)}
-              >
-                {pageNum}
-              </button>
-            {/each}
+    <!-- Pagination -->
+    {#if data.pagination.totalPages > 1}
+      <div class="card-footer">
+        <div class="pagination">
+          <div class="pagination-info">
+            Showing {(data.pagination.page - 1) * data.pagination.pageSize + 1} to {Math.min(data.pagination.page * data.pagination.pageSize, data.pagination.totalCount)} of {data.pagination.totalCount} leads
           </div>
+          <div class="pagination-controls">
+            <button
+              class="btn btn-secondary btn-sm"
+              disabled={data.pagination.page <= 1}
+              onclick={() => goToPage(data.pagination.page - 1)}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Previous
+            </button>
 
-          <button
-            class="btn btn-secondary btn-sm"
-            disabled={data.pagination.page >= data.pagination.totalPages}
-            onclick={() => goToPage(data.pagination.page + 1)}
-          >
-            Next
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
+            <div class="pagination-pages">
+              {#each Array.from({ length: Math.min(5, data.pagination.totalPages) }, (_, i) => {
+                const startPage = Math.max(1, Math.min(data.pagination.page - 2, data.pagination.totalPages - 4));
+                return startPage + i;
+              }) as pageNum}
+                <button
+                  class="btn btn-sm {pageNum === data.pagination.page ? 'btn-primary' : 'btn-secondary'}"
+                  onclick={() => goToPage(pageNum)}
+                >
+                  {pageNum}
+                </button>
+              {/each}
+            </div>
+
+            <button
+              class="btn btn-secondary btn-sm"
+              disabled={data.pagination.page >= data.pagination.totalPages}
+              onclick={() => goToPage(data.pagination.page + 1)}
+            >
+              Next
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  {/if}
-</div>
+    {/if}
+  </div>
+{/if}
 
 <style>
   .stats-row {
@@ -460,7 +523,7 @@
     background: white;
     border-radius: var(--radius-xl);
     border: 1px solid var(--gray-200);
-    margin-bottom: var(--spacing-6);
+    margin-bottom: var(--spacing-4);
   }
 
   .filter-group {
@@ -488,6 +551,20 @@
 
   .filter-actions {
     margin-left: auto;
+  }
+
+  /* View Toggle Bar */
+  .view-toggle-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .view-toggle-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-600);
   }
 
   .lead-name-cell {
@@ -643,5 +720,15 @@
     .pagination-pages {
       display: none;
     }
+  }
+
+  /* Dark mode support */
+  :global(.dark) .filters-bar {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  :global(.dark) .view-toggle-label {
+    color: #d1d5db;
   }
 </style>

@@ -1689,16 +1689,7 @@ export const actions: Actions = {
     }
 
     try {
-      // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() }
-      });
-
-      if (existingUser) {
-        return fail(400, { error: 'A user with this email already exists', actionType: 'createUserAccount' });
-      }
-
-      // Get the organization
+      // Get the organization first
       const organization = await prisma.organization.findUnique({
         where: { id: params.id }
       });
@@ -1706,6 +1697,11 @@ export const actions: Actions = {
       if (!organization) {
         return fail(404, { error: 'Organization not found', actionType: 'createUserAccount' });
       }
+
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
 
       // Generate temporary password
       const tempPassword = crypto.randomUUID().slice(0, 12);
@@ -1716,7 +1712,58 @@ export const actions: Actions = {
         parallelism: 1
       });
 
-      // Create user account
+      if (existingUser) {
+        // If user was soft-deleted, reactivate them
+        if (existingUser.deletedAt) {
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              deletedAt: null,
+              isActive: true,
+              passwordHash,
+              firstName: firstName || existingUser.firstName,
+              lastName: lastName || existingUser.lastName,
+              organizationId: organization.id,
+              role: 'client_owner'
+            }
+          });
+
+          return {
+            success: true,
+            actionType: 'createUserAccount',
+            reactivated: true,
+            credentials: {
+              email: email.toLowerCase(),
+              password: tempPassword
+            }
+          };
+        }
+
+        // If user exists and is active, check if they belong to a different org
+        if (existingUser.organizationId && existingUser.organizationId !== params.id) {
+          return fail(400, { error: 'This email is already associated with another organization', actionType: 'createUserAccount' });
+        }
+
+        // User exists for this org - just reset their password
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            passwordHash,
+            isActive: true
+          }
+        });
+
+        return {
+          success: true,
+          actionType: 'createUserAccount',
+          credentials: {
+            email: email.toLowerCase(),
+            password: tempPassword
+          }
+        };
+      }
+
+      // Create new user account
       await prisma.user.create({
         data: {
           email: email.toLowerCase(),
@@ -1809,5 +1856,39 @@ export const actions: Actions = {
     }
 
     return { success: true, deleted: true };
+  },
+
+  deleteUser: async ({ params, request }) => {
+    const formData = await request.formData();
+    const userId = formData.get('userId') as string;
+
+    if (!userId) {
+      return fail(400, { error: 'User ID is required' });
+    }
+
+    try {
+      // Get the user to verify they belong to this organization
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return fail(404, { error: 'User not found' });
+      }
+
+      if (user.organizationId !== params.id) {
+        return fail(403, { error: 'User does not belong to this organization' });
+      }
+
+      // Hard delete the user (or soft delete if preferred)
+      await prisma.user.delete({
+        where: { id: userId }
+      });
+
+      return { success: true, deletedUserId: userId };
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      return fail(500, { error: 'Failed to delete user' });
+    }
   }
 };
