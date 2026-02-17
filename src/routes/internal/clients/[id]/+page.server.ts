@@ -1,6 +1,12 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { error, fail, redirect } from '@sveltejs/kit';
+import { scrapeWebsite, scrapeMultipleSources, type ScrapedContent } from '$lib/server/ai/scraper';
+import { analyzeVoice, analyzeMultipleSources, prepareContentForAnalysis, type ToneType } from '$lib/server/ai/voice-analyzer';
+import { generateVoiceProfile, generateInitialContent, type VoiceProfile } from '$lib/server/ai/voice-generator';
+import { AdCopyGenerator } from '$lib/server/ai/ad-generator';
+import { generateAdCopy as generateContentAdCopy, generateHeadlines, generateCTAs } from '$lib/server/ai/content-generator';
+import type { BrandVoiceProfile, TerritoryInfo, AdPlatform } from '$lib/server/ai/types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
   const { id } = params;
@@ -750,6 +756,26 @@ export const actions: Actions = {
     }
 
     try {
+      // Get the voice profile with its sources
+      const voiceProfile = await prisma.voiceProfile.findUnique({
+        where: { id: voiceProfileId },
+        include: {
+          sources: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              website: true
+            }
+          }
+        }
+      });
+
+      if (!voiceProfile) {
+        return fail(404, { error: 'Voice profile not found' });
+      }
+
+      // Update status to analyzing
       await prisma.voiceProfile.update({
         where: { id: voiceProfileId },
         data: {
@@ -758,13 +784,149 @@ export const actions: Actions = {
         }
       });
 
-      // TODO: Trigger actual AI analysis here
-      // For now, we just update the status
+      // Collect all URLs to scrape from sources
+      const sourcesToScrape: Array<{
+        url: string;
+        sourceId: string;
+      }> = [];
 
-      return { success: true };
+      for (const source of voiceProfile.sources) {
+        if (source.sourceUrl) {
+          sourcesToScrape.push({
+            url: source.sourceUrl,
+            sourceId: source.id
+          });
+        }
+      }
+
+      // Also include organization website if available and not already in sources
+      if (voiceProfile.organization.website) {
+        const websiteUrl = voiceProfile.organization.website;
+        const alreadyIncluded = sourcesToScrape.some(s => s.url === websiteUrl);
+        if (!alreadyIncluded) {
+          sourcesToScrape.push({
+            url: websiteUrl,
+            sourceId: 'organization'
+          });
+        }
+      }
+
+      if (sourcesToScrape.length === 0) {
+        await prisma.voiceProfile.update({
+          where: { id: voiceProfileId },
+          data: {
+            status: 'pending',
+            analysisStartedAt: null
+          }
+        });
+        return fail(400, { error: 'No URLs available to analyze. Please add at least one source URL.' });
+      }
+
+      // Scrape all sources
+      const scrapedResults: ScrapedContent[] = [];
+      const scrapeErrors: string[] = [];
+
+      for (const source of sourcesToScrape) {
+        try {
+          const result = await scrapeWebsite(source.url);
+          if (result.success) {
+            scrapedResults.push(result);
+
+            // Update the source with extracted content
+            if (source.sourceId !== 'organization') {
+              await prisma.voiceProfileSource.update({
+                where: { id: source.sourceId },
+                data: {
+                  contentExtracted: result.content.substring(0, 10000), // Limit stored content
+                  processedAt: new Date()
+                }
+              });
+            }
+          } else {
+            scrapeErrors.push(`${source.url}: ${result.error?.message || 'Unknown error'}`);
+          }
+        } catch (scrapeErr) {
+          console.error(`Failed to scrape ${source.url}:`, scrapeErr);
+          scrapeErrors.push(`${source.url}: ${scrapeErr instanceof Error ? scrapeErr.message : 'Scrape failed'}`);
+        }
+      }
+
+      if (scrapedResults.length === 0) {
+        await prisma.voiceProfile.update({
+          where: { id: voiceProfileId },
+          data: {
+            status: 'pending',
+            analysisStartedAt: null
+          }
+        });
+        return fail(500, {
+          error: `Failed to scrape any content. Errors: ${scrapeErrors.join('; ')}`
+        });
+      }
+
+      // Analyze the scraped content
+      const analysisResult = await analyzeMultipleSources(scrapedResults);
+
+      if (!analysisResult.success || !analysisResult.analysis) {
+        await prisma.voiceProfile.update({
+          where: { id: voiceProfileId },
+          data: {
+            status: 'pending',
+            analysisStartedAt: null
+          }
+        });
+        return fail(500, {
+          error: `Voice analysis failed: ${analysisResult.error?.message || 'Unknown error'}`
+        });
+      }
+
+      const analysis = analysisResult.analysis;
+
+      // Generate sample content based on the analysis
+      const contentResult = await generateInitialContent(analysis);
+      const sampleContent = contentResult.success && contentResult.content ? contentResult.content : null;
+
+      // Update the voice profile with analysis results
+      await prisma.voiceProfile.update({
+        where: { id: voiceProfileId },
+        data: {
+          status: 'in_review',
+          analysisCompletedAt: new Date(),
+          tone: analysis.tone,
+          personality: analysis.personality,
+          formalityLevel: analysis.formalityLevel,
+          targetAudience: analysis.targetAudience,
+          keyDifferentiators: analysis.keyDifferentiators,
+          preferredTerms: analysis.preferredTerms,
+          avoidTerms: analysis.avoidTerms,
+          sampleHeadlines: sampleContent?.headlines || analysis.keyPhrases,
+          sampleAdCopy: sampleContent?.adCopy || [],
+          sampleCtas: sampleContent?.ctas || [],
+          qualityScore: analysis.qualityScore
+        }
+      });
+
+      return {
+        success: true,
+        message: `Analysis complete. Scraped ${scrapedResults.length} source(s).${scrapeErrors.length > 0 ? ` ${scrapeErrors.length} source(s) failed.` : ''}`
+      };
     } catch (err) {
       console.error('Failed to start voice analysis:', err);
-      return fail(500, { error: 'Failed to start voice analysis' });
+
+      // Reset status on error
+      try {
+        await prisma.voiceProfile.update({
+          where: { id: voiceProfileId },
+          data: {
+            status: 'pending',
+            analysisStartedAt: null
+          }
+        });
+      } catch (resetErr) {
+        console.error('Failed to reset voice profile status:', resetErr);
+      }
+
+      return fail(500, { error: 'Failed to complete voice analysis' });
     }
   },
 
@@ -779,23 +941,70 @@ export const actions: Actions = {
     const personality = formData.get('personality') as string;
     const formalityLevel = formData.get('formalityLevel') as string;
     const targetAudience = formData.get('targetAudience') as string;
+    const regenerateSamples = formData.get('regenerateSamples') === 'true';
 
     if (!voiceProfileId) {
       return fail(400, { error: 'Voice profile ID is required' });
     }
 
     try {
+      // Build the update data
+      const updateData: Record<string, unknown> = {
+        status: 'in_review',
+        analysisCompletedAt: new Date(),
+        tone: tone || null,
+        personality: personality || null,
+        formalityLevel: formalityLevel as 'formal' | 'professional' | 'casual' | 'friendly' | null || null,
+        targetAudience: targetAudience || null
+      };
+
+      // Optionally regenerate sample content based on the manual input
+      if (regenerateSamples && tone && personality) {
+        try {
+          // Create a minimal analysis object for content generation
+          const manualAnalysis = {
+            tone: tone,
+            tones: ['professional'] as ToneType[],
+            personality: personality,
+            formalityLevel: (formalityLevel as 'formal' | 'professional' | 'casual' | 'friendly') || 'professional',
+            targetAudience: targetAudience || 'Adults seeking dental care',
+            voiceCharacteristics: {
+              empathy: 0.7,
+              authority: 0.7,
+              warmth: 0.7,
+              urgency: 0.3,
+              technicality: 0.4,
+              confidence: 0.8
+            },
+            communicationStyle: 'Clear and professional communication',
+            keyDifferentiators: [] as string[],
+            preferredTerms: [] as string[],
+            avoidTerms: [] as string[],
+            keyPhrases: [] as string[],
+            emotionalTriggers: [] as string[],
+            valuePropositions: [] as string[],
+            qualityScore: 70,
+            analysisNotes: 'Manually configured voice profile'
+          };
+
+          const contentResult = await generateInitialContent(manualAnalysis);
+          if (contentResult.success && contentResult.content) {
+            updateData.sampleHeadlines = contentResult.content.headlines;
+            updateData.sampleAdCopy = contentResult.content.adCopy;
+            updateData.sampleCtas = contentResult.content.ctas;
+          }
+        } catch (genErr) {
+          console.error('Failed to regenerate sample content:', genErr);
+          // Continue with update even if sample generation fails
+        }
+      }
+
+      // Set a quality score (lower for manual entries since they lack full AI analysis)
+      updateData.qualityScore = 70;
+
       await prisma.voiceProfile.update({
         where: { id: voiceProfileId },
-        data: {
-          status: 'in_review',
-          analysisCompletedAt: new Date(),
-          tone: tone || null,
-          personality: personality || null,
-          formalityLevel: formalityLevel as any || null,
-          targetAudience: targetAudience || null,
-          qualityScore: 75 // Placeholder score
-        }
+        data: updateData
       });
 
       return { success: true };
@@ -908,30 +1117,129 @@ export const actions: Actions = {
     const voiceProfileId = formData.get('voiceProfileId') as string;
     const creativeType = formData.get('creativeType') as string || 'text_ad';
     const topic = formData.get('topic') as string;
+    const platform = (formData.get('platform') as string) || 'facebook';
+    const variantCount = parseInt(formData.get('variantCount') as string) || 1;
 
     if (!campaignId || !voiceProfileId) {
       return fail(400, { error: 'Campaign ID and Voice Profile ID are required' });
     }
 
     try {
-      // Create a placeholder creative - in production this would call AI API
-      const creative = await prisma.campaignCreative.create({
-        data: {
-          campaignId,
-          creativeType: creativeType as any,
-          voiceProfileId,
-          aiGenerated: true,
-          status: 'pending_review',
-          headline: `AI Generated Headline for ${topic || 'dental implants'}`,
-          body: `This is placeholder AI-generated ad copy. In production, this would be generated by Claude/OpenAI using the voice profile settings.`,
-          ctaText: 'Learn More'
+      // Get the approved voice profile
+      const voiceProfile = await prisma.voiceProfile.findUnique({
+        where: { id: voiceProfileId },
+        include: {
+          organization: {
+            include: {
+              territoryAssignments: {
+                where: { status: 'active' },
+                include: {
+                  territory: true
+                },
+                take: 1
+              }
+            }
+          }
         }
       });
 
-      return { success: true, creativeId: creative.id };
+      if (!voiceProfile) {
+        return fail(404, { error: 'Voice profile not found' });
+      }
+
+      if (voiceProfile.status !== 'approved') {
+        return fail(400, { error: 'Voice profile must be approved before generating content' });
+      }
+
+      // Get territory info for context
+      const territory = voiceProfile.organization.territoryAssignments[0]?.territory;
+      const territoryInfo: TerritoryInfo = {
+        id: territory?.id || '',
+        name: territory?.name || '',
+        city: territory?.city || voiceProfile.organization.city || 'Your City',
+        state: territory?.state || voiceProfile.organization.state || 'ST',
+        radiusMiles: territory?.radiusMiles || 25,
+        population: territory?.population || undefined,
+        medianIncome: territory?.medianIncome?.toNumber() || undefined
+      };
+
+      // Convert database voice profile to BrandVoiceProfile type for AI generator
+      const brandVoiceProfile: BrandVoiceProfile = {
+        id: voiceProfile.id,
+        organizationId: voiceProfile.organizationId,
+        name: voiceProfile.name,
+        status: voiceProfile.status,
+        tone: voiceProfile.tone,
+        personality: voiceProfile.personality,
+        formalityLevel: voiceProfile.formalityLevel as BrandVoiceProfile['formalityLevel'],
+        targetAudience: voiceProfile.targetAudience,
+        keyDifferentiators: voiceProfile.keyDifferentiators as string[] | null,
+        avoidTerms: voiceProfile.avoidTerms as string[] | null,
+        preferredTerms: voiceProfile.preferredTerms as string[] | null,
+        sampleHeadlines: voiceProfile.sampleHeadlines as string[] | null,
+        sampleAdCopy: voiceProfile.sampleAdCopy as string[] | null,
+        sampleCtas: voiceProfile.sampleCtas as string[] | null,
+        qualityScore: voiceProfile.qualityScore?.toNumber() || null
+      };
+
+      // Generate ad copy using the AI service
+      const adGenerator = new AdCopyGenerator();
+      const result = await adGenerator.generateAdCopy({
+        platform: platform as AdPlatform,
+        campaignType: 'lead_gen',
+        voiceProfile: brandVoiceProfile,
+        targetAudience: {},
+        territory: territoryInfo,
+        variantCount
+      });
+
+      // Create CampaignCreative records for each generated variant
+      const createdCreatives: string[] = [];
+
+      for (const variant of result.variants) {
+        // Extract content based on platform type
+        let headline: string | null = null;
+        let body: string | null = null;
+        let ctaText: string | null = null;
+
+        if ('primaryText' in variant.content) {
+          // Facebook/Instagram ad format
+          headline = variant.content.headline;
+          body = variant.content.primaryText;
+          ctaText = variant.content.callToAction;
+        } else if ('headlines' in variant.content) {
+          // Google ad format - combine headlines and descriptions
+          headline = variant.content.headlines.slice(0, 3).join(' | ');
+          body = variant.content.descriptions.join(' ');
+          ctaText = 'Learn More';
+        }
+
+        const creative = await prisma.campaignCreative.create({
+          data: {
+            campaignId,
+            creativeType: creativeType as any,
+            voiceProfileId,
+            aiGenerated: true,
+            status: 'pending_review',
+            headline,
+            body,
+            ctaText,
+            performanceScore: variant.predictedScore
+          }
+        });
+
+        createdCreatives.push(creative.id);
+      }
+
+      return {
+        success: true,
+        creativeIds: createdCreatives,
+        voiceConsistencyScore: result.voiceConsistencyScore,
+        recommendations: result.recommendations
+      };
     } catch (err) {
       console.error('Failed to generate ad copy:', err);
-      return fail(500, { error: 'Failed to generate ad copy' });
+      return fail(500, { error: 'Failed to generate ad copy. Please try again.' });
     }
   },
 
@@ -943,36 +1251,131 @@ export const actions: Actions = {
     const formData = await request.formData();
     const campaignId = formData.get('campaignId') as string;
     const voiceProfileId = formData.get('voiceProfileId') as string;
-    const count = parseInt(formData.get('count') as string) || 3;
+    const count = parseInt(formData.get('count') as string) || 5;
+    const platform = (formData.get('platform') as string) || 'facebook';
+    const context = formData.get('context') as string;
 
     if (!campaignId || !voiceProfileId) {
       return fail(400, { error: 'Campaign ID and Voice Profile ID are required' });
     }
 
     try {
-      // Create multiple placeholder creatives
-      const creativesToCreate = [];
-      for (let i = 0; i < count; i++) {
-        creativesToCreate.push({
-          campaignId,
-          creativeType: 'text_ad' as const,
-          voiceProfileId,
-          aiGenerated: true,
-          status: 'pending_review' as const,
-          headline: `AI Generated Headline Variation ${i + 1}`,
-          body: `This is placeholder AI-generated ad copy variation ${i + 1}. In production, this would be generated by Claude/OpenAI.`,
-          ctaText: ['Learn More', 'Get Started', 'Book Now'][i % 3]
-        });
-      }
-
-      await prisma.campaignCreative.createMany({
-        data: creativesToCreate
+      // Get the approved voice profile
+      const voiceProfile = await prisma.voiceProfile.findUnique({
+        where: { id: voiceProfileId },
+        include: {
+          organization: {
+            include: {
+              territoryAssignments: {
+                where: { status: 'active' },
+                include: {
+                  territory: true
+                },
+                take: 1
+              }
+            }
+          }
+        }
       });
 
-      return { success: true, count };
+      if (!voiceProfile) {
+        return fail(404, { error: 'Voice profile not found' });
+      }
+
+      if (voiceProfile.status !== 'approved') {
+        return fail(400, { error: 'Voice profile must be approved before generating content' });
+      }
+
+      // Get territory info for context
+      const territory = voiceProfile.organization.territoryAssignments[0]?.territory;
+      const territoryInfo: TerritoryInfo = {
+        id: territory?.id || '',
+        name: territory?.name || '',
+        city: territory?.city || voiceProfile.organization.city || 'Your City',
+        state: territory?.state || voiceProfile.organization.state || 'ST',
+        radiusMiles: territory?.radiusMiles || 25,
+        population: territory?.population || undefined,
+        medianIncome: territory?.medianIncome?.toNumber() || undefined
+      };
+
+      // Convert database voice profile to BrandVoiceProfile type for AI generator
+      const brandVoiceProfile: BrandVoiceProfile = {
+        id: voiceProfile.id,
+        organizationId: voiceProfile.organizationId,
+        name: voiceProfile.name,
+        status: voiceProfile.status,
+        tone: voiceProfile.tone,
+        personality: voiceProfile.personality,
+        formalityLevel: voiceProfile.formalityLevel as BrandVoiceProfile['formalityLevel'],
+        targetAudience: voiceProfile.targetAudience,
+        keyDifferentiators: voiceProfile.keyDifferentiators as string[] | null,
+        avoidTerms: voiceProfile.avoidTerms as string[] | null,
+        preferredTerms: voiceProfile.preferredTerms as string[] | null,
+        sampleHeadlines: voiceProfile.sampleHeadlines as string[] | null,
+        sampleAdCopy: voiceProfile.sampleAdCopy as string[] | null,
+        sampleCtas: voiceProfile.sampleCtas as string[] | null,
+        qualityScore: voiceProfile.qualityScore?.toNumber() || null
+      };
+
+      // Generate multiple variants using the AI service
+      const adGenerator = new AdCopyGenerator();
+      const result = await adGenerator.generateAdCopy({
+        platform: platform as AdPlatform,
+        campaignType: 'lead_gen',
+        voiceProfile: brandVoiceProfile,
+        targetAudience: {},
+        territory: territoryInfo,
+        variantCount: count
+      });
+
+      // Create CampaignCreative records for each generated variant
+      const createdCreatives: string[] = [];
+
+      for (const variant of result.variants) {
+        // Extract content based on platform type
+        let headline: string | null = null;
+        let body: string | null = null;
+        let ctaText: string | null = null;
+
+        if ('primaryText' in variant.content) {
+          // Facebook/Instagram ad format
+          headline = variant.content.headline;
+          body = variant.content.primaryText;
+          ctaText = variant.content.callToAction;
+        } else if ('headlines' in variant.content) {
+          // Google ad format - combine headlines and descriptions
+          headline = variant.content.headlines.slice(0, 3).join(' | ');
+          body = variant.content.descriptions.join(' ');
+          ctaText = 'Learn More';
+        }
+
+        const creative = await prisma.campaignCreative.create({
+          data: {
+            campaignId,
+            creativeType: 'text_ad',
+            voiceProfileId,
+            aiGenerated: true,
+            status: 'pending_review',
+            headline,
+            body,
+            ctaText,
+            performanceScore: variant.predictedScore
+          }
+        });
+
+        createdCreatives.push(creative.id);
+      }
+
+      return {
+        success: true,
+        count: createdCreatives.length,
+        creativeIds: createdCreatives,
+        voiceConsistencyScore: result.voiceConsistencyScore,
+        recommendations: result.recommendations
+      };
     } catch (err) {
       console.error('Failed to generate bulk creatives:', err);
-      return fail(500, { error: 'Failed to generate bulk creatives' });
+      return fail(500, { error: 'Failed to generate bulk creatives. Please try again.' });
     }
   },
 
@@ -1055,6 +1458,222 @@ export const actions: Actions = {
     } catch (err) {
       console.error('Failed to edit creative:', err);
       return fail(500, { error: 'Failed to edit creative' });
+    }
+  },
+
+  // Bulk Creative Actions
+  approveBulkCreatives: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: 'Not authenticated' });
+    }
+
+    const formData = await request.formData();
+    const creativeIdsJson = formData.get('creativeIds') as string;
+
+    if (!creativeIdsJson) {
+      return fail(400, { error: 'Creative IDs are required' });
+    }
+
+    try {
+      const creativeIds = JSON.parse(creativeIdsJson) as string[];
+
+      if (!Array.isArray(creativeIds) || creativeIds.length === 0) {
+        return fail(400, { error: 'At least one creative ID is required' });
+      }
+
+      const result = await prisma.campaignCreative.updateMany({
+        where: {
+          id: { in: creativeIds },
+          status: { in: ['pending_review', 'draft'] }
+        },
+        data: { status: 'approved' }
+      });
+
+      return { success: true, approvedCount: result.count };
+    } catch (err) {
+      console.error('Failed to approve bulk creatives:', err);
+      return fail(500, { error: 'Failed to approve creatives' });
+    }
+  },
+
+  rejectBulkCreatives: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: 'Not authenticated' });
+    }
+
+    const formData = await request.formData();
+    const creativeIdsJson = formData.get('creativeIds') as string;
+    const reason = formData.get('reason') as string;
+
+    if (!creativeIdsJson) {
+      return fail(400, { error: 'Creative IDs are required' });
+    }
+
+    try {
+      const creativeIds = JSON.parse(creativeIdsJson) as string[];
+
+      if (!Array.isArray(creativeIds) || creativeIds.length === 0) {
+        return fail(400, { error: 'At least one creative ID is required' });
+      }
+
+      const result = await prisma.campaignCreative.updateMany({
+        where: {
+          id: { in: creativeIds },
+          status: { in: ['pending_review', 'draft'] }
+        },
+        data: { status: 'rejected' }
+      });
+
+      return { success: true, rejectedCount: result.count, reason: reason || undefined };
+    } catch (err) {
+      console.error('Failed to reject bulk creatives:', err);
+      return fail(500, { error: 'Failed to reject creatives' });
+    }
+  },
+
+  regenerateCreative: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: 'Not authenticated' });
+    }
+
+    const formData = await request.formData();
+    const creativeId = formData.get('creativeId') as string;
+
+    if (!creativeId) {
+      return fail(400, { error: 'Creative ID is required' });
+    }
+
+    try {
+      // Get the existing creative to copy its settings
+      const existingCreative = await prisma.campaignCreative.findUnique({
+        where: { id: creativeId },
+        include: {
+          campaign: {
+            include: {
+              organization: {
+                include: {
+                  territoryAssignments: {
+                    where: { status: 'active' },
+                    include: {
+                      territory: true
+                    },
+                    take: 1
+                  }
+                }
+              }
+            }
+          },
+          voiceProfile: true
+        }
+      });
+
+      if (!existingCreative) {
+        return fail(404, { error: 'Creative not found' });
+      }
+
+      if (!existingCreative.voiceProfile) {
+        return fail(400, { error: 'Cannot regenerate: no voice profile associated with this creative' });
+      }
+
+      const voiceProfile = existingCreative.voiceProfile;
+      const organization = existingCreative.campaign.organization;
+
+      // Get territory info for context
+      const territory = organization.territoryAssignments[0]?.territory;
+      const territoryInfo: TerritoryInfo = {
+        id: territory?.id || '',
+        name: territory?.name || '',
+        city: territory?.city || organization.city || 'Your City',
+        state: territory?.state || organization.state || 'ST',
+        radiusMiles: territory?.radiusMiles || 25,
+        population: territory?.population || undefined,
+        medianIncome: territory?.medianIncome?.toNumber() || undefined
+      };
+
+      // Convert database voice profile to BrandVoiceProfile type
+      const brandVoiceProfile: BrandVoiceProfile = {
+        id: voiceProfile.id,
+        organizationId: voiceProfile.organizationId,
+        name: voiceProfile.name,
+        status: voiceProfile.status,
+        tone: voiceProfile.tone,
+        personality: voiceProfile.personality,
+        formalityLevel: voiceProfile.formalityLevel as BrandVoiceProfile['formalityLevel'],
+        targetAudience: voiceProfile.targetAudience,
+        keyDifferentiators: voiceProfile.keyDifferentiators as string[] | null,
+        avoidTerms: voiceProfile.avoidTerms as string[] | null,
+        preferredTerms: voiceProfile.preferredTerms as string[] | null,
+        sampleHeadlines: voiceProfile.sampleHeadlines as string[] | null,
+        sampleAdCopy: voiceProfile.sampleAdCopy as string[] | null,
+        sampleCtas: voiceProfile.sampleCtas as string[] | null,
+        qualityScore: voiceProfile.qualityScore?.toNumber() || null
+      };
+
+      // Determine platform from campaign
+      const platform = (existingCreative.campaign.platform?.toLowerCase() || 'facebook') as AdPlatform;
+
+      // Generate a new variant
+      const adGenerator = new AdCopyGenerator();
+      const result = await adGenerator.generateAdCopy({
+        platform,
+        campaignType: 'lead_gen',
+        voiceProfile: brandVoiceProfile,
+        targetAudience: {},
+        territory: territoryInfo,
+        variantCount: 1
+      });
+
+      if (result.variants.length === 0) {
+        return fail(500, { error: 'No content generated' });
+      }
+
+      const variant = result.variants[0];
+
+      // Extract content based on platform type
+      let headline: string | null = null;
+      let body: string | null = null;
+      let ctaText: string | null = null;
+
+      if ('primaryText' in variant.content) {
+        headline = variant.content.headline;
+        body = variant.content.primaryText;
+        ctaText = variant.content.callToAction;
+      } else if ('headlines' in variant.content) {
+        headline = variant.content.headlines.slice(0, 3).join(' | ');
+        body = variant.content.descriptions.join(' ');
+        ctaText = 'Learn More';
+      }
+
+      // Create a new creative record (keeping the old one for reference)
+      const newCreative = await prisma.campaignCreative.create({
+        data: {
+          campaignId: existingCreative.campaignId,
+          creativeType: existingCreative.creativeType,
+          voiceProfileId: existingCreative.voiceProfileId,
+          aiGenerated: true,
+          status: 'pending_review',
+          headline,
+          body,
+          ctaText,
+          performanceScore: variant.predictedScore
+        }
+      });
+
+      // Optionally mark the old creative as replaced
+      await prisma.campaignCreative.update({
+        where: { id: creativeId },
+        data: { status: 'rejected' }
+      });
+
+      return {
+        success: true,
+        newCreativeId: newCreative.id,
+        oldCreativeId: creativeId,
+        voiceConsistencyScore: result.voiceConsistencyScore
+      };
+    } catch (err) {
+      console.error('Failed to regenerate creative:', err);
+      return fail(500, { error: 'Failed to regenerate creative. Please try again.' });
     }
   }
 };

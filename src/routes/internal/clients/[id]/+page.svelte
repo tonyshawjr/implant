@@ -1,8 +1,57 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
+	import VoiceCharacteristicsDisplay from '$lib/components/ai/VoiceCharacteristicsDisplay.svelte';
+	import ContentReviewGrid from '$lib/components/ai/ContentReviewGrid.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	// Refs for form submissions (for programmatic form submission)
+	let approveCreativeForm: HTMLFormElement;
+	let rejectCreativeForm: HTMLFormElement;
+	let bulkApproveForm: HTMLFormElement;
+	let bulkRejectForm: HTMLFormElement;
+
+	// Hidden form values for programmatic submissions
+	let approveCreativeId = $state('');
+	let rejectCreativeId = $state('');
+	let bulkApproveIds = $state<string[]>([]);
+	let bulkRejectIds = $state<string[]>([]);
+
+	// Handlers for ContentReviewGrid actions
+	function handleApproveCreative(id: string) {
+		approveCreativeId = id;
+		// Use setTimeout to ensure the state is updated before form submission
+		setTimeout(() => approveCreativeForm?.requestSubmit(), 0);
+	}
+
+	function handleRejectCreative(id: string) {
+		rejectCreativeId = id;
+		setTimeout(() => rejectCreativeForm?.requestSubmit(), 0);
+	}
+
+	function handleBulkApprove(ids: string[]) {
+		bulkApproveIds = ids;
+		setTimeout(() => bulkApproveForm?.requestSubmit(), 0);
+	}
+
+	function handleBulkReject(ids: string[]) {
+		bulkRejectIds = ids;
+		setTimeout(() => bulkRejectForm?.requestSubmit(), 0);
+	}
+
+	// Transform pendingCreatives data to match ContentReviewGrid interface
+	let contentReviewCreatives = $derived(
+		data.pendingCreatives.map((creative) => ({
+			id: creative.id,
+			headline: creative.headline,
+			body: creative.body,
+			ctaText: creative.ctaText,
+			status: creative.status || 'pending_review',
+			aiGenerated: creative.aiGenerated ?? true,
+			createdAt: creative.createdAt
+		}))
+	);
 
 	// Modal states
 	let showAddNoteModal = $state(false);
@@ -511,6 +560,18 @@
 												</div>
 											{/if}
 										</div>
+										<!-- Voice Characteristics Display -->
+										<div class="voice-characteristics-section">
+											<VoiceCharacteristicsDisplay
+												tone={profile.tone}
+												personality={profile.personality}
+												formalityLevel={profile.formalityLevel}
+												keyDifferentiators={profile.keyDifferentiators}
+												preferredTerms={profile.preferredTerms}
+												avoidTerms={profile.avoidTerms}
+												qualityScore={profile.qualityScore}
+											/>
+										</div>
 									{:else if profile.status === 'pending'}
 										<div class="voice-profile-actions">
 											<form method="POST" action="?/startVoiceAnalysis" use:enhance>
@@ -606,50 +667,61 @@
 								</button>
 							</div>
 
-							<!-- Pending Review Section -->
+							<!-- Content Review Grid -->
 							{#if data.pendingCreatives.length > 0}
 								<div class="pending-creatives-section">
 									<h5 class="section-subtitle">Pending Review ({data.pendingCreatives.length})</h5>
-									<div class="creatives-grid">
-										{#each data.pendingCreatives as creative}
-											<div class="creative-card-mini">
-												<div class="creative-card-header-mini">
-													<span class="badge gray">{creative.creativeType.replace('_', ' ')}</span>
-													<span class="badge primary">AI</span>
-												</div>
-												<div class="creative-card-content">
-													{#if creative.headline}
-														<p class="creative-headline-mini">{creative.headline}</p>
-													{/if}
-													{#if creative.body}
-														<p class="creative-body-mini">{creative.body.substring(0, 100)}...</p>
-													{/if}
-												</div>
-												<div class="creative-card-meta">
-													<span class="creative-campaign">{creative.campaign.name}</span>
-												</div>
-												<div class="creative-card-actions">
-													<form method="POST" action="?/approveCreative" use:enhance>
-														<input type="hidden" name="creativeId" value={creative.id} />
-														<button type="submit" class="btn btn-xs btn-success">Approve</button>
-													</form>
-													<button
-														type="button"
-														class="btn btn-xs btn-secondary"
-														onclick={() => openEditCreative(creative)}
-													>
-														Edit
-													</button>
-													<form method="POST" action="?/rejectCreative" use:enhance>
-														<input type="hidden" name="creativeId" value={creative.id} />
-														<button type="submit" class="btn btn-xs btn-outline-danger">Reject</button>
-													</form>
-												</div>
-											</div>
-										{/each}
-									</div>
+									<ContentReviewGrid
+										creatives={contentReviewCreatives}
+										onApprove={handleApproveCreative}
+										onReject={handleRejectCreative}
+										onEdit={openEditCreative}
+										onBulkApprove={handleBulkApprove}
+										onBulkReject={handleBulkReject}
+									/>
 								</div>
 							{/if}
+
+							<!-- Hidden forms for programmatic submissions -->
+							<form
+								bind:this={approveCreativeForm}
+								method="POST"
+								action="?/approveCreative"
+								use:enhance
+								class="hidden"
+							>
+								<input type="hidden" name="creativeId" value={approveCreativeId} />
+							</form>
+
+							<form
+								bind:this={rejectCreativeForm}
+								method="POST"
+								action="?/rejectCreative"
+								use:enhance
+								class="hidden"
+							>
+								<input type="hidden" name="creativeId" value={rejectCreativeId} />
+							</form>
+
+							<form
+								bind:this={bulkApproveForm}
+								method="POST"
+								action="?/bulkApproveCreatives"
+								use:enhance
+								class="hidden"
+							>
+								<input type="hidden" name="creativeIds" value={JSON.stringify(bulkApproveIds)} />
+							</form>
+
+							<form
+								bind:this={bulkRejectForm}
+								method="POST"
+								action="?/bulkRejectCreatives"
+								use:enhance
+								class="hidden"
+							>
+								<input type="hidden" name="creativeIds" value={JSON.stringify(bulkRejectIds)} />
+							</form>
 
 							<!-- Recent Creatives Section -->
 							{#if data.recentCreatives.length > 0}
@@ -1177,6 +1249,11 @@
 {/if}
 
 <style>
+	/* Utility */
+	.hidden {
+		display: none !important;
+	}
+
 	/* Breadcrumb */
 	.back-link {
 		display: inline-flex;
@@ -2057,5 +2134,12 @@
 		padding: var(--spacing-4) var(--spacing-5);
 		border-top: 1px solid var(--gray-200);
 		background: var(--gray-50);
+	}
+
+	/* Voice Characteristics Section */
+	.voice-characteristics-section {
+		margin-top: var(--spacing-4);
+		padding-top: var(--spacing-4);
+		border-top: 1px solid var(--gray-100);
 	}
 </style>
