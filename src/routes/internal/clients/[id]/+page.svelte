@@ -914,10 +914,6 @@
 							<span class="status-badge {data.contract.status}">{data.contract.status}</span>
 						</div>
 						<div class="info-row">
-							<span class="info-label">Tier</span>
-							<span class="info-value">{data.contract.plan}</span>
-						</div>
-						<div class="info-row">
 							<span class="info-label">Term</span>
 							<span class="info-value">{data.contract.termMonths} months</span>
 						</div>

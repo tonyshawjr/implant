@@ -289,10 +289,6 @@
 					</div>
 					<div class="card-body">
 						<div class="info-row">
-							<span class="info-label">Tier</span>
-							<span class="info-value">{data.currentContract.planName}</span>
-						</div>
-						<div class="info-row">
 							<span class="info-label">Term</span>
 							<span class="info-value">{data.currentContract.termMonths} months</span>
 						</div>

@@ -70,7 +70,9 @@ export const load: PageServerLoad = async ({ url }) => {
       include: {
         territoryAssignments: {
           where: { status: 'active' },
-          include: {
+          select: {
+            id: true,
+            monthlyRate: true,
             territory: {
               select: {
                 id: true,
@@ -185,8 +187,8 @@ export const load: PageServerLoad = async ({ url }) => {
     })
   ]);
 
-  // Calculate MRR from active contracts
-  const mrrData = await prisma.contract.aggregate({
+  // Calculate MRR from active territory assignments (territory rate is THE price)
+  const mrrData = await prisma.territoryAssignment.aggregate({
     where: {
       status: 'active',
       organization: {
@@ -194,7 +196,7 @@ export const load: PageServerLoad = async ({ url }) => {
       }
     },
     _sum: {
-      monthlyCommitment: true
+      monthlyRate: true
     }
   });
 
@@ -202,7 +204,7 @@ export const load: PageServerLoad = async ({ url }) => {
   const totalActive = stats.find(s => s.status === 'active')?._count.status || 0;
   const totalSuspended = stats.find(s => s.status === 'suspended')?._count.status || 0;
   const totalChurned = stats.find(s => s.status === 'churned')?._count.status || 0;
-  const mrr = mrrData._sum.monthlyCommitment?.toNumber() || 0;
+  const mrr = mrrData._sum.monthlyRate?.toNumber() || 0;
 
   // Calculate CPL for each client (simplified - would normally come from campaign metrics)
   const clientsWithCpl = await Promise.all(
@@ -246,15 +248,15 @@ export const load: PageServerLoad = async ({ url }) => {
       territory: client.territoryAssignments[0]?.territory ? {
         id: client.territoryAssignments[0].territory.id,
         name: client.territoryAssignments[0].territory.name,
-        location: `${client.territoryAssignments[0].territory.city}, ${client.territoryAssignments[0].territory.state}`
+        location: `${client.territoryAssignments[0].territory.city}, ${client.territoryAssignments[0].territory.state}`,
+        monthlyRate: client.territoryAssignments[0].monthlyRate?.toNumber() ?? 0
       } : null,
       contract: client.contracts[0] ? {
         id: client.contracts[0].id,
         status: client.contracts[0].status,
-        mrr: client.contracts[0].monthlyCommitment.toNumber(),
-        endDate: client.contracts[0].endDate.toISOString(),
-        planName: client.contracts[0].plan.name
+        endDate: client.contracts[0].endDate.toISOString()
       } : null,
+      mrr: client.territoryAssignments[0]?.monthlyRate?.toNumber() ?? 0,
       leadsThisMonth: client._count.leads,
       activeCampaigns: client._count.campaigns,
       cpl: client.cpl,
