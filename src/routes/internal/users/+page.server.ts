@@ -1,6 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/db';
 import { fail } from '@sveltejs/kit';
+import { hash } from '@node-rs/argon2';
 
 export const load: PageServerLoad = async ({ url }) => {
   const search = url.searchParams.get('search') || '';
@@ -211,9 +212,12 @@ export const actions: Actions = {
 
       // Generate new temporary password
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
-      const bcryptModule = await import('bcryptjs');
-      const bcrypt = bcryptModule.default || bcryptModule;
-      const passwordHash = await bcrypt.hash(tempPassword, 10);
+      const passwordHash = await hash(tempPassword, {
+        memoryCost: 19456,
+        timeCost: 2,
+        outputLen: 32,
+        parallelism: 1
+      });
 
       await prisma.user.update({
         where: { id: userId },
