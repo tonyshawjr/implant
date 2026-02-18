@@ -34,6 +34,26 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
 | Release territory | Complete | Unassign from organizations |
 | Client territory view | Complete | Map with boundary overlays |
 
+### Territory Builder System (NEW)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Dedicated builder page | Complete | `/internal/territories/create` |
+| Census Bureau API integration | Complete | MSAs, counties, cities, zip codes |
+| 4 boundary types | Complete | Metro, County, City, Zip Code(s) |
+| Interactive map builder | Complete | TIGERweb GeoJSON boundaries |
+| Demographics auto-fill | Complete | Population, income, age, 65+ |
+| Market potential scoring | Complete | Auto-pricing based on demographics |
+| Overlap detection | Complete | Prevents overlapping territories |
+| Lead routing by zip | Complete | Auto-assign leads to territories |
+
+#### How to Use the Territory Builder:
+1. Navigate to `/internal/territories/create`
+2. Select boundary type: Zip Codes, Cities, Counties, or Metros
+3. Add locations using the searchable dropdowns
+4. View real-time demographics and map visualization
+5. Set pricing and create territory
+
 ### Landing Pages System (NEW)
 
 | Feature | Status | Notes |
@@ -100,19 +120,27 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
 
 ### Just Completed (This Session)
 
-1. **Landing Pages System**
+1. **Territory Builder System**
+   - Dedicated builder page at `/internal/territories/create`
+   - Census Bureau API integration (MSAs, counties, cities, zip codes)
+   - Interactive map with TIGERweb GeoJSON boundaries
+   - Auto-fill demographics (population, income, age, 65+, veterans, etc.)
+   - Market potential scoring with auto-pricing
+   - Lead routing by zip code (auto-assign leads to territories)
+
+2. **Landing Pages System**
    - Created 5 quiz-style funnel templates
    - Built internal management UI with proper design system
    - Added public route with preview mode for drafts
    - Fixed 404 errors for draft pages
 
-2. **Ad Preview Components**
+3. **Ad Preview Components**
    - Facebook feed ad preview
    - Instagram feed ad preview
    - Google search ad preview
    - Integrated into campaign wizard
 
-3. **Bug Fixes**
+4. **Bug Fixes**
    - Fixed `ExternalLinkOutline` icon import error
    - Fixed New Campaign button in AI Operations
    - Fixed territory release form
@@ -124,8 +152,6 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
 |------|----------|-------|
 | Client landing pages UI | High | Needs design system update like internal |
 | Landing page editor | Medium | Edit content after creation |
-| Lead routing | Medium | Auto-assign leads by zip code |
-| Census API integration | Medium | Real demographics data |
 | Email notifications | Low | Lead alerts, status changes |
 
 ---
@@ -145,8 +171,10 @@ src/
 │   │   │   └── CampaignWizard.svelte
 │   │   └── ...
 │   ├── server/
+│   │   ├── census.ts               # Census Bureau API integration (NEW)
+│   │   ├── lead-routing.ts         # Lead-to-territory routing (NEW)
 │   │   ├── landing-pages/
-│   │   │   └── templates.ts        # 5 funnel templates (NEW)
+│   │   │   └── templates.ts        # 5 funnel templates
 │   │   └── ...
 │   └── styles/
 │       └── design-system.css       # Core CSS variables & components
@@ -162,6 +190,11 @@ src/
 │   │   │   ├── +page.svelte
 │   │   │   └── create/
 │   │   ├── territories/            # Territory management
+│   │   │   ├── +page.svelte
+│   │   │   ├── create/             # Territory builder (NEW)
+│   │   │   │   ├── +page.svelte
+│   │   │   │   └── +page.server.ts
+│   │   │   └── [id]/               # Edit territory
 │   │   └── ...
 │   │
 │   └── lp/                         # Public landing pages (NEW)
