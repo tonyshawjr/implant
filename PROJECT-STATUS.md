@@ -64,7 +64,7 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
 | Public landing page route | Complete | `/lp/[slug]` |
 | Draft preview mode | Complete | `?preview=true` for testing |
 | Lead submission endpoint | Complete | `/lp/submit` with UTM tracking |
-| Client landing page view | Partial | Needs design system update |
+| Client landing page view | Complete | Uses design system CSS |
 
 #### Funnel Templates Available:
 1. **Implant Candidacy Quiz** - Interactive qualification quiz
@@ -152,7 +152,7 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Client landing pages UI | High | Replace Flowbite Badge/Modal with CSS design system |
+| ~~Client landing pages UI~~ | Done | Replaced Flowbite with CSS design system |
 | Landing page editor | Medium | Edit content after creation |
 | Email notifications | Low | Lead alerts, status changes |
 
