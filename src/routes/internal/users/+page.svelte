@@ -10,6 +10,8 @@
 	let orgFilter = $state(data.filters.orgFilter);
 	let selectedUsers = $state<string[]>([]);
 	let showBulkDeleteModal = $state(false);
+	let showCredentialsModal = $state(false);
+	let credentials = $state<{ email: string; password: string } | null>(null);
 
 	function applyFilters() {
 		const params = new URLSearchParams();
@@ -219,6 +221,25 @@
 											</svg>
 										</button>
 									</form>
+								{:else}
+									<form method="POST" action="?/resetPassword" use:enhance={() => {
+										return async ({ result }) => {
+											if (result.type === 'success') {
+												const resultData = result.data as { credentials?: { email: string; password: string } };
+												if (resultData?.credentials) {
+													credentials = resultData.credentials;
+													showCredentialsModal = true;
+												}
+											}
+										};
+									}}>
+										<input type="hidden" name="userId" value={user.id} />
+										<button type="submit" class="btn-icon" title="Reset Password">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+											</svg>
+										</button>
+									</form>
 								{/if}
 								<form method="POST" action="?/deleteUser" use:enhance={() => {
 									return async ({ result }) => {
@@ -309,6 +330,53 @@
 					<button type="submit" class="btn btn-danger">Delete Users</button>
 				</div>
 			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- Credentials Modal -->
+{#if showCredentialsModal && credentials}
+	<div class="modal-overlay" onclick={() => { showCredentialsModal = false; credentials = null; }}>
+		<div class="modal" onclick={(e) => e.stopPropagation()}>
+			<div class="modal-header">
+				<h2>Password Reset</h2>
+				<button class="modal-close" onclick={() => { showCredentialsModal = false; credentials = null; }}>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+			</div>
+			<div class="modal-body">
+				<p>New login credentials:</p>
+				<div class="credentials-box">
+					<div class="credential-row">
+						<span class="credential-label">Email</span>
+						<span class="credential-value">{credentials.email}</span>
+					</div>
+					<div class="credential-row">
+						<span class="credential-label">Password</span>
+						<span class="credential-value" style="font-family: monospace;">{credentials.password}</span>
+					</div>
+				</div>
+				<p style="font-size: 0.75rem; color: var(--gray-500); margin-top: var(--spacing-3);">
+					Share these credentials with the user. They should change their password after logging in.
+				</p>
+			</div>
+			<div class="modal-footer">
+				<button
+					type="button"
+					class="btn btn-secondary"
+					onclick={() => {
+						if (credentials) {
+							navigator.clipboard.writeText(`Email: ${credentials.email}\nPassword: ${credentials.password}`);
+							alert('Credentials copied to clipboard!');
+						}
+					}}
+				>
+					Copy to Clipboard
+				</button>
+				<button type="button" class="btn btn-primary" onclick={() => { showCredentialsModal = false; credentials = null; }}>Done</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -737,5 +805,44 @@
 		margin-top: var(--spacing-3);
 		font-size: 0.875rem;
 		cursor: pointer;
+	}
+
+	.credentials-box {
+		background: var(--gray-100);
+		border-radius: var(--radius-md);
+		padding: var(--spacing-4);
+		margin-top: var(--spacing-3);
+	}
+
+	.credential-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: var(--spacing-2) 0;
+	}
+
+	.credential-row:not(:last-child) {
+		border-bottom: 1px solid var(--gray-200);
+	}
+
+	.credential-label {
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--gray-500);
+		text-transform: uppercase;
+	}
+
+	.credential-value {
+		font-weight: 500;
+		color: var(--gray-900);
+	}
+
+	.btn-primary {
+		background: var(--primary-600);
+		color: white;
+	}
+
+	.btn-primary:hover {
+		background: var(--primary-700);
 	}
 </style>
