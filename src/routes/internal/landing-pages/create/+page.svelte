@@ -1,23 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
-  import {
-    Button,
-    Input,
-    Select,
-    Label,
-    Alert,
-    Badge,
-    Card
-  } from 'flowbite-svelte';
-  import {
-    ArrowLeftOutline,
-    ExclamationCircleOutline,
-    PlusOutline,
-    EyeOutline,
-    CheckCircleSolid,
-    ChartOutline
-  } from 'flowbite-svelte-icons';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -27,15 +10,6 @@
   let name = $state('');
   let slug = $state('');
   let isCreating = $state(false);
-
-  // Organization options for dropdown
-  let organizationOptions = $derived([
-    { value: '', name: 'Select a client...' },
-    ...data.organizations.map(org => ({
-      value: org.id,
-      name: org.name
-    }))
-  ]);
 
   // Selected organization details
   let selectedOrganization = $derived(
@@ -60,34 +34,17 @@
   function handleNameChange(e: Event) {
     const target = e.target as HTMLInputElement;
     name = target.value;
-    // Auto-generate slug from name
     slug = generateSlug(name);
   }
 
   function handleTemplateSelect(templateSlugValue: string) {
     templateSlug = templateSlugValue;
-    // Auto-generate name based on org and template
     if (selectedOrganization && templateSlugValue) {
       const template = data.templates.find(t => t.slug === templateSlugValue);
       if (template) {
         name = `${selectedOrganization.name} - ${template.name}`;
         slug = generateSlug(name);
       }
-    }
-  }
-
-  function getCategoryColor(category: string): 'blue' | 'purple' | 'green' | 'yellow' {
-    switch (category) {
-      case 'implant':
-        return 'blue';
-      case 'cosmetic':
-        return 'purple';
-      case 'general':
-        return 'green';
-      case 'promo':
-        return 'yellow';
-      default:
-        return 'blue';
     }
   }
 
@@ -105,166 +62,168 @@
         return category;
     }
   }
+
+  function getCategoryBadgeClass(category: string): string {
+    switch (category) {
+      case 'implant':
+        return 'badge-primary';
+      case 'cosmetic':
+        return 'badge-purple';
+      case 'general':
+        return 'badge-success';
+      case 'promo':
+        return 'badge-warning';
+      default:
+        return 'badge-primary';
+    }
+  }
 </script>
 
 <svelte:head>
   <title>Create Landing Page - SqueezMedia</title>
 </svelte:head>
 
-<div class="max-w-6xl mx-auto">
-  <!-- Header -->
-  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-    <div class="flex items-center gap-4">
-      <Button href="/internal/landing-pages" color="light" size="sm">
-        <ArrowLeftOutline class="w-4 h-4 me-1" />
-        Back
-      </Button>
-      <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-          Create Landing Page
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Create a new landing page for a client using a funnel template
-        </p>
-      </div>
-    </div>
+<!-- Header -->
+<div class="page-header">
+  <a href="/internal/landing-pages" class="btn btn-outline btn-sm">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="page-header-content">
+    <h1 class="page-title">Create Landing Page</h1>
+    <p class="page-subtitle">Create a new landing page for a client using a funnel template</p>
   </div>
+</div>
 
-  <!-- Error Messages -->
-  {#if form?.message && !form?.success}
-    <Alert color="red" class="mb-6">
-      <ExclamationCircleOutline slot="icon" class="w-5 h-5" />
-      {form.message}
-    </Alert>
-  {/if}
+<!-- Error Messages -->
+{#if form?.message && !form?.success}
+  <div class="alert alert-danger">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    {form.message}
+  </div>
+{/if}
 
-  <form
-    method="POST"
-    action="?/create"
-    use:enhance={() => {
-      isCreating = true;
-      return async ({ update }) => {
-        await update();
-        isCreating = false;
-      };
-    }}
-  >
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Main Content - Left Side -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Step 1: Select Organization -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold text-sm">
-              1
-            </div>
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Select Client
-            </h2>
-          </div>
-
-          <div class="space-y-4">
-            <div>
-              <Label for="organization" class="mb-2">Client Organization *</Label>
-              <Select
-                id="organization"
-                name="organizationId"
-                items={organizationOptions}
-                bind:value={organizationId}
-                required
-              />
-            </div>
-
-            {#if selectedOrganization}
-              <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div class="flex items-center gap-3">
-                  {#if selectedOrganization.logoUrl}
-                    <img
-                      src={selectedOrganization.logoUrl}
-                      alt={selectedOrganization.name}
-                      class="w-10 h-10 rounded-lg object-cover"
-                    />
-                  {:else}
-                    <div class="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                      <span class="text-primary-600 dark:text-primary-400 font-semibold">
-                        {selectedOrganization.name.charAt(0)}
-                      </span>
-                    </div>
-                  {/if}
-                  <div>
-                    <p class="font-medium text-gray-900 dark:text-white">
-                      {selectedOrganization.name}
-                    </p>
-                    {#if selectedOrganization.city && selectedOrganization.state}
-                      <p class="text-sm text-gray-500 dark:text-gray-400">
-                        {selectedOrganization.city}, {selectedOrganization.state}
-                      </p>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            {/if}
+<form
+  method="POST"
+  action="?/create"
+  use:enhance={() => {
+    isCreating = true;
+    return async ({ update }) => {
+      await update();
+      isCreating = false;
+    };
+  }}
+>
+  <div class="create-layout">
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Step 1: Select Organization -->
+      <div class="card">
+        <div class="card-header">
+          <div class="step-indicator">
+            <span class="step-number">1</span>
+            <h3 class="card-title">Select Client</h3>
           </div>
         </div>
-
-        <!-- Step 2: Select Template -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold text-sm">
-              2
-            </div>
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Select Template
-            </h2>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="organization" class="form-label">Client Organization *</label>
+            <select
+              id="organization"
+              name="organizationId"
+              bind:value={organizationId}
+              required
+              class="form-select"
+            >
+              <option value="">Select a client...</option>
+              {#each data.organizations as org}
+                <option value={org.id}>{org.name}</option>
+              {/each}
+            </select>
           </div>
 
+          {#if selectedOrganization}
+            <div class="selected-info">
+              <div class="selected-avatar">
+                {#if selectedOrganization.logoUrl}
+                  <img src={selectedOrganization.logoUrl} alt={selectedOrganization.name} />
+                {:else}
+                  <span class="avatar-letter">{selectedOrganization.name.charAt(0)}</span>
+                {/if}
+              </div>
+              <div class="selected-details">
+                <div class="selected-name">{selectedOrganization.name}</div>
+                {#if selectedOrganization.city && selectedOrganization.state}
+                  <div class="selected-location">{selectedOrganization.city}, {selectedOrganization.state}</div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Step 2: Select Template -->
+      <div class="card">
+        <div class="card-header">
+          <div class="step-indicator">
+            <span class="step-number">2</span>
+            <h3 class="card-title">Select Template</h3>
+          </div>
+        </div>
+        <div class="card-body">
           <input type="hidden" name="templateSlug" value={templateSlug} />
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="template-grid">
             {#each data.templates as template (template.slug)}
               <button
                 type="button"
-                class="text-left p-4 rounded-xl border-2 transition-all {templateSlug === template.slug
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}"
+                class="template-card"
+                class:selected={templateSlug === template.slug}
                 onclick={() => handleTemplateSelect(template.slug)}
               >
                 <!-- Template Preview -->
                 <div
-                  class="h-24 rounded-lg mb-3 flex items-center justify-center"
+                  class="template-preview"
                   style="background: linear-gradient(135deg, {template.primaryColor}20, {template.primaryColor}40)"
                 >
                   <div
-                    class="w-12 h-12 rounded-full flex items-center justify-center"
+                    class="template-icon"
                     style="background-color: {template.primaryColor}"
                   >
-                    <span class="text-white text-xl font-bold">
-                      {template.stepCount}
-                    </span>
+                    <span>{template.stepCount}</span>
                   </div>
                 </div>
 
                 <!-- Template Info -->
-                <div class="space-y-2">
-                  <div class="flex items-start justify-between gap-2">
-                    <h3 class="font-semibold text-gray-900 dark:text-white text-sm">
-                      {template.name}
-                    </h3>
+                <div class="template-info">
+                  <div class="template-header">
+                    <h4 class="template-name">{template.name}</h4>
                     {#if templateSlug === template.slug}
-                      <CheckCircleSolid class="w-5 h-5 text-primary-500 shrink-0" />
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="check-icon">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
                     {/if}
                   </div>
 
-                  <Badge color={getCategoryColor(template.category)} class="text-xs">
+                  <span class="badge {getCategoryBadgeClass(template.category)}">
                     {getCategoryLabel(template.category)}
-                  </Badge>
+                  </span>
 
-                  <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                    {template.description}
-                  </p>
+                  <p class="template-description">{template.description}</p>
 
-                  <div class="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                    <ChartOutline class="w-3.5 h-3.5" />
+                  <div class="template-stats">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="20" x2="18" y2="10"/>
+                      <line x1="12" y1="20" x2="12" y2="4"/>
+                      <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
                     <span>{template.estimatedConversionRate}% est. conv. rate</span>
                   </div>
                 </div>
@@ -272,126 +231,481 @@
             {/each}
           </div>
         </div>
-
-        <!-- Step 3: Page Details -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold text-sm">
-              3
-            </div>
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Page Details
-            </h2>
-          </div>
-
-          <div class="space-y-4">
-            <div>
-              <Label for="pageName" class="mb-2">Landing Page Name *</Label>
-              <Input
-                id="pageName"
-                name="name"
-                value={name}
-                oninput={handleNameChange}
-                placeholder="e.g., Acme Dental - Implant Quiz"
-                required
-              />
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Internal name for this landing page
-              </p>
-            </div>
-
-            <div>
-              <Label for="pageSlug" class="mb-2">URL Slug</Label>
-              <Input
-                id="pageSlug"
-                name="slug"
-                bind:value={slug}
-                placeholder="acme-dental-implant-quiz"
-              />
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Used in the landing page URL. Auto-generated from name if left empty.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- Sidebar - Right Side -->
-      <div class="space-y-6">
-        <!-- Selected Template Preview -->
-        {#if selectedTemplate}
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h3 class="font-semibold text-gray-900 dark:text-white mb-4">
-              Selected Template
-            </h3>
-
-            <div
-              class="h-32 rounded-lg mb-4 flex items-center justify-center"
-              style="background: linear-gradient(135deg, {selectedTemplate.primaryColor}20, {selectedTemplate.primaryColor}40)"
-            >
-              <div
-                class="w-16 h-16 rounded-full flex items-center justify-center"
-                style="background-color: {selectedTemplate.primaryColor}"
-              >
-                <span class="text-white text-2xl font-bold">
-                  {selectedTemplate.stepCount}
-                </span>
-              </div>
-            </div>
-
-            <h4 class="font-semibold text-gray-900 dark:text-white mb-2">
-              {selectedTemplate.name}
-            </h4>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              {selectedTemplate.description}
-            </p>
-
-            <div class="flex items-center gap-2 mb-3">
-              <Badge color={getCategoryColor(selectedTemplate.category)}>
-                {getCategoryLabel(selectedTemplate.category)}
-              </Badge>
-              <Badge color="green">
-                {selectedTemplate.estimatedConversionRate}% Conv. Rate
-              </Badge>
-            </div>
-
-            <div class="text-sm text-gray-600 dark:text-gray-400">
-              <strong>{selectedTemplate.stepCount}</strong> interactive steps
-            </div>
+      <!-- Step 3: Page Details -->
+      <div class="card">
+        <div class="card-header">
+          <div class="step-indicator">
+            <span class="step-number">3</span>
+            <h3 class="card-title">Page Details</h3>
           </div>
-        {/if}
-
-        <!-- Create Button -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <Button
-            type="submit"
-            color="primary"
-            class="w-full"
-            disabled={isCreating || !organizationId || !templateSlug || !name}
-          >
-            <PlusOutline class="w-4 h-4 me-2" />
-            {isCreating ? 'Creating...' : 'Create Landing Page'}
-          </Button>
-          <p class="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center">
-            Page will be created as a draft. You can edit and publish it after creation.
-          </p>
         </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="pageName" class="form-label">Landing Page Name *</label>
+            <input
+              type="text"
+              id="pageName"
+              name="name"
+              value={name}
+              oninput={handleNameChange}
+              placeholder="e.g., Acme Dental - Implant Quiz"
+              required
+              class="form-input"
+            />
+            <p class="form-hint">Internal name for this landing page</p>
+          </div>
 
-        <!-- Help Card -->
-        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-          <h3 class="font-medium text-blue-900 dark:text-blue-100 mb-2">
-            About Funnel Templates
-          </h3>
-          <ul class="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-            <li>- Interactive quiz-style lead funnels</li>
-            <li>- Mobile-optimized for high conversion</li>
-            <li>- Auto-populated with client info</li>
-            <li>- Customizable after creation</li>
-            <li>- Integrated lead capture forms</li>
-          </ul>
+          <div class="form-group">
+            <label for="pageSlug" class="form-label">URL Slug</label>
+            <input
+              type="text"
+              id="pageSlug"
+              name="slug"
+              bind:value={slug}
+              placeholder="acme-dental-implant-quiz"
+              class="form-input"
+            />
+            <p class="form-hint">Used in the landing page URL. Auto-generated from name if left empty.</p>
+          </div>
         </div>
       </div>
     </div>
-  </form>
-</div>
+
+    <!-- Sidebar -->
+    <div class="sidebar-content">
+      <!-- Selected Template Preview -->
+      {#if selectedTemplate}
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Selected Template</h3>
+          </div>
+          <div class="card-body">
+            <div
+              class="preview-image"
+              style="background: linear-gradient(135deg, {selectedTemplate.primaryColor}20, {selectedTemplate.primaryColor}40)"
+            >
+              <div
+                class="preview-icon"
+                style="background-color: {selectedTemplate.primaryColor}"
+              >
+                <span>{selectedTemplate.stepCount}</span>
+              </div>
+            </div>
+
+            <h4 class="preview-name">{selectedTemplate.name}</h4>
+            <p class="preview-description">{selectedTemplate.description}</p>
+
+            <div class="preview-badges">
+              <span class="badge {getCategoryBadgeClass(selectedTemplate.category)}">
+                {getCategoryLabel(selectedTemplate.category)}
+              </span>
+              <span class="badge badge-success">
+                {selectedTemplate.estimatedConversionRate}% Conv. Rate
+              </span>
+            </div>
+
+            <div class="preview-steps">
+              <strong>{selectedTemplate.stepCount}</strong> interactive steps
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Create Button -->
+      <div class="card">
+        <div class="card-body">
+          <button
+            type="submit"
+            class="btn btn-primary btn-lg btn-full"
+            disabled={isCreating || !organizationId || !templateSlug || !name}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            {isCreating ? 'Creating...' : 'Create Landing Page'}
+          </button>
+          <p class="create-hint">
+            Page will be created as a draft. You can edit and publish it after creation.
+          </p>
+        </div>
+      </div>
+
+      <!-- Help Card -->
+      <div class="help-card">
+        <h3 class="help-title">About Funnel Templates</h3>
+        <ul class="help-list">
+          <li>Interactive quiz-style lead funnels</li>
+          <li>Mobile-optimized for high conversion</li>
+          <li>Auto-populated with client info</li>
+          <li>Customizable after creation</li>
+          <li>Integrated lead capture forms</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</form>
+
+<style>
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+  }
+
+  .page-header-content {
+    flex: 1;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-1);
+  }
+
+  .page-subtitle {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+  }
+
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+    border-radius: var(--radius-lg);
+  }
+
+  .alert-danger {
+    background: var(--danger-50);
+    color: var(--danger-700);
+    border: 1px solid var(--danger-200);
+  }
+
+  .create-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-6);
+    align-items: start;
+  }
+
+  @media (max-width: 1024px) {
+    .create-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar-content {
+      order: -1;
+    }
+  }
+
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+  }
+
+  .sidebar-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+  }
+
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+  }
+
+  .step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--primary-100);
+    color: var(--primary-600);
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .form-group {
+    margin-bottom: var(--spacing-4);
+  }
+
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .form-input,
+  .form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    background: white;
+  }
+
+  .form-input:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-hint {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: var(--spacing-1);
+  }
+
+  .selected-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    margin-top: var(--spacing-4);
+  }
+
+  .selected-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-lg);
+    background: var(--primary-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .selected-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-letter {
+    color: var(--primary-600);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .selected-name {
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+
+  .selected-location {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+  }
+
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-4);
+  }
+
+  .template-card {
+    text-align: left;
+    padding: var(--spacing-4);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .template-card:hover {
+    border-color: var(--gray-300);
+  }
+
+  .template-card.selected {
+    border-color: var(--primary-500);
+    background: var(--primary-50);
+  }
+
+  .template-preview {
+    height: 80px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--spacing-3);
+  }
+
+  .template-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .template-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .template-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-2);
+  }
+
+  .template-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+  }
+
+  .check-icon {
+    color: var(--primary-500);
+    flex-shrink: 0;
+  }
+
+  .template-description {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+  }
+
+  .template-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    font-size: 0.75rem;
+    color: var(--success-600);
+  }
+
+  .preview-image {
+    height: 120px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--spacing-4);
+  }
+
+  .preview-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+
+  .preview-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .preview-description {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .preview-badges {
+    display: flex;
+    gap: var(--spacing-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-3);
+  }
+
+  .preview-steps {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+  }
+
+  .btn-lg {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+
+  .btn-full {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .create-hint {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-align: center;
+    margin-top: var(--spacing-3);
+  }
+
+  .help-card {
+    padding: var(--spacing-4);
+    background: var(--primary-50);
+    border: 1px solid var(--primary-200);
+    border-radius: var(--radius-xl);
+  }
+
+  .help-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-900);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .help-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .help-list li {
+    font-size: 0.875rem;
+    color: var(--primary-700);
+    padding-left: var(--spacing-4);
+    position: relative;
+    margin-bottom: var(--spacing-1);
+  }
+
+  .help-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+  }
+
+  .badge-purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+</style>

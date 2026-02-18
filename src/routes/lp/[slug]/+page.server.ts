@@ -3,14 +3,16 @@ import { prisma } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
 import { getTemplateBySlug, renderFunnelHtml, funnelTemplates } from '$lib/server/landing-pages/templates';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url }) => {
 	const { slug } = params;
+	const isPreview = url.searchParams.get('preview') === 'true';
 
 	// Load landing page by slug
+	// Allow draft pages in preview mode
 	const landingPage = await prisma.landingPage.findFirst({
 		where: {
 			slug,
-			status: 'published'
+			status: isPreview ? { in: ['published', 'draft'] } : 'published'
 		},
 		select: {
 			id: true,
@@ -49,8 +51,9 @@ export const load: PageServerLoad = async ({ params }) => {
 		});
 	}
 
-	// Check if organization is active
-	if (landingPage.organization.status !== 'active') {
+	// Check if organization is active (allow onboarding for preview)
+	const allowedStatuses = isPreview ? ['active', 'onboarding'] : ['active'];
+	if (!allowedStatuses.includes(landingPage.organization.status)) {
 		throw error(404, {
 			message: 'Landing page not available'
 		});
@@ -122,12 +125,15 @@ export const load: PageServerLoad = async ({ params }) => {
 	const html = renderFunnelHtml(funnelTemplate, orgData, landingPage.id, trackingHtml);
 
 	// Increment view count (fire and forget - don't await)
-	prisma.landingPage.update({
-		where: { id: landingPage.id },
-		data: { viewCount: { increment: 1 } }
-	}).catch((err) => {
-		console.error('Failed to increment view count:', err);
-	});
+	// Skip for preview mode to avoid skewing stats
+	if (!isPreview) {
+		prisma.landingPage.update({
+			where: { id: landingPage.id },
+			data: { viewCount: { increment: 1 } }
+		}).catch((err) => {
+			console.error('Failed to increment view count:', err);
+		});
+	}
 
 	return {
 		html,
