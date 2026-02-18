@@ -223,13 +223,23 @@
 									</form>
 								{:else}
 									<form method="POST" action="?/resetPassword" use:enhance={() => {
+										console.log('Reset password form submitted');
 										return async ({ result }) => {
+											console.log('Reset password result:', result);
 											if (result.type === 'success') {
 												const resultData = result.data as { credentials?: { email: string; password: string } };
+												console.log('Result data:', resultData);
 												if (resultData?.credentials) {
 													credentials = resultData.credentials;
 													showCredentialsModal = true;
+												} else {
+													alert('Password reset but no credentials returned');
 												}
+											} else if (result.type === 'failure') {
+												const errorData = result.data as { error?: string };
+												alert('Error: ' + (errorData?.error || 'Unknown error'));
+											} else if (result.type === 'error') {
+												alert('Server error occurred');
 											}
 										};
 									}}>

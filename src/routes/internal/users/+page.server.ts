@@ -211,7 +211,8 @@ export const actions: Actions = {
 
       // Generate new temporary password
       const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-4).toUpperCase();
-      const bcrypt = await import('bcryptjs');
+      const bcryptModule = await import('bcryptjs');
+      const bcrypt = bcryptModule.default || bcryptModule;
       const passwordHash = await bcrypt.hash(tempPassword, 10);
 
       await prisma.user.update({
