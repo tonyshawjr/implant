@@ -156,6 +156,22 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
 | Landing page editor | Medium | Edit content after creation |
 | Email notifications | Low | Lead alerts, status changes |
 
+### Hardcoded Values Remediation (see `HARDCODED-REMEDIATION-PLAN.md`)
+
+Full plan has 53 tasks across 6 waves to make all business config editable from Settings UI.
+
+| Wave | Status | Tasks | What It Does |
+|------|--------|-------|--------------|
+| Wave 0: Security | Not Started | 3 | Rotate DB creds, remove .env from git, add encryption key |
+| Wave 1: Database Schema | Complete | 8/8 | Tables for settings, pricing, scoring, emails, onboarding, benchmarks |
+| Wave 2: Services | Complete | 8/8 | Server-side services to read/write config from DB |
+| Wave 3A: Settings UI | Not Started | 0/8 | Build admin UI tabs for each config category |
+| Wave 3B: Replace Hardcodes | Not Started | 0/20 | Swap hardcoded values with DB lookups across all files |
+| Wave 4: Roles | Complete | 2/2 | Centralized role constants, replaced in 21 files |
+| Wave 5: Cleanup | Not Started | 0/4 | Seed scripts, docs, testing |
+
+**Next up:** Wave 0 (security - manual), then Wave 3A + 3B (can run in parallel)
+
 ---
 
 ## File Structure (Key Files)
@@ -255,11 +271,12 @@ CSS variables are defined in `src/lib/styles/design-system.css`.
 
 ## Next Steps (Recommended)
 
-1. **Update client landing pages UI** to match internal design system
-2. **Add landing page editor** for post-creation customization
-3. **Implement lead routing** to auto-assign by zip code
-4. **Add Census API** for real demographic data
-5. **Build email notifications** for lead alerts
+1. **Wave 0: Security** - Rotate DB creds, remove .env from git history, add encryption key (manual)
+2. **Wave 3A: Settings UI** - Build admin tabs for pricing, scoring, emails, onboarding, benchmarks, optimization, demographics
+3. **Wave 3B: Replace Hardcodes** - Swap all hardcoded company names, emails, pricing, thresholds with DB lookups (20 tasks)
+4. **Update client landing pages UI** to match internal design system
+5. **Add landing page editor** for post-creation customization
+6. **Wave 5: Cleanup** - Seed scripts, documentation, full testing
 
 ---
 
