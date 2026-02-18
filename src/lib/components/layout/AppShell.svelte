@@ -47,7 +47,7 @@
 
   <Sidebar {variant} {user} isOpen={sidebarOpen} onClose={closeSidebar} />
 
-  <Header {title} {breadcrumbs} {user} onMenuToggle={toggleSidebar} />
+  <Header {title} {breadcrumbs} {variant} {user} onMenuToggle={toggleSidebar} />
 
   <main class="main-content">
     <div class="page-content">
