@@ -1884,7 +1884,7 @@ export const actions: Actions = {
       if (assignments.length > 0) {
         await prisma.territoryAssignment.updateMany({
           where: { organizationId: id, status: 'active' },
-          data: { status: 'terminated' }
+          data: { status: 'cancelled' }
         });
 
         // Unlock territories - set back to available

@@ -46,7 +46,8 @@ export const load: PageServerLoad = async ({ url }) => {
     totalTerritories,
     stats,
     waitlistByTerritory,
-    states
+    states,
+    organizations
   ] = await Promise.all([
     // Main territories query with related data
     prisma.territory.findMany({
@@ -117,6 +118,17 @@ export const load: PageServerLoad = async ({ url }) => {
       distinct: ['state'],
       select: { state: true },
       orderBy: { state: 'asc' }
+    }),
+
+    // Get organizations for assignment dropdown
+    prisma.organization.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        status: true
+      },
+      orderBy: { name: 'asc' }
     })
   ]);
 
@@ -196,6 +208,11 @@ export const load: PageServerLoad = async ({ url }) => {
       monthlyRevenue: totalMonthlyRevenue
     },
     states: states.map(s => s.state),
+    organizations: organizations.map(o => ({
+      id: o.id,
+      name: o.name,
+      status: o.status
+    })),
     pagination: {
       page,
       limit,
@@ -492,6 +509,128 @@ export const actions: Actions = {
     } catch (error) {
       console.error('Failed to delete territory:', error);
       return fail(500, { error: 'Failed to delete territory' });
+    }
+  },
+
+  clearWaitlist: async ({ request }) => {
+    const formData = await request.formData();
+    const territoryId = formData.get('territoryId') as string;
+
+    if (!territoryId) {
+      return fail(400, { error: 'Territory ID is required' });
+    }
+
+    try {
+      // Delete all waitlist entries for this territory
+      const deleted = await prisma.territoryWaitlist.deleteMany({
+        where: { territoryId }
+      });
+
+      // Update territory status to available if it was on waitlist
+      const territory = await prisma.territory.findUnique({
+        where: { id: territoryId },
+        select: { status: true }
+      });
+
+      if (territory?.status === 'waitlist') {
+        await prisma.territory.update({
+          where: { id: territoryId },
+          data: { status: 'available' }
+        });
+      }
+
+      return { success: true, message: `Cleared ${deleted.count} waitlist entries` };
+    } catch (error) {
+      console.error('Failed to clear waitlist:', error);
+      return fail(500, { error: 'Failed to clear waitlist' });
+    }
+  },
+
+  assignTerritory: async ({ request }) => {
+    const formData = await request.formData();
+    const territoryId = formData.get('territoryId') as string;
+    const organizationId = formData.get('organizationId') as string;
+    const monthlyRate = parseFloat(formData.get('monthlyRate') as string);
+
+    if (!territoryId || !organizationId) {
+      return fail(400, { error: 'Territory ID and Organization ID are required' });
+    }
+
+    if (isNaN(monthlyRate) || monthlyRate <= 0) {
+      return fail(400, { error: 'Valid monthly rate is required' });
+    }
+
+    try {
+      // Check if organization exists and is not deleted
+      const organization = await prisma.organization.findFirst({
+        where: { id: organizationId, deletedAt: null }
+      });
+
+      if (!organization) {
+        return fail(400, { error: 'Organization not found or has been deleted' });
+      }
+
+      // Cancel any existing active assignments for this territory
+      await prisma.territoryAssignment.updateMany({
+        where: { territoryId, status: 'active' },
+        data: { status: 'cancelled' }
+      });
+
+      // Create new assignment
+      await prisma.territoryAssignment.create({
+        data: {
+          territoryId,
+          organizationId,
+          monthlyRate,
+          assignedAt: new Date(),
+          isExclusive: true,
+          status: 'active'
+        }
+      });
+
+      // Update territory status to locked
+      await prisma.territory.update({
+        where: { id: territoryId },
+        data: { status: 'locked' }
+      });
+
+      // Clear any waitlist entries
+      await prisma.territoryWaitlist.deleteMany({
+        where: { territoryId }
+      });
+
+      return { success: true, message: `Territory assigned to ${organization.name}` };
+    } catch (error) {
+      console.error('Failed to assign territory:', error);
+      return fail(500, { error: 'Failed to assign territory' });
+    }
+  },
+
+  releaseTerritory: async ({ request }) => {
+    const formData = await request.formData();
+    const territoryId = formData.get('territoryId') as string;
+
+    if (!territoryId) {
+      return fail(400, { error: 'Territory ID is required' });
+    }
+
+    try {
+      // Cancel all active assignments for this territory
+      await prisma.territoryAssignment.updateMany({
+        where: { territoryId, status: 'active' },
+        data: { status: 'cancelled' }
+      });
+
+      // Set territory status back to available
+      await prisma.territory.update({
+        where: { id: territoryId },
+        data: { status: 'available' }
+      });
+
+      return { success: true, message: 'Territory released successfully' };
+    } catch (error) {
+      console.error('Failed to release territory:', error);
+      return fail(500, { error: 'Failed to release territory' });
     }
   }
 };

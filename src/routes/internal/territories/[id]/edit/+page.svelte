@@ -1216,6 +1216,66 @@
         {/if}
       </div>
     </div>
+
+    <!-- Waitlist Management -->
+    {#if data.waitlist && data.waitlist.length > 0}
+      <div class="card waitlist-card">
+        <div class="card-header">
+          <h3 class="card-title">Waitlist ({data.waitlist.length})</h3>
+          <form method="POST" action="?/clearWaitlist" use:enhance style="margin-left: auto;">
+            <button type="submit" class="btn btn-warning btn-sm" onclick={(e) => { if (!confirm('Clear all waitlist entries? This cannot be undone.')) e.preventDefault(); }}>
+              Clear All
+            </button>
+          </form>
+        </div>
+        <div class="card-body">
+          <div class="waitlist-entries">
+            {#each data.waitlist as entry}
+              <div class="waitlist-entry">
+                <div class="waitlist-info">
+                  <div class="waitlist-name">{entry.contactName}</div>
+                  <div class="waitlist-email">{entry.contactEmail}</div>
+                  {#if entry.practiceName}<div class="waitlist-practice">{entry.practiceName}</div>{/if}
+                </div>
+                <div class="waitlist-meta">
+                  <span class="waitlist-position">#{entry.position}</span>
+                  <span class="waitlist-status {entry.status}">{entry.status}</span>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Assign Territory -->
+    {#if !data.territory.hasActiveAssignment}
+      <div class="card assign-card">
+        <div class="card-header">
+          <h3 class="card-title">Assign Territory</h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="?/assignTerritory" use:enhance>
+            <div class="form-group">
+              <label class="form-label">Select Organization</label>
+              <select name="organizationId" class="form-select" required>
+                <option value="">-- Select Organization --</option>
+                {#each data.organizations as org}
+                  <option value={org.id}>{org.name} ({org.status})</option>
+                {/each}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Monthly Rate ($)</label>
+              <input type="number" name="monthlyRate" class="form-input" value={monthlyBasePrice} step="100" min="0" required />
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+              Assign Territory
+            </button>
+          </form>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -1920,5 +1980,96 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  /* Waitlist Card */
+  .waitlist-card .card-header {
+    display: flex;
+    align-items: center;
+  }
+
+  .waitlist-entries {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .waitlist-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-3);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+  }
+
+  .waitlist-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .waitlist-name {
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+
+  .waitlist-email {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+  }
+
+  .waitlist-practice {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+  }
+
+  .waitlist-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+
+  .waitlist-position {
+    font-weight: 600;
+    color: var(--gray-700);
+  }
+
+  .waitlist-status {
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: capitalize;
+  }
+
+  .waitlist-status.waiting {
+    background: var(--warning-100);
+    color: var(--warning-700);
+  }
+
+  .waitlist-status.expired {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  /* Assign Card */
+  .assign-card .form-group {
+    margin-bottom: var(--spacing-4);
+  }
+
+  .form-select {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    background: white;
+  }
+
+  .form-select:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   }
 </style>
