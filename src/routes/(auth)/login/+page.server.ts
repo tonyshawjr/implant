@@ -78,7 +78,7 @@ export const actions: Actions = {
       if (isInternalRole(user.role)) {
         throw redirect(302, '/internal');
       }
-      throw redirect(302, '/dashboard');
+      throw redirect(302, '/');
 
     } catch (e) {
       // If it's a redirect, rethrow it

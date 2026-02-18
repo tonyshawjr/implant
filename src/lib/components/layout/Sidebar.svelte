@@ -48,7 +48,7 @@
   // Client navigation items
   const clientNavItems = {
     main: [
-      { label: 'Overview', href: '/dashboard', icon: 'home' },
+      { label: 'Overview', href: '/', icon: 'home' },
       { label: 'Leads', href: '/leads', icon: 'users' },
       { label: 'Campaigns', href: '/campaigns', icon: 'megaphone' },
       { label: 'Brand Voice', href: '/brand-voice', icon: 'mic' },
@@ -64,7 +64,7 @@
   let currentPath = $derived($page.url.pathname);
 
   function isActive(href: string): boolean {
-    if (href === '/internal' || href === '/dashboard') {
+    if (href === '/internal' || href === '/') {
       return currentPath === href;
     }
     return currentPath.startsWith(href);
