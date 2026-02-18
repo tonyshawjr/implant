@@ -170,8 +170,9 @@ function generateMockResponse(messages: AIMessage[], options: AICompletionOption
 
   // Generate contextual mock responses based on prompt content
   let content = '';
+  const lowerPrompt = prompt.toLowerCase();
 
-  if (prompt.toLowerCase().includes('analyze') && prompt.toLowerCase().includes('brand')) {
+  if (lowerPrompt.includes('analyze') && lowerPrompt.includes('brand')) {
     content = JSON.stringify({
       tone: 'Professional and Caring',
       personality: 'Trustworthy Expert',
@@ -205,7 +206,7 @@ function generateMockResponse(messages: AIMessage[], options: AICompletionOption
       },
       communicationStyle: 'The brand communicates with a warm yet professional tone, emphasizing expertise while remaining approachable. Content focuses on patient outcomes and comfort rather than clinical procedures.'
     }, null, 2);
-  } else if (prompt.toLowerCase().includes('generate') && prompt.toLowerCase().includes('headline')) {
+  } else if (lowerPrompt.includes('headline')) {
     content = JSON.stringify([
       'Transform Your Smile with Confidence',
       'Experience the Difference Expert Care Makes',
@@ -213,13 +214,13 @@ function generateMockResponse(messages: AIMessage[], options: AICompletionOption
       'Rediscover the Joy of Smiling',
       'Advanced Implant Solutions, Personalized for You'
     ], null, 2);
-  } else if (prompt.toLowerCase().includes('generate') && prompt.toLowerCase().includes('ad copy')) {
+  } else if (lowerPrompt.includes('ad copy') || lowerPrompt.includes('ad_copy')) {
     content = JSON.stringify([
       'Missing teeth shouldn\'t hold you back. Our experienced team combines advanced technology with personalized care to restore your smile and confidence. Schedule your free consultation today.',
       'You deserve a smile that feels natural. With over 20 years of implant expertise, we\'ve helped thousands rediscover the joy of eating, laughing, and living without limits.',
       'Ready for a lasting solution? Our state-of-the-art dental implants look, feel, and function like natural teeth. Experience the difference compassionate, expert care makes.'
     ], null, 2);
-  } else if (prompt.toLowerCase().includes('generate') && prompt.toLowerCase().includes('cta')) {
+  } else if (lowerPrompt.includes('call-to-action') || lowerPrompt.includes('cta')) {
     content = JSON.stringify([
       'Schedule Your Free Consultation',
       'Start Your Smile Journey',
@@ -227,45 +228,63 @@ function generateMockResponse(messages: AIMessage[], options: AICompletionOption
       'Get Your Personalized Plan',
       'Take the First Step'
     ], null, 2);
-  } else if (prompt.toLowerCase().includes('email')) {
+  } else if (lowerPrompt.includes('email template') || lowerPrompt.includes('email')) {
     content = JSON.stringify({
       subject: 'Your Path to a Confident Smile',
-      preview: 'Learn how dental implants can transform your life',
-      body: `Dear [First Name],
-
-Thank you for your interest in dental implants. We understand that considering dental work can feel overwhelming, which is why we're here to guide you every step of the way.
-
-At [Practice Name], we believe everyone deserves a smile they can be proud of. Our experienced team has helped thousands of patients just like you rediscover the confidence that comes with a complete, natural-looking smile.
-
-Here's what makes our approach different:
-- Personalized treatment plans designed around your unique needs
-- State-of-the-art technology for precise, comfortable procedures
-- Dedicated care team supporting you from consultation to recovery
-
-We'd love to answer your questions and explore whether dental implants are right for you. Your complimentary consultation includes a comprehensive exam and personalized treatment recommendation.
-
-Ready to take the next step?
-
-[Schedule Your Free Consultation Button]
-
-We look forward to meeting you.
-
-Warm regards,
-[Practice Name] Team`
-    }, null, 2);
-  } else if (prompt.toLowerCase().includes('social')) {
-    content = JSON.stringify([
-      {
-        platform: 'facebook',
-        content: 'Missing teeth? You\'re not alone. Over 120 million Americans are missing at least one tooth. The good news? Modern dental implants look and feel completely natural. Ready to learn more? Link in bio.',
-        hashtags: ['#dentalimplants', '#smilemakeover', '#dentalcare']
+      previewText: 'Learn how dental implants can transform your life',
+      greeting: 'Dear [First Name],',
+      body: [
+        'Thank you for your interest in dental implants. We understand that considering dental work can feel overwhelming, which is why we\'re here to guide you every step of the way.',
+        'At [Practice Name], we believe everyone deserves a smile they can be proud of. Our experienced team has helped thousands of patients just like you rediscover the confidence that comes with a complete, natural-looking smile.',
+        'Here\'s what makes our approach different: personalized treatment plans, state-of-the-art technology, and a dedicated care team supporting you from consultation to recovery.',
+        'We\'d love to answer your questions and explore whether dental implants are right for you. Your complimentary consultation includes a comprehensive exam and personalized treatment recommendation.'
+      ],
+      callToAction: {
+        text: 'Schedule Your Free Consultation',
+        subtext: 'No obligation, just answers to your questions'
       },
-      {
-        platform: 'instagram',
-        content: 'Every smile tells a story. Our patients\' transformations remind us why we love what we do. Swipe to see real results from real patients.',
-        hashtags: ['#smiletransformation', '#dentalimplants', '#beforeandafter']
-      }
+      closing: 'We look forward to meeting you.',
+      signature: 'Warm regards,\n[Practice Name] Team'
+    }, null, 2);
+  } else if (lowerPrompt.includes('social media') || lowerPrompt.includes('social post')) {
+    content = JSON.stringify([
+      'Missing teeth? You\'re not alone. Over 120 million Americans are missing at least one tooth. The good news? Modern dental implants look and feel completely natural. Ready to learn more? Link in bio. #dentalimplants #smilemakeover',
+      'Every smile tells a story. Our patients\' transformations remind us why we love what we do. See real results from real patients. #smiletransformation #dentalimplants',
+      'Your smile is worth investing in. Dental implants aren\'t just about appearance - they\'re about eating, speaking, and living with confidence. Schedule your free consultation today!'
     ], null, 2);
+  } else if (lowerPrompt.includes('sms') || lowerPrompt.includes('text message')) {
+    content = JSON.stringify([
+      'Hi! Your dental implant consultation is confirmed for [DATE]. Reply CONFIRM to confirm or call us to reschedule. - [Practice Name]',
+      'Ready to transform your smile? Schedule your FREE implant consultation today: [LINK] - [Practice Name]',
+      'Don\'t forget! Your follow-up appointment is tomorrow at [TIME]. See you then! - [Practice Name]'
+    ], null, 2);
+  } else if (lowerPrompt.includes('landing page')) {
+    content = JSON.stringify({
+      headline: 'Restore Your Smile with Confidence',
+      subheadline: 'Advanced Dental Implant Solutions Tailored to Your Needs',
+      heroDescription: 'Missing teeth shouldn\'t hold you back. Our experienced team combines cutting-edge technology with personalized care to give you a smile that looks, feels, and functions like natural teeth.',
+      benefits: [
+        { title: 'Natural Look & Feel', description: 'Dental implants are designed to match your natural teeth perfectly, giving you a seamless smile.' },
+        { title: 'Long-Lasting Results', description: 'With proper care, dental implants can last a lifetime - a true investment in your health.' },
+        { title: 'Expert Care', description: 'Our specialists have placed thousands of implants with a 98% success rate.' }
+      ],
+      socialProof: 'Join over 5,000 patients who have transformed their smiles with our care.',
+      ctaText: 'Schedule Your Free Consultation',
+      ctaSubtext: 'No obligation. Get your personalized treatment plan today.'
+    }, null, 2);
+  } else if (lowerPrompt.includes('blog') || lowerPrompt.includes('outline')) {
+    content = JSON.stringify({
+      title: 'Everything You Need to Know About Dental Implants in 2024',
+      metaDescription: 'Learn about dental implant procedures, costs, recovery time, and whether you\'re a candidate. Expert guide from our dental implant specialists.',
+      introduction: 'Dental implants have revolutionized the way we restore missing teeth, offering a permanent solution that looks and functions like natural teeth.',
+      sections: [
+        { heading: 'What Are Dental Implants?', keyPoints: ['Titanium post that replaces tooth root', 'Supports crown, bridge, or denture', 'Integrates with jawbone'] },
+        { heading: 'Benefits Over Other Options', keyPoints: ['Preserve jawbone health', 'No impact on adjacent teeth', 'Long-lasting with proper care'] },
+        { heading: 'The Implant Process', keyPoints: ['Initial consultation and planning', 'Implant placement procedure', 'Healing and crown attachment'] }
+      ],
+      conclusion: 'Dental implants offer a reliable, long-term solution for missing teeth that can dramatically improve your quality of life.',
+      callToAction: 'Ready to learn if dental implants are right for you? Schedule a free consultation with our specialists today.'
+    }, null, 2);
   } else {
     content = 'This is a mock AI response for development. Configure CLAUDE_API_KEY or OPENAI_API_KEY to enable real AI completions.';
   }
