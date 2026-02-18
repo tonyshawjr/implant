@@ -957,7 +957,7 @@
         </svg>
         <span>Assigned to: <strong>{data.territory.assignedTo}</strong></span>
       </div>
-      <form method="POST" action="?/releaseTerritory" style="display: inline;">
+      <form method="POST" action="?/releaseTerritory" use:enhance style="display: inline;">
         <button type="submit" class="btn btn-warning btn-sm" onclick={(e) => { if (!confirm('Are you sure you want to release this territory? The client will lose access to this territory.')) e.preventDefault(); }}>
           Release Territory
         </button>
@@ -1223,7 +1223,7 @@
         <div class="card-header">
           <h3 class="card-title">Waitlist ({data.waitlist.length})</h3>
           <form method="POST" action="?/clearWaitlist" use:enhance style="margin-left: auto;">
-            <button type="submit" class="btn btn-warning btn-sm" onclick={(e) => { if (!confirm('Clear all waitlist entries? This cannot be undone.')) e.preventDefault(); }}>
+            <button type="submit" class="btn btn-outline btn-sm" onclick={(e) => { if (!confirm('Clear all waitlist entries? This cannot be undone.')) e.preventDefault(); }}>
               Clear All
             </button>
           </form>
@@ -1237,9 +1237,29 @@
                   <div class="waitlist-email">{entry.contactEmail}</div>
                   {#if entry.practiceName}<div class="waitlist-practice">{entry.practiceName}</div>{/if}
                 </div>
-                <div class="waitlist-meta">
-                  <span class="waitlist-position">#{entry.position}</span>
-                  <span class="waitlist-status {entry.status}">{entry.status}</span>
+                <div class="waitlist-actions">
+                  {#if entry.organizationId && !data.territory.hasActiveAssignment}
+                    <form method="POST" action="?/assignTerritory" use:enhance style="display: inline;">
+                      <input type="hidden" name="organizationId" value={entry.organizationId} />
+                      <input type="hidden" name="monthlyRate" value={monthlyBasePrice} />
+                      <input type="hidden" name="waitlistEntryId" value={entry.id} />
+                      <button type="submit" class="btn btn-success btn-sm" title="Assign territory to this organization">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Assign
+                      </button>
+                    </form>
+                  {/if}
+                  <form method="POST" action="?/removeWaitlistEntry" use:enhance style="display: inline;">
+                    <input type="hidden" name="waitlistId" value={entry.id} />
+                    <input type="hidden" name="territoryId" value={data.territory.id} />
+                    <button type="submit" class="btn btn-danger btn-sm" onclick={(e) => { if (!confirm(`Remove ${entry.contactName} from waitlist?`)) e.preventDefault(); }} title="Remove from waitlist">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </form>
                 </div>
               </div>
             {/each}
@@ -2051,6 +2071,35 @@
   .waitlist-status.expired {
     background: var(--gray-100);
     color: var(--gray-600);
+  }
+
+  .waitlist-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+
+  .btn-success {
+    background: var(--success-600);
+    color: white;
+  }
+
+  .btn-success:hover:not(:disabled) {
+    background: var(--success-700);
+  }
+
+  .btn-warning {
+    background: var(--warning-500);
+    color: white;
+  }
+
+  .btn-warning:hover:not(:disabled) {
+    background: var(--warning-600);
+  }
+
+  .btn-sm {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: 0.75rem;
   }
 
   /* Assign Card */

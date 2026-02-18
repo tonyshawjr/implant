@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
 
   let { data }: { data: PageData } = $props();
+
+  // Map state
+  let mapContainer: HTMLDivElement;
+  let map: any = null;
+  let L: any = null;
 
   // Helper functions
   function formatCurrency(value: number): string {
@@ -33,17 +40,181 @@
     return { label: 'High', class: 'danger' };
   }
 
-  function getPerformanceClass(score: number | null): string {
+  function getScoreClass(score: number | null): string {
     if (score === null) return 'gray';
-    if (score >= 85) return 'success';
-    if (score >= 70) return 'primary';
-    if (score >= 50) return 'warning';
-    return 'danger';
+    if (score >= 65) return 'success';
+    if (score >= 40) return 'warning';
+    return 'gray';
+  }
+
+  function getBoundaryTypeLabel(type: string | null): string {
+    switch (type) {
+      case 'metro': return 'Metro Area';
+      case 'county': return 'County';
+      case 'city': return 'City';
+      case 'zipcode': return 'Zip Code(s)';
+      default: return 'Custom';
+    }
+  }
+
+  // State FIPS mapping for boundary fetching
+  const STATE_FIPS: Record<string, string> = {
+    'AL': '01', 'AK': '02', 'AZ': '04', 'AR': '05', 'CA': '06', 'CO': '08', 'CT': '09',
+    'DE': '10', 'FL': '12', 'GA': '13', 'HI': '15', 'ID': '16', 'IL': '17', 'IN': '18',
+    'IA': '19', 'KS': '20', 'KY': '21', 'LA': '22', 'ME': '23', 'MD': '24', 'MA': '25',
+    'MI': '26', 'MN': '27', 'MS': '28', 'MO': '29', 'MT': '30', 'NE': '31', 'NV': '32',
+    'NH': '33', 'NJ': '34', 'NM': '35', 'NY': '36', 'NC': '37', 'ND': '38', 'OH': '39',
+    'OK': '40', 'OR': '41', 'PA': '42', 'RI': '44', 'SC': '45', 'SD': '46', 'TN': '47',
+    'TX': '48', 'UT': '49', 'VT': '50', 'VA': '51', 'WA': '53', 'WV': '54', 'WI': '55',
+    'WY': '56', 'DC': '11', 'PR': '72'
+  };
+
+  // Fetch GeoJSON boundary from Census TIGERweb API
+  async function fetchBoundary(type: string, geoid: string): Promise<any> {
+    try {
+      let layerId: number;
+      let whereClause: string;
+
+      if (type === 'metro') {
+        layerId = 93;
+        whereClause = `GEOID='${geoid}'`;
+      } else if (type === 'county') {
+        layerId = 82;
+        whereClause = `GEOID='${geoid}'`;
+      } else if (type === 'city') {
+        layerId = 28;
+        whereClause = `GEOID='${geoid}'`;
+      } else {
+        layerId = 2;
+        whereClause = `ZCTA5='${geoid}'`;
+      }
+
+      const url = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/${layerId}/query?where=${encodeURIComponent(whereClause)}&f=geojson&outSR=4326&outFields=*`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        return data.features[0];
+      }
+    } catch (e) {
+      console.error('Error fetching boundary:', e);
+    }
+    return null;
+  }
+
+  // Initialize Leaflet map
+  onMount(async () => {
+    if (browser && data.territory) {
+      L = (await import('leaflet')).default;
+
+      const centerLat = data.territory.centerLat || 39.8283;
+      const centerLng = data.territory.centerLng || -98.5795;
+
+      map = L.map(mapContainer).setView([centerLat, centerLng], 10);
+
+      // CartoDB Positron - clean, minimal map style
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(map);
+
+      // Load and display the territory boundary
+      await loadTerritoryBoundary();
+    }
+    return () => { if (map) map.remove(); };
+  });
+
+  async function loadTerritoryBoundary() {
+    if (!data.territory || !map || !L) return;
+
+    const t = data.territory;
+    const bt = t.boundaryType || 'custom';
+    let geoid = '';
+
+    if (bt === 'metro' && t.msaCode) {
+      geoid = t.msaCode;
+    } else if (bt === 'county' && t.countyFips) {
+      const stateFips = STATE_FIPS[t.state] || '';
+      geoid = `${stateFips}${t.countyFips}`;
+    } else if (bt === 'city' && t.placeFips) {
+      const stateFips = STATE_FIPS[t.state] || '';
+      geoid = `${stateFips}${t.placeFips}`;
+    } else if (bt === 'zipcode' && data.zipCodes.length > 0) {
+      // For zip codes, we'll show all of them
+      for (const zc of data.zipCodes) {
+        const boundary = await fetchBoundary('zipcode', zc.zipCode);
+        if (boundary) {
+          const geoLayer = L.geoJSON(boundary, {
+            style: {
+              fillColor: '#2563eb',
+              fillOpacity: 0.25,
+              color: '#2563eb',
+              weight: 2
+            }
+          }).addTo(map);
+          geoLayer.bindPopup(`<strong>${zc.zipCode}</strong><br>${zc.city || ''}`);
+        } else {
+          // Fallback to circle if no boundary
+          const circle = L.circle([t.centerLat, t.centerLng], {
+            radius: 4000,
+            fillColor: '#2563eb',
+            fillOpacity: 0.3,
+            color: '#2563eb',
+            weight: 2
+          }).addTo(map);
+          circle.bindPopup(`<strong>${zc.zipCode}</strong><br>${zc.city || ''}`);
+        }
+      }
+      map.setView([t.centerLat, t.centerLng], 11);
+      return;
+    }
+
+    if (geoid) {
+      const boundary = await fetchBoundary(bt, geoid);
+      if (boundary) {
+        const geoLayer = L.geoJSON(boundary, {
+          style: {
+            fillColor: '#2563eb',
+            fillOpacity: 0.25,
+            color: '#2563eb',
+            weight: 2
+          }
+        }).addTo(map);
+        geoLayer.bindPopup(`<strong>${t.name}</strong><br>${getBoundaryTypeLabel(bt)}`);
+        map.fitBounds(geoLayer.getBounds(), { padding: [30, 30] });
+      } else {
+        // Fallback to circle
+        showFallbackCircle();
+      }
+    } else {
+      // Show fallback circle for custom or unknown boundary
+      showFallbackCircle();
+    }
+  }
+
+  function showFallbackCircle() {
+    if (!data.territory || !map || !L) return;
+    const t = data.territory;
+    const radius = (t.radiusMiles || 15) * 1609.34; // Convert miles to meters
+
+    const circle = L.circle([t.centerLat, t.centerLng], {
+      radius,
+      fillColor: '#2563eb',
+      fillOpacity: 0.2,
+      color: '#2563eb',
+      weight: 2,
+      dashArray: '5, 5'
+    }).addTo(map);
+    circle.bindPopup(`<strong>${t.name}</strong><br>${t.radiusMiles} mile radius`);
+    map.fitBounds(circle.getBounds(), { padding: [30, 30] });
   }
 </script>
 
 <svelte:head>
   <title>Territory - Implant Lead Engine</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </svelte:head>
 
 {#if !data.territory}
@@ -63,7 +234,7 @@
   </div>
 {:else}
   <!-- Territory Info Card -->
-  <div class="card mb-6">
+  <div class="card">
     <div class="card-header">
       <div>
         <h2 class="card-title">{data.territory.name}</h2>
@@ -80,7 +251,7 @@
         {:else}
           <span class="badge badge-gray">Shared Territory</span>
         {/if}
-        <span class="badge badge-{data.territory.status === 'active' ? 'success' : 'gray'}">
+        <span class="badge badge-{data.territory.status === 'locked' ? 'primary' : 'success'}">
           {data.territory.status.charAt(0).toUpperCase() + data.territory.status.slice(1)}
         </span>
       </div>
@@ -88,12 +259,12 @@
     <div class="card-body">
       <div class="territory-info-grid">
         <div class="info-item">
-          <span class="info-label">Coverage Area</span>
-          <span class="info-value">{data.territory.radiusMiles} mile radius</span>
+          <span class="info-label">Coverage Type</span>
+          <span class="info-value">{getBoundaryTypeLabel(data.territory.boundaryType)}</span>
         </div>
         <div class="info-item">
-          <span class="info-label">Territory Type</span>
-          <span class="info-value">{data.territory.territoryType.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</span>
+          <span class="info-label">Coverage Area</span>
+          <span class="info-value">{data.territory.radiusMiles} mile radius</span>
         </div>
         <div class="info-item">
           <span class="info-label">Monthly Rate</span>
@@ -116,37 +287,24 @@
   </div>
 
   <!-- Map and Demographics Row -->
-  <div class="territory-grid mb-6">
-    <!-- Map Placeholder -->
+  <div class="territory-grid">
+    <!-- Interactive Map -->
     <div class="card map-card">
       <div class="card-header">
         <h3 class="card-title">Territory Map</h3>
-        <button class="btn btn-sm btn-secondary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 3 21 3 21 9"/>
-            <polyline points="9 21 3 21 3 15"/>
-            <line x1="21" y1="3" x2="14" y2="10"/>
-            <line x1="3" y1="21" x2="10" y2="14"/>
-          </svg>
-          Expand
-        </button>
       </div>
-      <div class="card-body">
-        <div class="map-placeholder">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-          <span>Territory Map</span>
-          <span class="map-coords">{data.territory.centerLat.toFixed(4)}, {data.territory.centerLng.toFixed(4)}</span>
-        </div>
-      </div>
+      <div class="map-container" bind:this={mapContainer}></div>
     </div>
 
     <!-- Demographics Card -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Demographics</h3>
+        {#if data.territory.marketScore !== null}
+          <span class="market-score-badge {getScoreClass(data.territory.marketScore)}">
+            Market Score: {data.territory.marketScore}/100
+          </span>
+        {/if}
       </div>
       <div class="card-body">
         <div class="demographics-list">
@@ -204,6 +362,26 @@
             </div>
           </div>
 
+          {#if data.territory.population65Plus}
+            <div class="demographic-item highlight">
+              <div class="demographic-icon success">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div class="demographic-content">
+                <span class="demographic-label">Population 65+</span>
+                <span class="demographic-value">
+                  {formatNumber(data.territory.population65Plus)}
+                  {#if data.territory.population65Pct}
+                    <span class="demo-percent">({data.territory.population65Pct.toFixed(1)}%)</span>
+                  {/if}
+                </span>
+              </div>
+            </div>
+          {/if}
+
           <div class="demographic-item">
             <div class="demographic-icon {getCompetitionLevel(data.territory.competitionCount).class}">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -221,39 +399,41 @@
             </div>
           </div>
 
-          <div class="demographic-item">
-            <div class="demographic-icon success">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-              </svg>
+          {#if data.territory.implantCandidates}
+            <div class="demographic-item">
+              <div class="demographic-icon success">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+              </div>
+              <div class="demographic-content">
+                <span class="demographic-label">Implant Candidates</span>
+                <span class="demographic-value">{formatNumber(data.territory.implantCandidates)}</span>
+              </div>
             </div>
-            <div class="demographic-content">
-              <span class="demographic-label">Implant Candidates</span>
-              <span class="demographic-value">{formatNumber(data.territory.implantCandidates ?? 0)}</span>
-            </div>
-          </div>
+          {/if}
         </div>
       </div>
     </div>
   </div>
 
   <!-- Performance Metrics -->
-  <div class="stats-row mb-6">
+  <div class="stats-row">
     <div class="stat-card">
       <div class="stat-card-header">
-        <div class="stat-card-icon {getPerformanceClass(data.territory.performanceScore)}">
+        <div class="stat-card-icon {getScoreClass(data.territory.marketScore)}">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </div>
       </div>
-      <div class="stat-card-label">Performance Score</div>
-      <div class="stat-card-value">{data.territory.performanceScore ?? 'N/A'}</div>
+      <div class="stat-card-label">Market Score</div>
+      <div class="stat-card-value">{data.territory.marketScore ?? 'N/A'}{data.territory.marketScore ? '/100' : ''}</div>
       <div class="stat-card-change positive">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
         </svg>
-        Territory ranking
+        Territory quality
       </div>
     </div>
 
@@ -346,6 +526,41 @@
 {/if}
 
 <style>
+  /* Cards */
+  .card {
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+    margin-bottom: var(--spacing-6);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-4) var(--spacing-5);
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+  }
+
+  .card-subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin: var(--spacing-1) 0 0 0;
+  }
+
+  .card-body {
+    padding: var(--spacing-5);
+  }
+
+  /* Territory Info Grid */
   .territory-info-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -384,10 +599,12 @@
     color: var(--gray-900);
   }
 
+  /* Territory Grid - Map & Demographics */
   .territory-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-6);
+    margin-bottom: var(--spacing-6);
   }
 
   @media (max-width: 1024px) {
@@ -396,38 +613,44 @@
     }
   }
 
+  /* Map Card */
   .map-card {
     display: flex;
     flex-direction: column;
+    margin-bottom: 0;
   }
 
-  .map-card .card-body {
-    flex: 1;
-    display: flex;
-    padding: 0;
-  }
-
-  .map-placeholder {
-    flex: 1;
-    min-height: 300px;
-    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-50) 100%);
+  .map-container {
+    height: 350px;
+    background: var(--gray-100);
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-2);
-    color: var(--gray-400);
-    font-size: 1rem;
-    font-weight: 500;
   }
 
-  .map-coords {
+  /* Market Score Badge */
+  .market-score-badge {
+    display: inline-flex;
+    padding: 4px 10px;
     font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--gray-400);
+    font-weight: 500;
+    border-radius: var(--radius-md);
   }
 
+  .market-score-badge.success {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+
+  .market-score-badge.warning {
+    background: var(--warning-100);
+    color: var(--warning-700);
+  }
+
+  .market-score-badge.gray {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  /* Demographics */
   .demographics-list {
     display: flex;
     flex-direction: column;
@@ -438,6 +661,13 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-3);
+  }
+
+  .demographic-item.highlight {
+    background: var(--primary-50);
+    padding: var(--spacing-3);
+    border-radius: var(--radius-lg);
+    margin: 0 calc(-1 * var(--spacing-3));
   }
 
   .demographic-icon {
@@ -491,6 +721,13 @@
     color: var(--gray-900);
   }
 
+  .demo-percent {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--primary-600);
+    margin-left: var(--spacing-1);
+  }
+
   .competition-count {
     font-size: 0.75rem;
     font-weight: 400;
@@ -498,10 +735,12 @@
     margin-left: var(--spacing-1);
   }
 
+  /* Stats Row */
   .stats-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-6);
+    margin-bottom: var(--spacing-6);
   }
 
   @media (max-width: 1200px) {
@@ -516,6 +755,71 @@
     }
   }
 
+  .stat-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--gray-200);
+    padding: var(--spacing-5);
+  }
+
+  .stat-card-header {
+    margin-bottom: var(--spacing-3);
+  }
+
+  .stat-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-card-icon.primary {
+    background: var(--primary-100);
+    color: var(--primary-600);
+  }
+
+  .stat-card-icon.success {
+    background: var(--success-100);
+    color: var(--success-600);
+  }
+
+  .stat-card-icon.warning {
+    background: var(--warning-100);
+    color: var(--warning-600);
+  }
+
+  .stat-card-icon.gray {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  .stat-card-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-bottom: var(--spacing-1);
+  }
+
+  .stat-card-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .stat-card-change {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    font-size: 0.8125rem;
+  }
+
+  .stat-card-change.positive {
+    color: var(--success-600);
+  }
+
+  /* Zip Codes Grid */
   .zip-codes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -563,5 +867,102 @@
     padding: 1px 6px;
     margin-top: var(--spacing-1);
     width: fit-content;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background: var(--success-100);
+    color: var(--success-700);
+  }
+
+  .badge-primary {
+    background: var(--primary-100);
+    color: var(--primary-700);
+  }
+
+  .badge-gray {
+    background: var(--gray-100);
+    color: var(--gray-600);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: var(--spacing-10);
+  }
+
+  .empty-state-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-full);
+    background: var(--gray-100);
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--spacing-4);
+  }
+
+  .empty-state-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 var(--spacing-2);
+  }
+
+  .empty-state-description {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin: 0 0 var(--spacing-4);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Button */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--primary-600);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-700);
+  }
+
+  /* Utilities */
+  .flex {
+    display: flex;
+  }
+
+  .items-center {
+    align-items: center;
+  }
+
+  .gap-3 {
+    gap: var(--spacing-3);
   }
 </style>

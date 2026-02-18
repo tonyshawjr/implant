@@ -411,6 +411,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const organizationId = formData.get('organizationId') as string;
 		const monthlyRate = parseFloat(formData.get('monthlyRate') as string);
+		const waitlistEntryId = formData.get('waitlistEntryId') as string | null;
 
 		if (!organizationId) {
 			return fail(400, { error: 'Organization ID is required' });
@@ -454,15 +455,74 @@ export const actions: Actions = {
 				data: { status: 'locked' }
 			});
 
-			// Clear any waitlist entries
-			await prisma.territoryWaitlist.deleteMany({
-				where: { territoryId: id }
-			});
+			// If assigning from waitlist, mark that entry as converted, delete others
+			if (waitlistEntryId) {
+				await prisma.territoryWaitlist.update({
+					where: { id: waitlistEntryId },
+					data: { status: 'converted' }
+				});
+				// Delete remaining waitlist entries
+				await prisma.territoryWaitlist.deleteMany({
+					where: { territoryId: id, id: { not: waitlistEntryId } }
+				});
+			} else {
+				// Clear all waitlist entries
+				await prisma.territoryWaitlist.deleteMany({
+					where: { territoryId: id }
+				});
+			}
 
 			return { success: true, message: `Territory assigned to ${organization.name}` };
 		} catch (error) {
 			console.error('Failed to assign territory:', error);
 			return fail(500, { error: 'Failed to assign territory' });
+		}
+	},
+
+	/**
+	 * Remove a single waitlist entry
+	 */
+	removeWaitlistEntry: async ({ request }) => {
+		const formData = await request.formData();
+		const waitlistId = formData.get('waitlistId') as string;
+		const territoryId = formData.get('territoryId') as string;
+
+		if (!waitlistId) {
+			return fail(400, { error: 'Waitlist entry ID is required' });
+		}
+
+		try {
+			// Delete the waitlist entry
+			await prisma.territoryWaitlist.delete({
+				where: { id: waitlistId }
+			});
+
+			// Check if there are any remaining waitlist entries
+			if (territoryId) {
+				const remainingCount = await prisma.territoryWaitlist.count({
+					where: { territoryId, status: 'waiting' }
+				});
+
+				// If no more waitlist entries and territory is in waitlist status, update to available
+				if (remainingCount === 0) {
+					const territory = await prisma.territory.findUnique({
+						where: { id: territoryId },
+						select: { status: true }
+					});
+
+					if (territory?.status === 'waitlist') {
+						await prisma.territory.update({
+							where: { id: territoryId },
+							data: { status: 'available' }
+						});
+					}
+				}
+			}
+
+			return { success: true, message: 'Waitlist entry removed' };
+		} catch (error) {
+			console.error('Failed to remove waitlist entry:', error);
+			return fail(500, { error: 'Failed to remove waitlist entry' });
 		}
 	}
 };

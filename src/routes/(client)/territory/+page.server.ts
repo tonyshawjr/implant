@@ -56,7 +56,19 @@ export const load: PageServerLoad = async ({ parent }) => {
     implantCandidates: territory.implantCandidates,
     competitionCount: territory.competitionCount,
     monthlyBasePrice: territory.monthlyBasePrice ? Number(territory.monthlyBasePrice) : null,
-    performanceScore: territory.performanceScore ? Number(territory.performanceScore) : null
+    performanceScore: territory.performanceScore ? Number(territory.performanceScore) : null,
+    // Boundary info
+    boundaryType: territory.boundaryType,
+    msaCode: territory.msaCode,
+    countyFips: territory.countyFips,
+    placeFips: territory.placeFips,
+    // Additional demographics
+    population65Plus: territory.population65Plus,
+    population65Pct: territory.population65Pct ? Number(territory.population65Pct) : null,
+    medianHomeValue: territory.medianHomeValue,
+    veteransCount: territory.veteransCount,
+    ownerOccupiedPct: territory.ownerOccupiedPct ? Number(territory.ownerOccupiedPct) : null,
+    marketScore: territory.marketScore ? Number(territory.marketScore) : null
   };
 
   // Format assignment data
