@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { Toast } from 'flowbite-svelte';
-  import { CheckCircleSolid, CloseCircleSolid } from 'flowbite-svelte-icons';
   import LeadKanbanColumn from './LeadKanbanColumn.svelte';
 
   interface Lead {
@@ -34,32 +32,29 @@
   let toastMessage = $state('');
   let toastType = $state<'success' | 'error'>('success');
 
-  // Column configurations with colors matching LeadStatusBadge
+  // Column configurations matching lead statuses
   const columns = [
-    { id: 'new', label: 'New', color: '#3b82f6', bgColor: '#eff6ff' },
-    { id: 'contacted', label: 'Contacted', color: '#eab308', bgColor: '#fefce8' },
-    { id: 'qualified', label: 'Qualified', color: '#a855f7', bgColor: '#faf5ff' },
-    { id: 'appointment_set', label: 'Appointment Set', color: '#f97316', bgColor: '#fff7ed' },
-    { id: 'consultation_completed', label: 'Consultation', color: '#6366f1', bgColor: '#eef2ff' },
-    { id: 'converted', label: 'Converted', color: '#22c55e', bgColor: '#f0fdf4' },
-    { id: 'lost', label: 'Lost', color: '#ef4444', bgColor: '#fef2f2' }
+    { id: 'new', label: 'New', dotClass: 'new' },
+    { id: 'contacted', label: 'Contacted', dotClass: 'contacted' },
+    { id: 'qualified', label: 'Qualified', dotClass: 'qualified' },
+    { id: 'appointment_set', label: 'Appointment Set', dotClass: 'appointment_set' },
+    { id: 'consultation_completed', label: 'Consultation', dotClass: 'consultation_completed' },
+    { id: 'converted', label: 'Converted', dotClass: 'converted' },
+    { id: 'lost', label: 'Lost', dotClass: 'lost' }
   ];
 
   // Group leads by status
   const leadsByStatus = $derived(() => {
     const grouped: Record<string, Lead[]> = {};
 
-    // Initialize all columns with empty arrays
     for (const col of columns) {
       grouped[col.id] = [];
     }
 
-    // Populate with leads
     for (const lead of leads) {
       if (grouped[lead.status]) {
         grouped[lead.status].push(lead);
       } else {
-        // If status doesn't match any column, put in 'new'
         grouped['new'].push(lead);
       }
     }
@@ -72,9 +67,7 @@
     try {
       const response = await fetch(`/api/leads/${leadId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
 
@@ -84,18 +77,15 @@
       }
 
       const updatedLead = await response.json();
-
-      // Show success toast
       showToast(`Lead moved to ${formatStatus(newStatus)}`, 'success');
 
-      // Notify parent if callback provided
       if (onLeadUpdated) {
         onLeadUpdated(updatedLead);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update status';
       showToast(message, 'error');
-      throw error; // Re-throw so column can handle reverting
+      throw error;
     }
   }
 
@@ -103,99 +93,146 @@
     toastMessage = message;
     toastType = type;
     toastVisible = true;
-
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-      toastVisible = false;
-    }, 3000);
+    setTimeout(() => { toastVisible = false; }, 3000);
   }
 
   function formatStatus(status: string): string {
-    return status
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   }
 </script>
 
-<div class="kanban-container">
-  <div class="kanban-board">
-    {#each columns as column (column.id)}
-      <LeadKanbanColumn
-        {column}
-        leads={leadsByStatus()[column.id]}
-        onStatusChange={handleStatusChange}
-      />
-    {/each}
-  </div>
+<div class="pipeline-container">
+  {#each columns as column (column.id)}
+    <LeadKanbanColumn
+      {column}
+      leads={leadsByStatus()[column.id]}
+      onStatusChange={handleStatusChange}
+    />
+  {/each}
 </div>
 
 <!-- Toast Notification -->
 {#if toastVisible}
-  <div class="toast-container">
-    <Toast color={toastType === 'success' ? 'green' : 'red'} dismissable bind:toastStatus={toastVisible}>
-      {#snippet icon()}
-        {#if toastType === 'success'}
-          <CheckCircleSolid class="w-5 h-5" />
-        {:else}
-          <CloseCircleSolid class="w-5 h-5" />
-        {/if}
-      {/snippet}
-      {toastMessage}
-    </Toast>
+  <div class="toast-notification {toastType}">
+    {#if toastType === 'success'}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    {:else}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+      </svg>
+    {/if}
+    <span>{toastMessage}</span>
+    <button class="toast-close" onclick={() => toastVisible = false}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
   </div>
 {/if}
 
 <style>
-  .kanban-container {
-    width: 100%;
+  .pipeline-container {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-4);
     overflow-x: auto;
-    padding-bottom: 1rem;
+    padding-bottom: var(--spacing-4);
   }
 
-  .kanban-board {
-    display: flex;
-    gap: 1rem;
-    min-width: max-content;
-    padding: 0.25rem;
+  @media (max-width: 1400px) {
+    .pipeline-container {
+      grid-template-columns: repeat(7, minmax(260px, 1fr));
+    }
   }
 
-  .toast-container {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 50;
+  @media (max-width: 768px) {
+    .pipeline-container {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      gap: var(--spacing-3);
+      padding: var(--spacing-2);
+      margin: 0 calc(-1 * var(--spacing-4));
+      padding-left: var(--spacing-4);
+      padding-right: var(--spacing-4);
+    }
   }
 
-  /* Custom scrollbar for horizontal scroll */
-  .kanban-container::-webkit-scrollbar {
+  /* Custom scrollbar */
+  .pipeline-container::-webkit-scrollbar {
     height: 8px;
   }
 
-  .kanban-container::-webkit-scrollbar-track {
-    background: #f1f5f9;
+  .pipeline-container::-webkit-scrollbar-track {
+    background: var(--gray-100);
     border-radius: 4px;
   }
 
-  .kanban-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+  .pipeline-container::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
     border-radius: 4px;
   }
 
-  .kanban-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  .pipeline-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
   }
 
-  /* Dark mode scrollbar */
-  :global(.dark) .kanban-container::-webkit-scrollbar-track {
-    background: #1e293b;
+  /* Toast */
+  .toast-notification {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.3s ease;
   }
 
-  :global(.dark) .kanban-container::-webkit-scrollbar-thumb {
-    background: #475569;
+  .toast-notification.success {
+    background: var(--success-600);
+    color: white;
   }
 
-  :global(.dark) .kanban-container::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+  .toast-notification.error {
+    background: var(--danger-600);
+    color: white;
+  }
+
+  .toast-close {
+    background: transparent;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+  }
+
+  .toast-close:hover {
+    opacity: 1;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(1rem);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 </style>

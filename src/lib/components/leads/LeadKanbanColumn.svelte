@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Badge } from 'flowbite-svelte';
   import { flip } from 'svelte/animate';
   import { dndzone } from 'svelte-dnd-action';
   import LeadKanbanCard from './LeadKanbanCard.svelte';
@@ -26,8 +25,7 @@
   interface ColumnConfig {
     id: string;
     label: string;
-    color: string;
-    bgColor: string;
+    dotClass: string;
   }
 
   interface Props {
@@ -61,37 +59,32 @@
     if (movedLead && onStatusChange) {
       try {
         await onStatusChange(movedLead.id, column.id);
-        // Update the local lead status after successful API call
         movedLead.status = column.id;
       } catch (error) {
-        // If API call fails, the parent component should handle reverting
         console.error('Failed to update lead status:', error);
       }
     }
   }
 
-  const leadCount = $derived(items.length);
+  let leadCount = $derived(items.length);
 </script>
 
-<div class="kanban-column">
-  <!-- Column Header -->
-  <div class="column-header" style="border-top-color: {column.color};">
-    <div class="header-content">
-      <h3 class="column-title">{column.label}</h3>
-      <Badge color="gray" class="text-xs">{leadCount}</Badge>
+<div class="pipeline-column">
+  <div class="pipeline-column-header">
+    <div class="pipeline-column-title">
+      <span class="stage-dot {column.dotClass}"></span>
+      {column.label}
+      <span class="stage-count">{leadCount}</span>
     </div>
   </div>
-
-  <!-- Column Body - Dropzone -->
   <div
-    class="column-body"
-    style="background-color: {column.bgColor};"
+    class="pipeline-column-body"
     use:dndzone={{
       items,
       flipDurationMs,
       type: 'leads',
       dropTargetStyle: {
-        outline: `2px dashed ${column.color}`,
+        outline: '2px dashed var(--primary-300)',
         outlineOffset: '-2px'
       }
     }}
@@ -105,7 +98,12 @@
     {/each}
 
     {#if items.length === 0}
-      <div class="empty-column">
+      <div class="pipeline-empty">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
         <span>No leads</span>
       </div>
     {/if}
@@ -113,80 +111,71 @@
 </div>
 
 <style>
-  .kanban-column {
+  .pipeline-column {
+    background: var(--gray-50);
+    border-radius: var(--radius-xl);
+    min-height: 400px;
     display: flex;
     flex-direction: column;
-    min-width: 280px;
-    max-width: 320px;
+    min-width: 260px;
     flex: 1;
   }
 
-  .column-header {
-    background: white;
-    border-radius: 0.5rem 0.5rem 0 0;
-    padding: 0.75rem 1rem;
-    border-top: 3px solid;
-    border-left: 1px solid #e5e7eb;
-    border-right: 1px solid #e5e7eb;
+  .pipeline-column-header {
+    padding: var(--spacing-4);
+    border-bottom: 1px solid var(--gray-200);
   }
 
-  .header-content {
+  .pipeline-column-title {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .column-title {
+    gap: var(--spacing-2);
     font-weight: 600;
-    font-size: 0.875rem;
-    color: #374151;
-    margin: 0;
+    color: var(--gray-900);
   }
 
-  .column-body {
+  .stage-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .stage-dot.new { background: var(--primary-500); }
+  .stage-dot.contacted { background: var(--warning-500); }
+  .stage-dot.qualified { background: #8b5cf6; }
+  .stage-dot.appointment_set { background: #f97316; }
+  .stage-dot.consultation_completed { background: #6366f1; }
+  .stage-dot.converted { background: var(--success-500); }
+  .stage-dot.lost { background: var(--danger-500); }
+
+  .stage-count {
+    margin-left: auto;
+    background: var(--gray-200);
+    color: var(--gray-700);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  .pipeline-column-body {
+    padding: var(--spacing-3);
     flex: 1;
-    min-height: 400px;
-    padding: 0.75rem;
-    border-radius: 0 0 0.5rem 0.5rem;
-    border: 1px solid #e5e7eb;
-    border-top: none;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    overflow-y: auto;
+    gap: var(--spacing-3);
     transition: outline 0.2s ease;
   }
 
-  .empty-column {
+  .pipeline-empty {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100px;
-    color: #9ca3af;
+    gap: var(--spacing-2);
+    padding: var(--spacing-8);
+    color: var(--gray-400);
     font-size: 0.875rem;
-    border: 2px dashed #e5e7eb;
-    border-radius: 0.375rem;
-    flex: 1;
-  }
-
-  /* Dark mode support */
-  :global(.dark) .column-header {
-    background: #1f2937;
-    border-left-color: #374151;
-    border-right-color: #374151;
-  }
-
-  :global(.dark) .column-title {
-    color: #f3f4f6;
-  }
-
-  :global(.dark) .column-body {
-    border-color: #374151;
-  }
-
-  :global(.dark) .empty-column {
-    border-color: #4b5563;
-    color: #6b7280;
   }
 </style>

@@ -3,8 +3,6 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
-  import { ButtonGroup, Button } from 'flowbite-svelte';
-  import { TableColumnOutline, GridPlusOutline } from 'flowbite-svelte-icons';
   import { LeadKanban } from '$lib/components/leads';
 
   let { data }: { data: PageData } = $props();
@@ -307,25 +305,36 @@
 
 <!-- View Toggle -->
 <div class="view-toggle-bar">
-  <div class="view-toggle-label">View:</div>
-  <ButtonGroup>
-    <Button
-      color={viewMode === 'list' ? 'primary' : 'alternative'}
-      size="sm"
+  <div class="view-toggle">
+    <button
+      class="view-toggle-btn"
+      class:active={viewMode === 'list'}
       onclick={() => setViewMode('list')}
     >
-      <TableColumnOutline class="w-4 h-4 me-1.5" />
-      List
-    </Button>
-    <Button
-      color={viewMode === 'kanban' ? 'primary' : 'alternative'}
-      size="sm"
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/>
+        <line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+      <span class="view-toggle-label">List</span>
+    </button>
+    <button
+      class="view-toggle-btn"
+      class:active={viewMode === 'kanban'}
       onclick={() => setViewMode('kanban')}
     >
-      <GridPlusOutline class="w-4 h-4 me-1.5" />
-      Kanban
-    </Button>
-  </ButtonGroup>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      <span class="view-toggle-label">Kanban</span>
+    </button>
+  </div>
 </div>
 
 <!-- Conditional View Rendering -->
@@ -561,10 +570,42 @@
     margin-bottom: var(--spacing-4);
   }
 
-  .view-toggle-label {
+  .view-toggle {
+    display: flex;
+    background: var(--gray-100);
+    border-radius: var(--radius-lg);
+    padding: 4px;
+  }
+
+  .view-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md);
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .view-toggle-btn:hover {
+    color: var(--gray-900);
+  }
+
+  .view-toggle-btn.active {
+    background: white;
+    color: var(--gray-900);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .view-toggle-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: inherit;
   }
 
   .lead-name-cell {
@@ -722,13 +763,14 @@
     }
   }
 
-  /* Dark mode support */
-  :global(.dark) .filters-bar {
-    background: #1f2937;
-    border-color: #374151;
-  }
+  @media (max-width: 768px) {
+    .view-toggle-btn {
+      padding: 8px 12px;
+      min-height: 44px;
+    }
 
-  :global(.dark) .view-toggle-label {
-    color: #d1d5db;
+    .view-toggle-label {
+      display: none;
+    }
   }
 </style>
