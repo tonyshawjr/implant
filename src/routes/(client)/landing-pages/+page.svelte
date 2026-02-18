@@ -16,7 +16,7 @@
     CheckCircleOutline,
     ClipboardOutline,
     PlusOutline,
-    ExternalLinkOutline,
+    LinkOutline,
     CalendarMonthOutline,
     ArrowRightOutline
   } from 'flowbite-svelte-icons';
@@ -286,7 +286,7 @@
               target="_blank"
               class="btn btn-sm btn-outline"
             >
-              <ExternalLinkOutline class="w-4 h-4" />
+              <LinkOutline class="w-4 h-4" />
               Preview
             </a>
             <a
