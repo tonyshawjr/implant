@@ -86,15 +86,15 @@
     }
   }
 
-  function getPublicUrl(landingPageId: string): string {
-    return `/lp/${landingPageId}`;
+  function getPublicUrl(slug: string, isDraft: boolean = false): string {
+    return isDraft ? `/lp/${slug}?preview=true` : `/lp/${slug}`;
   }
 
-  async function copyToClipboard(landingPageId: string) {
-    const url = `${window.location.origin}${getPublicUrl(landingPageId)}`;
+  async function copyToClipboard(slug: string, isDraft: boolean = false) {
+    const url = `${window.location.origin}${getPublicUrl(slug, isDraft)}`;
     try {
       await navigator.clipboard.writeText(url);
-      copiedId = landingPageId;
+      copiedId = slug;
       setTimeout(() => {
         copiedId = null;
       }, 2000);
@@ -231,15 +231,15 @@
 
         <!-- URL Copy Section -->
         <div class="landing-page-url">
-          <code class="url-text">{getPublicUrl(landingPage.id)}</code>
+          <code class="url-text">{getPublicUrl(landingPage.slug, landingPage.status === 'draft')}</code>
           <button
             class="btn btn-icon btn-secondary"
-            onclick={() => copyToClipboard(landingPage.id)}
+            onclick={() => copyToClipboard(landingPage.slug, landingPage.status === 'draft')}
             id="copy-btn-{landingPage.id}"
           >
             <ClipboardOutline class="w-4 h-4" />
           </button>
-          {#if copiedId === landingPage.id}
+          {#if copiedId === landingPage.slug}
             <span class="copy-success">Copied!</span>
           {/if}
         </div>
@@ -249,7 +249,7 @@
           <div class="landing-page-leads">
             <div class="leads-header">
               <span class="leads-title">Recent Leads</span>
-              <a href="/leads?source={landingPage.id}" class="leads-link">
+              <a href="/leads?source={landingPage.slug}" class="leads-link">
                 View all
                 <ArrowRightOutline class="w-3 h-3" />
               </a>
@@ -282,7 +282,7 @@
           </div>
           <div class="footer-actions">
             <a
-              href={getPublicUrl(landingPage.id)}
+              href={getPublicUrl(landingPage.slug, landingPage.status === 'draft')}
               target="_blank"
               class="btn btn-sm btn-outline"
             >
@@ -290,7 +290,7 @@
               Preview
             </a>
             <a
-              href="/leads?source={landingPage.id}"
+              href="/leads?source={landingPage.slug}"
               class="btn btn-sm btn-secondary"
             >
               View Leads
