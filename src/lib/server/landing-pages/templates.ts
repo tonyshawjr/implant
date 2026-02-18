@@ -940,10 +940,10 @@ export function renderFunnelHtml(template: FunnelTemplate, orgData: {
         html += '<div class="form-group"><input type="text" name="lastName" class="form-input" placeholder="Last Name" required></div></div>';
         html += '<div class="form-group"><input type="email" name="email" class="form-input" placeholder="Email" required></div>';
         html += '<div class="form-group"><input type="tel" name="phone" class="form-input" placeholder="Phone" required></div>';
-        html += '</div>';
         html += '<button type="submit" class="btn">' + step.content.buttonText + '</button>';
         html += '<p class="disclaimer">By submitting, you agree to receive communications from ' + ORG_DATA.name + '.</p>';
         html += '</form>';
+        html += '</div>';
       }
 
       else if (step.type === 'result') {

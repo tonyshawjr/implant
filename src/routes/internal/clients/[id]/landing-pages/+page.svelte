@@ -1,29 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
-  import { goto } from '$app/navigation';
-  import {
-    Badge,
-    Button,
-    Alert,
-    Modal,
-    Select,
-    Breadcrumb,
-    BreadcrumbItem,
-    Dropdown,
-    DropdownItem
-  } from 'flowbite-svelte';
-  import {
-    PlusOutline,
-    EyeOutline,
-    FileDocOutline,
-    ChartOutline,
-    UsersGroupOutline,
-    CheckCircleOutline,
-    ExclamationCircleOutline,
-    ChevronDownOutline,
-    HomeOutline
-  } from 'flowbite-svelte-icons';
   import LandingPageCard from '$lib/components/landing-pages/LandingPageCard.svelte';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -31,27 +8,22 @@
   let showCreateModal = $state(false);
   let selectedTemplateId = $state('');
   let isCreating = $state(false);
-
-  // Filter state
   let statusFilter = $state('all');
 
-  // Filtered landing pages
   let filteredLandingPages = $derived(
     statusFilter === 'all'
       ? data.landingPages
       : data.landingPages.filter(lp => lp.status === statusFilter)
   );
 
-  // Template options for dropdown
-  let templateOptions = $derived(
-    data.templates.map(t => ({
-      value: t.id,
-      name: `${t.name} (${t.category})`
-    }))
-  );
-
-  function handleCopyUrl() {
-    // Could show a toast notification here
+  function getCategoryBadgeClass(category: string): string {
+    switch (category) {
+      case 'implant': return 'badge-primary';
+      case 'cosmetic': return 'badge-purple';
+      case 'general': return 'badge-success';
+      case 'promo': return 'badge-warning';
+      default: return 'badge-primary';
+    }
   }
 </script>
 
@@ -60,242 +32,316 @@
 </svelte:head>
 
 <!-- Breadcrumb -->
-<Breadcrumb aria-label="Breadcrumb navigation" class="mb-6">
-  <BreadcrumbItem href="/internal" home>
-    {#snippet icon()}
-      <HomeOutline class="w-4 h-4 me-2" />
-    {/snippet}
-    Clients
-  </BreadcrumbItem>
-  <BreadcrumbItem href="/internal/clients/{data.organization.id}">
-    {data.organization.name}
-  </BreadcrumbItem>
-  <BreadcrumbItem>Landing Pages</BreadcrumbItem>
-</Breadcrumb>
+<nav class="breadcrumb">
+  <a href="/internal">Clients</a>
+  <span class="sep">/</span>
+  <a href="/internal/clients/{data.organization.id}">{data.organization.name}</a>
+  <span class="sep">/</span>
+  <span class="current">Landing Pages</span>
+</nav>
 
 <!-- Stats Row -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-    <div class="flex items-center gap-3">
-      <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-        <FileDocOutline class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-      </div>
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Total Pages</p>
-        <p class="text-xl font-bold text-gray-900 dark:text-white">{data.stats.totalPages}</p>
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-card-icon primary">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       </div>
     </div>
+    <div class="stat-card-label">Total Pages</div>
+    <div class="stat-card-value">{data.stats.totalPages}</div>
   </div>
 
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-    <div class="flex items-center gap-3">
-      <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-        <CheckCircleOutline class="w-5 h-5 text-green-600 dark:text-green-400" />
-      </div>
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Published</p>
-        <p class="text-xl font-bold text-gray-900 dark:text-white">{data.stats.publishedPages}</p>
+  <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-card-icon success">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       </div>
     </div>
+    <div class="stat-card-label">Published</div>
+    <div class="stat-card-value">{data.stats.publishedPages}</div>
   </div>
 
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-    <div class="flex items-center gap-3">
-      <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-        <EyeOutline class="w-5 h-5 text-purple-600 dark:text-purple-400" />
-      </div>
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Total Views</p>
-        <p class="text-xl font-bold text-gray-900 dark:text-white">
-          {data.stats.totalViews.toLocaleString()}
-        </p>
+  <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-card-icon primary">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </div>
     </div>
+    <div class="stat-card-label">Total Views</div>
+    <div class="stat-card-value">{data.stats.totalViews.toLocaleString()}</div>
   </div>
 
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-    <div class="flex items-center gap-3">
-      <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-        <UsersGroupOutline class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-      </div>
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Submissions</p>
-        <p class="text-xl font-bold text-gray-900 dark:text-white">
-          {data.stats.totalSubmissions.toLocaleString()}
-        </p>
+  <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-card-icon warning">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
       </div>
     </div>
+    <div class="stat-card-label">Submissions</div>
+    <div class="stat-card-value">{data.stats.totalSubmissions.toLocaleString()}</div>
   </div>
 
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-    <div class="flex items-center gap-3">
-      <div class="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-        <ChartOutline class="w-5 h-5 text-teal-600 dark:text-teal-400" />
-      </div>
-      <div>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Avg Conv. Rate</p>
-        <p class="text-xl font-bold text-gray-900 dark:text-white">{data.stats.avgConversionRate}%</p>
+  <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-card-icon success">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </div>
     </div>
+    <div class="stat-card-label">Avg Conv. Rate</div>
+    <div class="stat-card-value">{data.stats.avgConversionRate}%</div>
   </div>
 </div>
 
 <!-- Page Header -->
-<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Landing Pages</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-      Manage landing pages for {data.organization.name}
-    </p>
+<div class="card">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h3 class="card-title">Landing Pages</h3>
+      <p class="card-subtitle">Manage landing pages for {data.organization.name}</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <select bind:value={statusFilter} class="form-select" style="width: auto; min-width: 140px;">
+        <option value="all">All Status</option>
+        <option value="published">Published</option>
+        <option value="draft">Draft</option>
+        <option value="archived">Archived</option>
+      </select>
+      <button class="btn btn-primary" onclick={() => (showCreateModal = true)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create Landing Page
+      </button>
+    </div>
   </div>
-  <div class="flex items-center gap-3">
-    <!-- Status Filter -->
-    <Select
-      class="w-40"
-      items={[
-        { value: 'all', name: 'All Status' },
-        { value: 'published', name: 'Published' },
-        { value: 'draft', name: 'Draft' },
-        { value: 'archived', name: 'Archived' }
-      ]}
-      bind:value={statusFilter}
-    />
 
-    <!-- Create Button with Template Dropdown -->
-    <Button color="primary" onclick={() => (showCreateModal = true)}>
-      <PlusOutline class="w-4 h-4 me-2" />
-      Create Landing Page
-    </Button>
+  <!-- Success/Error Messages -->
+  {#if form?.success}
+    <div class="alert alert-success" style="margin: 1rem;">
+      {form.message}
+    </div>
+  {/if}
+
+  {#if form?.message && !form?.success}
+    <div class="alert alert-danger" style="margin: 1rem;">
+      {form.message}
+    </div>
+  {/if}
+
+  <div class="card-body">
+    {#if filteredLandingPages && filteredLandingPages.length > 0}
+      <div class="lp-grid">
+        {#each filteredLandingPages as landingPage (landingPage.id)}
+          <LandingPageCard
+            {landingPage}
+            organizationId={data.organization.id}
+          />
+        {/each}
+      </div>
+    {:else}
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3 class="empty-state-title">
+          {#if statusFilter !== 'all'}
+            No {statusFilter} landing pages
+          {:else}
+            No landing pages yet
+          {/if}
+        </h3>
+        <p class="empty-state-description">
+          {#if statusFilter !== 'all'}
+            Try changing the filter or create a new landing page.
+          {:else}
+            Create your first landing page for {data.organization.name} to get started.
+          {/if}
+        </p>
+        {#if statusFilter === 'all'}
+          <button class="btn btn-primary" onclick={() => (showCreateModal = true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create First Landing Page
+          </button>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>
 
-<!-- Success/Error Messages -->
-{#if form?.success}
-  <Alert color="green" class="mb-6">
-    <CheckCircleOutline slot="icon" class="w-5 h-5" />
-    {form.message}
-  </Alert>
-{/if}
+<!-- Create Landing Page Modal -->
+{#if showCreateModal}
+  <div class="modal-overlay" onclick={() => (showCreateModal = false)} role="presentation">
+    <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3>Create Landing Page</h3>
+        <button class="modal-close" onclick={() => (showCreateModal = false)}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--gray-600); margin-bottom: 1rem;">
+          Select a template to create a new landing page for {data.organization.name}.
+          You can customize it after creation.
+        </p>
 
-{#if form?.message && !form?.success}
-  <Alert color="red" class="mb-6">
-    <ExclamationCircleOutline slot="icon" class="w-5 h-5" />
-    {form.message}
-  </Alert>
-{/if}
+        <form
+          method="POST"
+          action="?/createFromTemplate"
+          use:enhance={() => {
+            isCreating = true;
+            return async ({ result, update }) => {
+              isCreating = false;
+              if (result.type === 'redirect') {
+                showCreateModal = false;
+              }
+              await update();
+            };
+          }}
+        >
+          <div style="margin-bottom: 1.5rem;">
+            <label class="form-label" for="templateSelect">Choose Template</label>
+            {#if data.templates.length > 0}
+              <select
+                id="templateSelect"
+                name="templateId"
+                bind:value={selectedTemplateId}
+                class="form-select"
+                required
+              >
+                <option value="" disabled>Select a template...</option>
+                {#each data.templates as template}
+                  <option value={template.id}>{template.name} ({template.category})</option>
+                {/each}
+              </select>
+              {#if selectedTemplateId}
+                {@const selectedTemplate = data.templates.find(t => t.id === selectedTemplateId)}
+                {#if selectedTemplate}
+                  <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--gray-50); border-radius: var(--radius-lg);">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                      <span style="font-weight: 500;">{selectedTemplate.name}</span>
+                      <span class="badge {getCategoryBadgeClass(selectedTemplate.category)}">{selectedTemplate.category}</span>
+                    </div>
+                    {#if selectedTemplate.description}
+                      <p style="font-size: 0.875rem; color: var(--gray-500);">{selectedTemplate.description}</p>
+                    {/if}
+                  </div>
+                {/if}
+              {/if}
+            {:else}
+              <p style="font-size: 0.875rem; color: var(--gray-500); padding: 1rem; background: var(--gray-50); border-radius: var(--radius-lg);">
+                No templates available. Create templates first.
+              </p>
+            {/if}
+          </div>
 
-<!-- Landing Pages Grid -->
-{#if filteredLandingPages && filteredLandingPages.length > 0}
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {#each filteredLandingPages as landingPage (landingPage.id)}
-      <LandingPageCard
-        {landingPage}
-        organizationId={data.organization.id}
-        onCopyUrl={handleCopyUrl}
-      />
-    {/each}
-  </div>
-{:else}
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-    <div class="flex justify-center mb-4">
-      <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded-full">
-        <FileDocOutline class="w-8 h-8 text-gray-400 dark:text-gray-500" />
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" onclick={() => (showCreateModal = false)} disabled={isCreating}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              disabled={!selectedTemplateId || isCreating || data.templates.length === 0}
+            >
+              {isCreating ? 'Creating...' : 'Create Landing Page'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-      {#if statusFilter !== 'all'}
-        No {statusFilter} landing pages
-      {:else}
-        No landing pages yet
-      {/if}
-    </h3>
-    <p class="text-gray-500 dark:text-gray-400 mb-6">
-      {#if statusFilter !== 'all'}
-        Try changing the filter or create a new landing page.
-      {:else}
-        Create your first landing page for {data.organization.name} to get started.
-      {/if}
-    </p>
-    {#if statusFilter === 'all'}
-      <Button color="primary" onclick={() => (showCreateModal = true)}>
-        <PlusOutline class="w-4 h-4 me-2" />
-        Create First Landing Page
-      </Button>
-    {/if}
   </div>
 {/if}
 
-<!-- Create Landing Page Modal -->
-<Modal bind:open={showCreateModal} size="md" title="Create Landing Page">
-  <p class="text-gray-500 dark:text-gray-400 mb-4">
-    Select a template to create a new landing page for {data.organization.name}.
-    You can customize it after creation.
-  </p>
+<style>
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+    color: var(--gray-500);
+  }
 
-  <form
-    method="POST"
-    action="?/createFromTemplate"
-    use:enhance={() => {
-      isCreating = true;
-      return async ({ result, update }) => {
-        isCreating = false;
-        if (result.type === 'redirect') {
-          showCreateModal = false;
-        }
-        await update();
-      };
-    }}
-  >
-    <div class="mb-6">
-      <label for="templateSelect" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-        Choose Template
-      </label>
-      {#if data.templates.length > 0}
-        <Select
-          id="templateSelect"
-          name="templateId"
-          items={templateOptions}
-          bind:value={selectedTemplateId}
-          placeholder="Select a template..."
-          required
-        />
-        {#if selectedTemplateId}
-          {@const selectedTemplate = data.templates.find(t => t.id === selectedTemplateId)}
-          {#if selectedTemplate}
-            <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="font-medium text-gray-900 dark:text-white">
-                  {selectedTemplate.name}
-                </span>
-                <Badge color="blue">{selectedTemplate.category}</Badge>
-              </div>
-              {#if selectedTemplate.description}
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedTemplate.description}
-                </p>
-              {/if}
-            </div>
-          {/if}
-        {/if}
-      {:else}
-        <p class="text-sm text-gray-500 dark:text-gray-400 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-          No templates available. Please create a template first in the
-          <a href="/internal/templates" class="text-primary-600 hover:underline">Templates</a> section.
-        </p>
-      {/if}
-    </div>
+  .breadcrumb a {
+    color: var(--gray-500);
+    text-decoration: none;
+  }
 
-    <div class="flex justify-end gap-3">
-      <Button color="light" onclick={() => (showCreateModal = false)} disabled={isCreating}>
-        Cancel
-      </Button>
-      <Button
-        type="submit"
-        color="primary"
-        disabled={!selectedTemplateId || isCreating || data.templates.length === 0}
-      >
-        {isCreating ? 'Creating...' : 'Create Landing Page'}
-      </Button>
-    </div>
-  </form>
-</Modal>
+  .breadcrumb a:hover {
+    color: var(--primary-600);
+  }
+
+  .breadcrumb .sep {
+    color: var(--gray-300);
+  }
+
+  .breadcrumb .current {
+    color: var(--gray-900);
+    font-weight: 500;
+  }
+
+  .lp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 1200px) {
+    .lp-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .lp-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .alert {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+  }
+
+  .alert-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+  }
+
+  .alert-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .empty-state {
+    padding: 3rem;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    display: inline-flex;
+    padding: 1rem;
+    background: var(--gray-100);
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    color: var(--gray-400);
+  }
+
+  .empty-state-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state-description {
+    color: var(--gray-500);
+    margin-bottom: 1.5rem;
+  }
+
+  .badge-purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+</style>
