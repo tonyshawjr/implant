@@ -94,9 +94,25 @@ export const load: PageServerLoad = async ({ parent, params }) => {
     throw error(404, 'Lead not found');
   }
 
+  // Resolve landing page UUID in sourceDetail to a name
+  let sourceDetail = lead.sourceDetail;
+  if (sourceDetail) {
+    const lpMatch = sourceDetail.match(/^Landing Page:\s*([0-9a-f-]{36})$/i);
+    if (lpMatch) {
+      const lp = await prisma.landingPage.findUnique({
+        where: { id: lpMatch[1] },
+        select: { name: true }
+      });
+      if (lp) {
+        sourceDetail = `Landing Page: ${lp.name}`;
+      }
+    }
+  }
+
   return {
     lead: {
       ...lead,
+      sourceDetail,
       estimatedRevenue: lead.estimatedRevenue ? Number(lead.estimatedRevenue) : null,
       conversionValue: lead.conversionValue ? Number(lead.conversionValue) : null,
       createdAt: lead.createdAt.toISOString(),

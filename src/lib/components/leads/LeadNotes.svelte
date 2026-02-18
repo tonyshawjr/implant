@@ -13,6 +13,44 @@
   let newNoteContent = $state('');
   let isSubmitting = $state(false);
 
+  // Parse quiz answers from notes (handles old JSON format for backwards compatibility)
+  let parsedNotes = $derived(parseNotes(notes));
+
+  function parseNotes(raw: string | null): { quizAnswers: { label: string; value: string }[] | null; text: string | null } {
+    if (!raw) return { quizAnswers: null, text: null };
+
+    // Check for old JSON format: "Quiz Answers: { ... }"
+    const jsonMatch = raw.match(/^Quiz Answers:\s*(\{[\s\S]*\})$/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[1]);
+        const answers = Object.entries(parsed).map(([key, value]) => ({
+          label: key.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+          value: String(value).replace(/[-_]/g, ' ')
+        }));
+        return { quizAnswers: answers, text: null };
+      } catch {
+        // Fall through to plain text
+      }
+    }
+
+    // Check for new readable format: "Quiz Answers:\nKey: Value\n..."
+    if (raw.startsWith('Quiz Answers:\n')) {
+      const lines = raw.split('\n').slice(1);
+      const answers = lines
+        .filter(l => l.includes(':'))
+        .map(l => {
+          const idx = l.indexOf(':');
+          return { label: l.slice(0, idx).trim(), value: l.slice(idx + 1).trim() };
+        });
+      if (answers.length > 0) {
+        return { quizAnswers: answers, text: null };
+      }
+    }
+
+    return { quizAnswers: null, text: raw };
+  }
+
   function toggleAddNote() {
     showAddNote = !showAddNote;
     if (!showAddNote) {
@@ -66,9 +104,21 @@
       </form>
     {/if}
 
-    {#if notes}
+    {#if parsedNotes.quizAnswers}
       <div class="notes-content">
-        <p class="note-text">{notes}</p>
+        <div class="quiz-header">Quiz Answers</div>
+        <div class="quiz-answers">
+          {#each parsedNotes.quizAnswers as answer}
+            <div class="quiz-row">
+              <span class="quiz-label">{answer.label}</span>
+              <span class="quiz-value">{answer.value}</span>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {:else if parsedNotes.text}
+      <div class="notes-content">
+        <p class="note-text">{parsedNotes.text}</p>
       </div>
     {:else if !showAddNote}
       <p class="empty-text">No notes yet</p>
@@ -104,6 +154,43 @@
     font-size: 0.875rem;
     color: var(--gray-700);
     white-space: pre-wrap;
+  }
+
+  .quiz-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-3);
+  }
+
+  .quiz-answers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .quiz-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    background: white;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-100);
+  }
+
+  .quiz-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+  }
+
+  .quiz-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-900);
+    text-transform: capitalize;
   }
 
   .empty-text {

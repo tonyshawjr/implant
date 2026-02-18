@@ -2,6 +2,19 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/db';
 
+function formatQuizAnswers(fields: Record<string, unknown>): string {
+	const lines = Object.entries(fields).map(([key, value]) => {
+		// Convert kebab-case/snake_case keys to Title Case
+		const label = key
+			.replace(/[-_]/g, ' ')
+			.replace(/\b\w/g, (c) => c.toUpperCase());
+		// Convert kebab-case/snake_case values to readable text
+		const val = String(value).replace(/[-_]/g, ' ');
+		return `${label}: ${val}`;
+	});
+	return `Quiz Answers:\n${lines.join('\n')}`;
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const formData = await request.formData();
@@ -65,7 +78,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Verify the landing page exists (allow both published and draft)
 		const landingPage = await prisma.landingPage.findUnique({
 			where: { id: landingPageId },
-			select: { id: true, campaignId: true, status: true }
+			select: { id: true, name: true, campaignId: true, status: true }
 		});
 
 		if (!landingPage) {
@@ -85,14 +98,14 @@ export const POST: RequestHandler = async ({ request }) => {
 				email,
 				phone,
 				source: 'website',
-				sourceDetail: `Landing Page: ${landingPageId}`,
+				sourceDetail: `Landing Page: ${landingPage.name || landingPageId}`,
 				status: 'new',
 				temperature: 'warm',
 				utmSource: utmSource || undefined,
 				utmMedium: utmMedium || undefined,
 				utmCampaign: utmCampaign || undefined,
 				notes: customFields && Object.keys(customFields).length > 0
-					? `Quiz Answers: ${JSON.stringify(customFields, null, 2)}`
+					? formatQuizAnswers(customFields)
 					: undefined
 			}
 		});
