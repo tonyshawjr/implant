@@ -1,33 +1,47 @@
 <script lang="ts">
-  import type { PageData } from './$types';
+  import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
-  import {
-    FileDocOutline,
-    EyeOutline,
-    UsersGroupOutline,
-    ChartOutline,
-    CheckCircleOutline,
-    ClipboardOutline,
-    PlusOutline,
-    LinkOutline,
-    CalendarMonthOutline,
-    ArrowRightOutline
-  } from 'flowbite-svelte-icons';
+  import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
 
-  // Template modal state
   let showTemplateModal = $state(false);
-
-  // Copy URL state
   let copiedId = $state<string | null>(null);
 
-  // Helper functions
-  function formatNumber(num: number): string {
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'k';
+  function getDisplayName(lp: typeof data.landingPages[0]): string {
+    // Strip org name prefix if present (e.g., "Coastal Carolina Dental Care - Denture Alternative Quiz" → "Denture Alternative Quiz")
+    const name = lp.name;
+    if (name.includes(' - ')) {
+      return name.split(' - ').slice(1).join(' - ');
     }
-    return num.toString();
+    return lp.template?.name || name;
+  }
+
+  function getTemplateBadgeClass(category: string): string {
+    switch (category) {
+      case 'implant': return 'badge-primary';
+      case 'cosmetic': return 'badge-purple';
+      case 'general': return 'badge-success';
+      case 'promo': return 'badge-warning';
+      default: return 'badge-primary';
+    }
+  }
+
+  function getRelativeTime(dateStr: string): string {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   function formatDate(dateStr: string): string {
@@ -38,58 +52,20 @@
     });
   }
 
-  function getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'published': return 'badge-success';
-      case 'draft': return 'badge-warning';
-      case 'archived': return 'badge-gray';
-      default: return 'badge-gray';
-    }
-  }
-
-  function getStatusLabel(status: string): string {
-    switch (status) {
-      case 'published': return 'Published';
-      case 'draft': return 'Draft';
-      case 'archived': return 'Archived';
-      default: return status;
-    }
-  }
-
-  function getCategoryBadgeClass(category: string): string {
-    switch (category) {
-      case 'implant': return 'badge-primary';
-      case 'cosmetic': return 'badge-purple';
-      case 'general': return 'badge-success';
-      case 'promo': return 'badge-warning';
-      default: return 'badge-primary';
-    }
-  }
-
-  function getPublicUrl(slug: string, isDraft: boolean = false): string {
-    return isDraft ? `/lp/${slug}?preview=true` : `/lp/${slug}`;
-  }
-
-  async function copyToClipboard(slug: string, isDraft: boolean = false) {
-    const url = `${window.location.origin}${getPublicUrl(slug, isDraft)}`;
+  async function copyUrl(slug: string) {
+    const url = `${window.location.origin}/lp/${slug}`;
     try {
       await navigator.clipboard.writeText(url);
       copiedId = slug;
-      setTimeout(() => {
-        copiedId = null;
-      }, 2000);
+      setTimeout(() => copiedId = null, 2000);
     } catch (err) {
-      console.error('Failed to copy URL:', err);
+      console.error('Failed to copy:', err);
     }
   }
 
   function selectTemplate(templateId: string) {
     showTemplateModal = false;
     goto(`/landing-pages/create?template=${templateId}`);
-  }
-
-  function openCreateModal() {
-    showTemplateModal = true;
   }
 </script>
 
@@ -100,67 +76,80 @@
 <!-- Stats Row -->
 <div class="stats-row">
   <div class="stat-card">
-    <div class="stat-card-header">
-      <div class="stat-card-icon primary">
-        <FileDocOutline class="w-5 h-5" />
+    <div class="stat-card-label">Active Pages</div>
+    <div class="stat-card-value">{data.stats.publishedPages}<span class="stat-total">/{data.stats.totalPages}</span></div>
+    {#if data.stats.publishedPages === 0 && data.stats.totalPages > 0}
+      <div class="stat-card-change negative">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        None published yet
       </div>
-    </div>
-    <div class="stat-card-label">Total Pages</div>
-    <div class="stat-card-value">{data.stats.totalPages}</div>
+    {:else if data.stats.publishedPages > 0}
+      <div class="stat-card-change positive">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Live & capturing leads
+      </div>
+    {:else}
+      <div class="stat-card-change neutral">No pages yet</div>
+    {/if}
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-label">Total Leads</div>
+    <div class="stat-card-value">{data.stats.totalSubmissions}</div>
     <div class="stat-card-change neutral">
-      {data.stats.publishedPages} published
+      From all pages
     </div>
   </div>
 
   <div class="stat-card">
-    <div class="stat-card-header">
-      <div class="stat-card-icon success">
-        <EyeOutline class="w-5 h-5" />
-      </div>
-    </div>
-    <div class="stat-card-label">Total Views</div>
-    <div class="stat-card-value">{formatNumber(data.stats.totalViews)}</div>
-    <div class="stat-card-change neutral">
-      All time
+    <div class="stat-card-label">This Month</div>
+    <div class="stat-card-value">{data.stats.leadsThisMonth}</div>
+    <div class="stat-card-change {data.stats.leadsThisMonth > 0 ? 'positive' : 'neutral'}">
+      {data.stats.leadsThisMonth > 0 ? 'Leads captured' : 'No leads yet'}
     </div>
   </div>
 
   <div class="stat-card">
-    <div class="stat-card-header">
-      <div class="stat-card-icon warning">
-        <UsersGroupOutline class="w-5 h-5" />
-      </div>
-    </div>
-    <div class="stat-card-label">Submissions</div>
-    <div class="stat-card-value">{formatNumber(data.stats.totalSubmissions)}</div>
-    <div class="stat-card-change neutral">
-      Leads captured
-    </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-card-header">
-      <div class="stat-card-icon danger">
-        <ChartOutline class="w-5 h-5" />
-      </div>
-    </div>
-    <div class="stat-card-label">Avg. Conversion</div>
-    <div class="stat-card-value">{data.stats.avgConversionRate}%</div>
-    <div class="stat-card-change neutral">
-      Views to leads
+    <div class="stat-card-label">Best Conversion</div>
+    <div class="stat-card-value">{data.stats.bestConversion > 0 ? `${data.stats.bestConversion}%` : '—'}</div>
+    <div class="stat-card-change {data.stats.bestConversion >= 10 ? 'positive' : 'neutral'}">
+      {#if data.stats.bestConversion > 0}
+        {data.stats.bestPageName}
+      {:else}
+        Needs more traffic
+      {/if}
     </div>
   </div>
 </div>
+
+<!-- Alert Banner for no published pages -->
+{#if data.stats.publishedPages === 0 && data.stats.totalPages > 0}
+  <div class="alert-banner">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <div class="alert-content">
+      <strong>Your landing pages aren't live yet.</strong>
+      Publish a page below to start capturing leads from your ads.
+    </div>
+  </div>
+{/if}
 
 <!-- Page Header -->
 <div class="page-header">
   <div class="page-header-left">
     <h2 class="page-title">Your Landing Pages</h2>
-    <p class="page-subtitle">Manage your lead capture pages and track performance</p>
+    <p class="page-subtitle">{data.landingPages.length} page{data.landingPages.length !== 1 ? 's' : ''} · {data.stats.totalViews} total views</p>
   </div>
   <div class="page-header-right">
-    <button class="btn btn-primary" onclick={openCreateModal}>
-      <PlusOutline class="w-4 h-4" />
+    <button class="btn btn-primary" onclick={() => showTemplateModal = true}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
       Create New Page
     </button>
   </div>
@@ -168,113 +157,133 @@
 
 <!-- Landing Pages Grid -->
 {#if data.landingPages && data.landingPages.length > 0}
-  <div class="landing-pages-grid">
-    {#each data.landingPages as landingPage (landingPage.id)}
-      <div class="card landing-page-card">
-        <!-- Card Header -->
-        <div class="landing-page-card-header">
-          <div class="landing-page-info">
-            <h3 class="landing-page-name">{landingPage.name}</h3>
-            <div class="landing-page-meta">
-              {#if landingPage.template}
-                <span class="badge {getCategoryBadgeClass(landingPage.template.category)}">
-                  {landingPage.template.name}
-                </span>
-              {/if}
-              {#if landingPage.campaign}
-                <span class="campaign-tag">
-                  Campaign: {landingPage.campaign.name}
-                </span>
-              {/if}
-            </div>
-          </div>
-          <span class="badge {getStatusBadgeClass(landingPage.status)}">
-            {getStatusLabel(landingPage.status)}
-          </span>
-        </div>
-
-        <!-- Metrics Row -->
-        <div class="landing-page-metrics">
-          <div class="metric-item">
-            <span class="metric-value">{formatNumber(landingPage.viewCount)}</span>
-            <span class="metric-label">Views</span>
-          </div>
-          <div class="metric-item">
-            <span class="metric-value">{formatNumber(landingPage.submissionCount)}</span>
-            <span class="metric-label">Submissions</span>
-          </div>
-          <div class="metric-item highlight">
-            <span class="metric-value">{landingPage.conversionRate.toFixed(1)}%</span>
-            <span class="metric-label">Conversion</span>
-          </div>
-        </div>
-
-        <!-- URL Copy Section -->
-        <div class="landing-page-url">
-          <code class="url-text">{getPublicUrl(landingPage.slug, landingPage.status === 'draft')}</code>
-          <button
-            class="btn btn-icon btn-secondary"
-            onclick={() => copyToClipboard(landingPage.slug, landingPage.status === 'draft')}
-            id="copy-btn-{landingPage.id}"
-          >
-            <ClipboardOutline class="w-4 h-4" />
-          </button>
-          {#if copiedId === landingPage.slug}
-            <span class="copy-success">Copied!</span>
-          {/if}
-        </div>
-
-        <!-- Recent Leads -->
-        {#if landingPage.recentLeads && landingPage.recentLeads.length > 0}
-          <div class="landing-page-leads">
-            <div class="leads-header">
-              <span class="leads-title">Recent Leads</span>
-              <a href="/leads?source={landingPage.slug}" class="leads-link">
-                View all
-                <ArrowRightOutline class="w-3 h-3" />
-              </a>
-            </div>
-            <div class="leads-list">
-              {#each landingPage.recentLeads.slice(0, 3) as lead}
-                <div class="lead-item">
-                  <div class="lead-avatar">
-                    {lead.firstName?.[0] || ''}{lead.lastName?.[0] || ''}
-                  </div>
-                  <div class="lead-info">
-                    <span class="lead-name">{lead.firstName} {lead.lastName}</span>
-                    <span class="lead-date">{formatDate(lead.createdAt)}</span>
-                  </div>
-                </div>
-              {/each}
-            </div>
+  <div class="lp-grid">
+    {#each data.landingPages as lp (lp.id)}
+      <div class="card lp-card">
+        <!-- Status Bar -->
+        {#if lp.status === 'draft'}
+          <div class="lp-status-bar draft">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Not Live</span>
+            <form method="POST" action="?/togglePublish" use:enhance style="display:contents;">
+              <input type="hidden" name="landingPageId" value={lp.id} />
+              <button type="submit" class="publish-btn">Publish Now</button>
+            </form>
           </div>
         {:else}
-          <div class="landing-page-leads empty">
-            <span class="no-leads">No leads captured yet</span>
+          <div class="lp-status-bar live">
+            <span class="live-dot"></span>
+            <span>Live</span>
+            {#if lp.publishedAt}
+              <span class="status-meta">since {formatDate(lp.publishedAt)}</span>
+            {/if}
           </div>
         {/if}
 
-        <!-- Card Footer -->
-        <div class="landing-page-card-footer">
-          <div class="footer-meta">
-            <CalendarMonthOutline class="w-4 h-4" />
-            <span>Created {formatDate(landingPage.createdAt)}</span>
+        <!-- Card Header -->
+        <div class="lp-header">
+          <div class="lp-header-info">
+            <h3 class="lp-name">{getDisplayName(lp)}</h3>
+            <div class="lp-tags">
+              {#if lp.template}
+                <span class="badge {getTemplateBadgeClass(lp.template.category)}">{lp.template.name}</span>
+              {/if}
+              {#if lp.campaign}
+                <span class="lp-campaign">{lp.campaign.name}</span>
+              {/if}
+            </div>
           </div>
-          <div class="footer-actions">
-            <a
-              href={getPublicUrl(landingPage.slug, landingPage.status === 'draft')}
-              target="_blank"
-              class="btn btn-sm btn-outline"
+        </div>
+
+        <!-- Metrics -->
+        <div class="lp-metrics">
+          <div class="lp-metric">
+            <span class="lp-metric-value">{lp.viewCount}</span>
+            <span class="lp-metric-label">Views</span>
+          </div>
+          <div class="lp-metric-divider"></div>
+          <div class="lp-metric">
+            <span class="lp-metric-value">{lp.submissionCount}</span>
+            <span class="lp-metric-label">Leads</span>
+          </div>
+          <div class="lp-metric-divider"></div>
+          <div class="lp-metric">
+            <span class="lp-metric-value {lp.conversionRate >= 10 ? 'metric-good' : lp.conversionRate > 0 ? 'metric-ok' : ''}">{lp.conversionRate.toFixed(1)}%</span>
+            <span class="lp-metric-label">Conversion</span>
+          </div>
+        </div>
+
+        <!-- Recent Leads (only show if there are leads) -->
+        {#if lp.recentLeads && lp.recentLeads.length > 0}
+          <div class="lp-leads">
+            <div class="lp-leads-header">
+              <span class="lp-leads-title">Recent Leads</span>
+              <a href="/leads" class="lp-leads-link">View all →</a>
+            </div>
+            {#each lp.recentLeads as lead}
+              <a href="/leads/{lead.id}" class="lp-lead-row">
+                <div class="lp-lead-avatar">{lead.firstName?.[0] || ''}{lead.lastName?.[0] || ''}</div>
+                <div class="lp-lead-info">
+                  <span class="lp-lead-name">{lead.firstName} {lead.lastName}</span>
+                  <span class="lp-lead-email">{lead.email}</span>
+                </div>
+                <span class="lp-lead-time">{getRelativeTime(lead.createdAt)}</span>
+              </a>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- URL & Actions -->
+        <div class="lp-footer">
+          <div class="lp-url-row">
+            <button
+              class="lp-copy-btn"
+              onclick={() => copyUrl(lp.slug)}
             >
-              <LinkOutline class="w-4 h-4" />
+              {#if copiedId === lp.slug}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-600)" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span class="copy-text success">Copied!</span>
+              {:else}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span class="copy-text">Copy Link</span>
+              {/if}
+            </button>
+
+            <a href="/lp/{lp.slug}{lp.status === 'draft' ? '?preview=true' : ''}" target="_blank" class="btn btn-sm btn-secondary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
               Preview
             </a>
-            <a
-              href="/leads?source={landingPage.slug}"
-              class="btn btn-sm btn-secondary"
-            >
-              View Leads
-            </a>
+
+            {#if lp.leadCount > 0}
+              <a href="/leads" class="btn btn-sm btn-secondary">
+                {lp.leadCount} Lead{lp.leadCount !== 1 ? 's' : ''}
+              </a>
+            {/if}
+          </div>
+
+          <div class="lp-dates">
+            {#if lp.lastLeadAt}
+              <span class="lp-date-item">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+                </svg>
+                Last lead {getRelativeTime(lp.lastLeadAt)}
+              </span>
+            {/if}
+            <span class="lp-date-item">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Created {formatDate(lp.createdAt)}
+            </span>
           </div>
         </div>
       </div>
@@ -283,14 +292,20 @@
 {:else}
   <div class="card">
     <div class="empty-state">
-      <div class="empty-state-icon">
-        <FileDocOutline class="w-8 h-8" />
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
       </div>
-      <h3 class="empty-state-title">No landing pages yet</h3>
-      <p class="empty-state-description">
-        Create your first landing page to start capturing leads from your advertising campaigns.
+      <h3 class="empty-title">No landing pages yet</h3>
+      <p class="empty-description">
+        Create your first lead capture page to start converting ad traffic into patient inquiries.
       </p>
-      <button class="btn btn-primary" onclick={openCreateModal}>
+      <button class="btn btn-primary" onclick={() => showTemplateModal = true}>
         Create Your First Page
       </button>
     </div>
@@ -300,7 +315,7 @@
 <!-- Template Selection Modal -->
 {#if showTemplateModal}
   <div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (showTemplateModal = false)} role="presentation">
-    <div class="modal modal-xl" role="dialog" aria-modal="true" tabindex="-1">
+    <div class="modal modal-lg" role="dialog" aria-modal="true" tabindex="-1">
       <div class="modal-header">
         <h3 class="modal-title">Choose a Template</h3>
         <button class="modal-close" onclick={() => showTemplateModal = false} aria-label="Close">
@@ -310,34 +325,34 @@
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-description">Select a template to get started. You can customize everything after creation.</p>
-
+        <p class="modal-hint">Select a template to get started. You can customize everything after creation.</p>
         {#if data.templates && data.templates.length > 0}
           <div class="template-grid">
             {#each data.templates as template}
-              <button
-                class="template-card"
-                onclick={() => selectTemplate(template.id)}
-              >
+              <button class="template-card" onclick={() => selectTemplate(template.id)}>
                 <div class="template-preview">
                   {#if template.thumbnailUrl}
                     <img src={template.thumbnailUrl} alt={template.name} />
                   {:else}
                     <div class="template-placeholder">
-                      <FileDocOutline class="w-12 h-12" />
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
                     </div>
                   {/if}
                 </div>
                 <div class="template-info">
                   <h4 class="template-name">{template.name}</h4>
-                  <span class="badge {getCategoryBadgeClass(template.category)}">{template.category}</span>
                   {#if template.description}
-                    <p class="template-description">{template.description}</p>
+                    <p class="template-desc">{template.description}</p>
                   {/if}
                   {#if template.estimatedConversionRate}
-                    <div class="template-conversion">
-                      <CheckCircleOutline class="w-4 h-4" />
-                      <span>~{template.estimatedConversionRate}% avg. conversion</span>
+                    <div class="template-stat">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                      </svg>
+                      ~{template.estimatedConversionRate}% avg. conversion
                     </div>
                   {/if}
                 </div>
@@ -345,9 +360,7 @@
             {/each}
           </div>
         {:else}
-          <div class="no-templates">
-            <p>No templates available. Please contact support.</p>
-          </div>
+          <p class="empty-templates">No templates available yet. Contact support to get started.</p>
         {/if}
       </div>
       <div class="modal-footer">
@@ -359,6 +372,7 @@
 {/if}
 
 <style>
+  /* Stats Row */
   .stats-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -366,22 +380,41 @@
     margin-bottom: var(--spacing-6);
   }
 
-  @media (max-width: 1200px) {
-    .stats-row {
-      grid-template-columns: repeat(2, 1fr);
-    }
+  .stat-total {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--gray-400);
   }
 
-  @media (max-width: 640px) {
-    .stats-row {
-      grid-template-columns: 1fr;
-    }
+  /* Alert Banner */
+  .alert-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-4) var(--spacing-5);
+    background: var(--warning-50, #fffbeb);
+    border: 1px solid var(--warning-200, #fde68a);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-6);
+    color: var(--warning-800, #92400e);
   }
 
-  .stat-card-change.neutral {
-    color: var(--gray-500);
+  .alert-banner svg {
+    flex-shrink: 0;
+    color: var(--warning-500);
   }
 
+  .alert-content {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .alert-content strong {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  /* Page Header */
   .page-header {
     display: flex;
     align-items: center;
@@ -401,172 +434,202 @@
     margin-top: var(--spacing-1);
   }
 
-  .landing-pages-grid {
+  /* Landing Pages Grid */
+  .lp-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: var(--spacing-6);
   }
 
-  @media (max-width: 1200px) {
-    .landing-pages-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .landing-page-card {
+  .lp-card {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
-  .landing-page-card-header {
-    padding: var(--spacing-4) var(--spacing-5);
-    border-bottom: 1px solid var(--gray-100);
+  /* Status Bar */
+  .lp-status-bar {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--spacing-3);
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: 0.8125rem;
+    font-weight: 500;
   }
 
-  .landing-page-info {
-    flex: 1;
-    min-width: 0;
+  .lp-status-bar.draft {
+    background: var(--warning-50, #fffbeb);
+    color: var(--warning-700, #b45309);
+    border-bottom: 1px solid var(--warning-100, #fef3c7);
   }
 
-  .landing-page-name {
-    font-size: 1rem;
+  .lp-status-bar.live {
+    background: var(--success-50, #f0fdf4);
+    color: var(--success-700, #15803d);
+    border-bottom: 1px solid var(--success-100, #dcfce7);
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-500);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .status-meta {
+    font-weight: 400;
+    color: var(--success-500);
+    font-size: 0.75rem;
+  }
+
+  .publish-btn {
+    margin-left: auto;
+    padding: var(--spacing-1) var(--spacing-3);
+    background: var(--warning-600, #d97706);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .publish-btn:hover {
+    background: var(--warning-700, #b45309);
+  }
+
+  /* Card Header */
+  .lp-header {
+    padding: var(--spacing-4) var(--spacing-5);
+  }
+
+  .lp-name {
+    font-size: 1.0625rem;
     font-weight: 600;
     color: var(--gray-900);
     margin-bottom: var(--spacing-2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
-  .landing-page-meta {
+  .lp-tags {
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
     flex-wrap: wrap;
   }
 
-  .campaign-tag {
+  .lp-campaign {
     font-size: 0.75rem;
     color: var(--gray-500);
   }
 
-  .landing-page-metrics {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-4);
+  .badge-purple {
+    background: var(--purple-100, #f3e8ff);
+    color: var(--purple-700, #7c3aed);
+  }
+
+  /* Metrics */
+  .lp-metrics {
+    display: flex;
+    align-items: center;
     padding: var(--spacing-4) var(--spacing-5);
     background: var(--gray-50);
+    border-top: 1px solid var(--gray-100);
     border-bottom: 1px solid var(--gray-100);
   }
 
-  .metric-item {
+  .lp-metric {
+    flex: 1;
     text-align: center;
   }
 
-  .metric-item.highlight .metric-value {
-    color: var(--success-600);
+  .lp-metric-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--gray-200);
   }
 
-  .metric-value {
+  .lp-metric-value {
     display: block;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--gray-900);
   }
 
-  .metric-label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--gray-500);
-    margin-top: var(--spacing-1);
+  .lp-metric-value.metric-good {
+    color: var(--success-600);
   }
 
-  .landing-page-url {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
+  .lp-metric-value.metric-ok {
+    color: var(--warning-600);
+  }
+
+  .lp-metric-label {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  /* Recent Leads */
+  .lp-leads {
     padding: var(--spacing-3) var(--spacing-5);
     border-bottom: 1px solid var(--gray-100);
   }
 
-  .url-text {
-    flex: 1;
-    font-size: 0.8125rem;
-    color: var(--gray-600);
-    background: var(--gray-100);
-    padding: var(--spacing-2) var(--spacing-3);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .copy-success {
-    font-size: 0.75rem;
-    color: var(--success-600);
-    font-weight: 500;
-  }
-
-  .landing-page-leads {
-    padding: var(--spacing-4) var(--spacing-5);
-    border-bottom: 1px solid var(--gray-100);
-  }
-
-  .landing-page-leads.empty {
-    text-align: center;
-    padding: var(--spacing-6) var(--spacing-5);
-  }
-
-  .no-leads {
-    font-size: 0.875rem;
-    color: var(--gray-400);
-  }
-
-  .leads-header {
+  .lp-leads-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--spacing-3);
+    margin-bottom: var(--spacing-2);
   }
 
-  .leads-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--gray-700);
+  .lp-leads-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .leads-link {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-1);
+  .lp-leads-link {
     font-size: 0.75rem;
     color: var(--primary-600);
+    text-decoration: none;
   }
 
-  .leads-link:hover {
+  .lp-leads-link:hover {
     color: var(--primary-700);
   }
 
-  .leads-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-2);
-  }
-
-  .lead-item {
+  .lp-lead-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-3);
+    padding: var(--spacing-2) 0;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: background 0.1s;
   }
 
-  .lead-avatar {
+  .lp-lead-row:hover {
+    background: var(--gray-50);
+    margin: 0 calc(-1 * var(--spacing-2));
+    padding: var(--spacing-2);
+  }
+
+  .lp-lead-avatar {
     width: 28px;
     height: 28px;
-    border-radius: var(--radius-full);
+    border-radius: 50%;
     background: var(--primary-100);
     color: var(--primary-600);
     display: flex;
@@ -574,70 +637,133 @@
     justify-content: center;
     font-size: 0.625rem;
     font-weight: 600;
+    flex-shrink: 0;
   }
 
-  .lead-info {
+  .lp-lead-info {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     min-width: 0;
   }
 
-  .lead-name {
+  .lp-lead-name {
+    display: block;
     font-size: 0.875rem;
+    font-weight: 500;
     color: var(--gray-900);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .lead-date {
+  .lp-lead-email {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--gray-400);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lp-lead-time {
     font-size: 0.75rem;
     color: var(--gray-400);
     flex-shrink: 0;
   }
 
-  .landing-page-card-footer {
-    padding: var(--spacing-4) var(--spacing-5);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--gray-50);
-    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  /* Footer */
+  .lp-footer {
+    padding: var(--spacing-3) var(--spacing-5) var(--spacing-4);
   }
 
-  .footer-meta {
+  .lp-url-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .lp-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-1) var(--spacing-3);
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
     font-size: 0.8125rem;
-    color: var(--gray-500);
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s;
   }
 
-  .footer-actions {
+  .lp-copy-btn:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
+  }
+
+  .copy-text {
+    font-size: 0.8125rem;
+  }
+
+  .copy-text.success {
+    color: var(--success-600);
+  }
+
+  .lp-dates {
     display: flex;
-    gap: var(--spacing-2);
+    align-items: center;
+    gap: var(--spacing-4);
+    flex-wrap: wrap;
   }
 
-  /* Badge purple variant */
-  .badge-purple {
-    background: var(--purple-100, #f3e8ff);
-    color: var(--purple-700, #7c3aed);
+  .lp-date-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    font-size: 0.75rem;
+    color: var(--gray-400);
   }
 
-  /* Modal size */
-  .modal-xl {
-    max-width: 900px;
+  .lp-date-item svg {
+    flex-shrink: 0;
   }
 
-  .modal-description {
-    color: var(--gray-500);
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: var(--spacing-12) var(--spacing-8);
+  }
+
+  .empty-icon {
+    margin-bottom: var(--spacing-4);
+  }
+
+  .empty-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .empty-description {
     font-size: 0.875rem;
+    color: var(--gray-500);
+    max-width: 400px;
+    margin: 0 auto var(--spacing-6);
+    line-height: 1.6;
+  }
+
+  /* Template Modal */
+  .modal-lg {
+    max-width: 800px;
+  }
+
+  .modal-hint {
+    font-size: 0.875rem;
+    color: var(--gray-500);
     margin-bottom: var(--spacing-5);
   }
 
-  /* Template Modal Styles */
   .template-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -646,37 +772,25 @@
     overflow-y: auto;
   }
 
-  @media (max-width: 1024px) {
-    .template-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 640px) {
-    .template-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
   .template-card {
     background: white;
     border: 2px solid var(--gray-200);
     border-radius: var(--radius-lg);
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
     text-align: left;
   }
 
   .template-card:hover {
     border-color: var(--primary-500);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   .template-preview {
     width: 100%;
-    height: 120px;
-    background: var(--gray-100);
+    height: 100px;
+    background: var(--gray-50);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -697,18 +811,18 @@
   }
 
   .template-info {
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
   }
 
   .template-name {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--gray-900);
-    margin-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-1);
   }
 
-  .template-description {
-    font-size: 0.8125rem;
+  .template-desc {
+    font-size: 0.75rem;
     color: var(--gray-500);
     margin-bottom: var(--spacing-2);
     display: -webkit-box;
@@ -717,7 +831,7 @@
     overflow: hidden;
   }
 
-  .template-conversion {
+  .template-stat {
     display: flex;
     align-items: center;
     gap: var(--spacing-1);
@@ -726,31 +840,42 @@
     font-weight: 500;
   }
 
-  .no-templates {
+  .empty-templates {
     text-align: center;
+    color: var(--gray-500);
     padding: var(--spacing-8);
   }
 
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .stats-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .lp-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .template-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
   @media (max-width: 640px) {
+    .stats-row {
+      grid-template-columns: 1fr;
+    }
     .page-header {
       flex-direction: column;
       align-items: flex-start;
       gap: var(--spacing-4);
     }
-
-    .landing-page-card-footer {
-      flex-direction: column;
-      gap: var(--spacing-3);
-      align-items: stretch;
+    .template-grid {
+      grid-template-columns: 1fr;
     }
-
-    .footer-actions {
-      width: 100%;
-    }
-
-    .footer-actions .btn {
-      flex: 1;
-      justify-content: center;
+    .lp-url-row {
+      flex-wrap: wrap;
     }
   }
 </style>
