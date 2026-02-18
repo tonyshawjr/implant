@@ -69,33 +69,23 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 
     const currentStatus = lead.status;
 
-    // Check if transition is valid
-    const allowedNextStatuses = validTransitions[currentStatus] || [];
-
-    if (!allowedNextStatuses.includes(newStatus)) {
-      // Special case: same status is allowed (no-op)
-      if (currentStatus === newStatus) {
-        // Return the lead without updating
-        const currentLead = await prisma.lead.findUnique({
-          where: { id },
-          include: {
-            assignedToUser: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true
-              }
+    // Same status is a no-op
+    if (currentStatus === newStatus) {
+      const currentLead = await prisma.lead.findUnique({
+        where: { id },
+        include: {
+          assignedToUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true
             }
           }
-        });
-
-        return json(formatLeadResponse(currentLead));
-      }
-
-      throw error(400, {
-        message: `Invalid status transition from '${formatStatus(currentStatus)}' to '${formatStatus(newStatus)}'. Allowed transitions: ${allowedNextStatuses.map(formatStatus).join(', ') || 'none'}`
+        }
       });
+
+      return json(formatLeadResponse(currentLead));
     }
 
     // Update the lead status and create activity log in a transaction
