@@ -1,13 +1,4 @@
 <script lang="ts">
-  import { Tabs, TabItem, Input, Textarea, Label, Card, Badge } from 'flowbite-svelte';
-  import {
-    CodeOutline,
-    PaletteOutline,
-    CogOutline,
-    InfoCircleOutline,
-    FileOutline
-  } from 'flowbite-svelte-icons';
-
   interface Props {
     customHtml: string;
     customCss: string;
@@ -124,162 +115,160 @@
   }
 </script>
 
-<div class="h-full flex flex-col">
-  <Tabs tabStyle="underline" class="mb-4">
-    <TabItem open={activeTab === 'html'} onclick={() => activeTab = 'html'}>
-      {#snippet titleSlot()}
-        <div class="flex items-center gap-2">
-          <CodeOutline class="w-4 h-4" />
-          HTML
-        </div>
-      {/snippet}
-    </TabItem>
-    <TabItem open={activeTab === 'css'} onclick={() => activeTab = 'css'}>
-      {#snippet titleSlot()}
-        <div class="flex items-center gap-2">
-          <PaletteOutline class="w-4 h-4" />
-          CSS
-        </div>
-      {/snippet}
-    </TabItem>
-    <TabItem open={activeTab === 'meta'} onclick={() => activeTab = 'meta'}>
-      {#snippet titleSlot()}
-        <div class="flex items-center gap-2">
-          <FileOutline class="w-4 h-4" />
-          Meta
-        </div>
-      {/snippet}
-    </TabItem>
-    <TabItem open={activeTab === 'config'} onclick={() => activeTab = 'config'}>
-      {#snippet titleSlot()}
-        <div class="flex items-center gap-2">
-          <CogOutline class="w-4 h-4" />
-          Config
-          {#if configFields.length > 0}
-            <Badge color="blue" class="ml-1">{configFields.length}</Badge>
-          {/if}
-        </div>
-      {/snippet}
-    </TabItem>
-  </Tabs>
+<div class="editor-container">
+  <!-- Tabs -->
+  <div class="tabs" style="margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200);">
+    <button
+      type="button"
+      class="tab"
+      class:active={activeTab === 'html'}
+      onclick={() => activeTab = 'html'}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+      HTML
+    </button>
+    <button
+      type="button"
+      class="tab"
+      class:active={activeTab === 'css'}
+      onclick={() => activeTab = 'css'}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+      CSS
+    </button>
+    <button
+      type="button"
+      class="tab"
+      class:active={activeTab === 'meta'}
+      onclick={() => activeTab = 'meta'}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+      Meta
+    </button>
+    <button
+      type="button"
+      class="tab"
+      class:active={activeTab === 'config'}
+      onclick={() => activeTab = 'config'}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+      Config
+      {#if configFields.length > 0}
+        <span class="badge badge-primary" style="margin-left: 4px; font-size: 0.7rem;">{configFields.length}</span>
+      {/if}
+    </button>
+  </div>
 
-  <div class="flex-1 overflow-auto">
+  <!-- Tab Content -->
+  <div class="tab-content">
     {#if activeTab === 'html'}
       <div class="space-y-4">
         <!-- Template Variables Reference -->
-        <Card class="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <div class="flex items-start gap-2">
-            <InfoCircleOutline class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+        <div class="info-box info-box-blue">
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+            <svg class="w-5 h-5" style="color: var(--primary-600); flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <h4 class="font-medium text-blue-900 dark:text-blue-100 mb-2">Template Variables</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+              <h4 style="font-weight: 600; margin-bottom: 0.5rem;">Template Variables</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.875rem;">
                 {#each templateVariables as variable}
-                  <div class="flex items-center gap-2">
-                    <code class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 rounded text-blue-800 dark:text-blue-200 font-mono text-xs">
-                      {variable.name}
-                    </code>
-                    <span class="text-blue-700 dark:text-blue-300">{variable.description}</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <code class="code-tag">{variable.name}</code>
+                    <span style="color: var(--gray-600);">{variable.description}</span>
                   </div>
                 {/each}
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
-        <!-- Template info -->
         {#if templateName}
-          <div class="text-sm text-gray-500 dark:text-gray-400">
-            Based on template: <span class="font-medium">{templateName}</span>
-          </div>
+          <p style="font-size: 0.875rem; color: var(--gray-500);">
+            Based on template: <span style="font-weight: 500;">{templateName}</span>
+          </p>
         {/if}
 
         <!-- HTML Editor -->
         <div>
-          <Label for="htmlEditor" class="mb-2">Custom HTML</Label>
+          <label class="form-label" for="htmlEditor">Custom HTML</label>
           <textarea
             id="htmlEditor"
             value={customHtml}
             oninput={handleHtmlInput}
-            class="w-full h-96 px-4 py-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-y"
+            class="form-input code-editor"
             placeholder="Enter your HTML here. Use template variables to personalize content for this client..."
             spellcheck="false"
+            rows="16"
           ></textarea>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Override the template HTML or leave empty to use template defaults.
-          </p>
+          <span class="form-hint">Override the template HTML or leave empty to use template defaults.</span>
         </div>
       </div>
     {:else if activeTab === 'css'}
       <div class="space-y-4">
         <!-- CSS Tips -->
-        <Card class="bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
-          <div class="flex items-start gap-2">
-            <InfoCircleOutline class="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 shrink-0" />
+        <div class="info-box info-box-purple">
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+            <svg class="w-5 h-5" style="color: #7c3aed; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <h4 class="font-medium text-purple-900 dark:text-purple-100 mb-2">CSS Tips</h4>
-              <ul class="text-sm text-purple-700 dark:text-purple-300 space-y-1">
-                <li>Use CSS custom properties for colors: <code class="bg-purple-100 dark:bg-purple-800 px-1 rounded">var(--primary-color)</code></li>
+              <h4 style="font-weight: 600; margin-bottom: 0.5rem;">CSS Tips</h4>
+              <ul style="font-size: 0.875rem; color: var(--gray-600); list-style: disc; padding-left: 1rem;">
+                <li>Use CSS custom properties for colors: <code class="code-tag">var(--primary-color)</code></li>
                 <li>All styles are scoped to the landing page container</li>
                 <li>Include responsive breakpoints for mobile optimization</li>
               </ul>
             </div>
           </div>
-        </Card>
+        </div>
 
         <!-- CSS Editor -->
         <div>
-          <Label for="cssEditor" class="mb-2">Custom CSS</Label>
+          <label class="form-label" for="cssEditor">Custom CSS</label>
           <textarea
             id="cssEditor"
             value={customCss}
             oninput={handleCssInput}
-            class="w-full h-96 px-4 py-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-y"
+            class="form-input code-editor"
             placeholder="/* Add custom CSS styles here */"
             spellcheck="false"
+            rows="16"
           ></textarea>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Add custom CSS to override or extend template styles.
-          </p>
+          <span class="form-hint">Add custom CSS to override or extend template styles.</span>
         </div>
       </div>
     {:else if activeTab === 'meta'}
       <div class="space-y-6">
-        <!-- Meta Title -->
         <div>
-          <Label for="metaTitle" class="mb-2">Meta Title</Label>
-          <Input
+          <label class="form-label" for="metaTitle">Meta Title</label>
+          <input
+            type="text"
             id="metaTitle"
             value={metaTitle}
             oninput={handleMetaTitleInput}
+            class="form-input"
             placeholder="e.g., Dental Implants in [City] | [Practice Name]"
           />
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Page title shown in browser tabs and search results (recommended: 50-60 characters)
-          </p>
+          <span class="form-hint">Page title shown in browser tabs and search results (recommended: 50-60 characters)</span>
         </div>
 
-        <!-- Meta Description -->
         <div>
-          <Label for="metaDescription" class="mb-2">Meta Description</Label>
-          <Textarea
+          <label class="form-label" for="metaDescription">Meta Description</label>
+          <textarea
             id="metaDescription"
             value={metaDescription}
             oninput={handleMetaDescriptionInput}
-            rows={3}
+            class="form-input"
+            rows="3"
             placeholder="A brief description of this landing page for search engines..."
-          />
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Description shown in search results (recommended: 150-160 characters)
-          </p>
+          ></textarea>
+          <span class="form-hint">Description shown in search results (recommended: 150-160 characters)</span>
         </div>
 
         <!-- SEO Tips -->
-        <Card class="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-          <div class="flex items-start gap-2">
-            <InfoCircleOutline class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+        <div class="info-box info-box-green">
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+            <svg class="w-5 h-5" style="color: var(--success-600); flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <h4 class="font-medium text-green-900 dark:text-green-100 mb-2">SEO Best Practices</h4>
-              <ul class="text-sm text-green-700 dark:text-green-300 space-y-1">
+              <h4 style="font-weight: 600; margin-bottom: 0.5rem;">SEO Best Practices</h4>
+              <ul style="font-size: 0.875rem; color: var(--gray-600); list-style: disc; padding-left: 1rem;">
                 <li>Include the city/location name in the title</li>
                 <li>Use action words in the description (e.g., "Schedule", "Get", "Discover")</li>
                 <li>Mention key services or unique selling points</li>
@@ -287,50 +276,47 @@
               </ul>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     {:else if activeTab === 'config'}
       <div class="space-y-4">
         <!-- Config Info -->
-        <Card class="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-          <div class="flex items-start gap-2">
-            <InfoCircleOutline class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+        <div class="info-box info-box-yellow">
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+            <svg class="w-5 h-5" style="color: #d97706; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <h4 class="font-medium text-yellow-900 dark:text-yellow-100 mb-1">Configuration Variables</h4>
-              <p class="text-sm text-yellow-700 dark:text-yellow-300">
+              <h4 style="font-weight: 600; margin-bottom: 0.25rem;">Configuration Variables</h4>
+              <p style="font-size: 0.875rem; color: var(--gray-600);">
                 Configure template-specific variables like headlines, CTA text, and other customizable content.
-                These values are used to populate template placeholders.
               </p>
             </div>
           </div>
-        </Card>
+        </div>
 
         <!-- Config Fields -->
         <div class="space-y-3">
           {#each configFields as field, index}
-            <div class="flex items-start gap-2">
-              <div class="flex-1 grid grid-cols-2 gap-2">
-                <div>
-                  <Input
-                    size="sm"
-                    value={field.key}
-                    oninput={(e) => updateFieldKey(index, (e.target as HTMLInputElement).value)}
-                    placeholder="Variable name"
-                  />
-                </div>
-                <div>
-                  <Input
-                    size="sm"
-                    value={field.value}
-                    oninput={(e) => updateConfigField(index, (e.target as HTMLInputElement).value)}
-                    placeholder="Value"
-                  />
-                </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+              <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <input
+                  type="text"
+                  class="form-input"
+                  value={field.key}
+                  oninput={(e) => updateFieldKey(index, (e.target as HTMLInputElement).value)}
+                  placeholder="Variable name"
+                />
+                <input
+                  type="text"
+                  class="form-input"
+                  value={field.value}
+                  oninput={(e) => updateConfigField(index, (e.target as HTMLInputElement).value)}
+                  placeholder="Value"
+                />
               </div>
               <button
                 type="button"
                 onclick={() => removeConfigField(index)}
-                class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                class="btn-icon-danger"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -342,7 +328,8 @@
           <button
             type="button"
             onclick={addConfigField}
-            class="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+            class="btn btn-outline"
+            style="font-size: 0.875rem;"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -352,16 +339,16 @@
         </div>
 
         <!-- Common Variables -->
-        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <h4 class="font-medium text-gray-900 dark:text-white mb-3">Common Variables</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm">
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-200);">
+          <h4 style="font-weight: 500; margin-bottom: 0.75rem;">Common Variables</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.875rem;">
             <button
               type="button"
               onclick={() => {
                 configFields = [...configFields, { key: 'headline', value: '' }];
                 updateConfigFromFields();
               }}
-              class="text-left px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="quick-add-btn"
             >
               + headline
             </button>
@@ -371,7 +358,7 @@
                 configFields = [...configFields, { key: 'subheadline', value: '' }];
                 updateConfigFromFields();
               }}
-              class="text-left px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="quick-add-btn"
             >
               + subheadline
             </button>
@@ -381,7 +368,7 @@
                 configFields = [...configFields, { key: 'cta_text', value: 'Get Started' }];
                 updateConfigFromFields();
               }}
-              class="text-left px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="quick-add-btn"
             >
               + cta_text
             </button>
@@ -391,7 +378,7 @@
                 configFields = [...configFields, { key: 'primary_color', value: '#2563eb' }];
                 updateConfigFromFields();
               }}
-              class="text-left px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              class="quick-add-btn"
             >
               + primary_color
             </button>
@@ -401,3 +388,93 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .tab-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .space-y-3 > :not(:first-child) { margin-top: 0.75rem; }
+  .space-y-4 > :not(:first-child) { margin-top: 1rem; }
+  .space-y-6 > :not(:first-child) { margin-top: 1.5rem; }
+
+  .code-editor {
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 300px;
+  }
+
+  .code-tag {
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.75rem;
+  }
+
+  .info-box {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid;
+  }
+
+  .info-box-blue {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+  }
+
+  .info-box-purple {
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+  }
+
+  .info-box-green {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  .info-box-yellow {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+
+  .btn-icon-danger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    color: var(--danger-600);
+    background: transparent;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+
+  .btn-icon-danger:hover {
+    background: #fef2f2;
+  }
+
+  .quick-add-btn {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+  }
+
+  .quick-add-btn:hover {
+    background: var(--gray-100);
+  }
+</style>

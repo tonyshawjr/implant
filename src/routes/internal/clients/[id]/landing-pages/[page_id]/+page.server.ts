@@ -153,7 +153,7 @@ export const load: PageServerLoad = async ({ params }) => {
     },
     campaigns,
     formSchema,
-    publicUrl: `/lp/${organizationId}/${landingPageId}`
+    publicUrl: `/lp/${landingPage.slug}`
   };
 };
 
