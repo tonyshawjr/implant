@@ -11,6 +11,7 @@
 
 import { env } from '$env/dynamic/private';
 import { prisma } from '$lib/server/db';
+import { getIntegrationCredentials, isIntegrationConnected } from '$lib/server/integrations';
 
 // Cache for API keys from database (refresh every 5 minutes)
 let apiKeyCache: { keys: Record<string, string>; timestamp: number } | null = null;
@@ -27,33 +28,40 @@ async function getApiKey(keyName: 'claude_api_key' | 'openai_api_key'): Promise<
     }
   }
 
-  // Refresh cache from database
-  try {
-    // Check both the integrations system (integration:claude, integration:openai)
-    // and legacy settings (claude_api_key, openai_api_key)
-    const integrationKey = keyName === 'claude_api_key' ? 'integration:claude' : 'integration:openai';
+  const keys: Record<string, string> = {};
 
+  // Try to get from integrations system (properly decrypted)
+  try {
+    const integrationId = keyName === 'claude_api_key' ? 'claude' : 'openai';
+
+    if (await isIntegrationConnected(integrationId as any)) {
+      const credentials = await getIntegrationCredentials(integrationId as any);
+      if (credentials?.apiKey) {
+        keys[keyName] = credentials.apiKey;
+        apiKeyCache = { keys: { ...apiKeyCache?.keys, ...keys }, timestamp: Date.now() };
+        return credentials.apiKey;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to get integration credentials:', error);
+  }
+
+  // Fall back to legacy settings in database
+  try {
     const settings = await prisma.systemSetting.findMany({
       where: {
-        key: { in: ['claude_api_key', 'openai_api_key', 'integration:claude', 'integration:openai'] }
+        key: { in: ['claude_api_key', 'openai_api_key'] }
       }
     });
 
-    const keys: Record<string, string> = {};
     for (const setting of settings) {
-      const value = setting.value as { key?: string; apiKey?: string } | null;
-
-      // Integration settings use 'apiKey' field
-      if (setting.key.startsWith('integration:') && value?.apiKey) {
-        const legacyKey = setting.key === 'integration:claude' ? 'claude_api_key' : 'openai_api_key';
-        keys[legacyKey] = value.apiKey;
-      }
-      // Legacy settings use 'key' field
-      else if (value?.key) {
+      const value = setting.value as { key?: string } | null;
+      if (value?.key) {
         keys[setting.key] = value.key;
       }
     }
-    apiKeyCache = { keys, timestamp: Date.now() };
+
+    apiKeyCache = { keys: { ...apiKeyCache?.keys, ...keys }, timestamp: Date.now() };
 
     if (keys[keyName]) {
       return keys[keyName];
