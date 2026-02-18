@@ -857,7 +857,7 @@ export function renderFunnelHtml(template: FunnelTemplate, orgData: {
   <div class="funnel" id="funnel">
     <header class="funnel-header">
       ${orgData.logoUrl ? `<img src="${orgData.logoUrl}" alt="${orgData.name}" class="logo">` : `<span class="logo-text">${orgData.name}</span>`}
-      <a href="tel:${orgData.phone}" class="phone-link">${orgData.phone}</a>
+      ${orgData.phone ? `<a href="tel:${orgData.phone}" class="phone-link">${orgData.phone}</a>` : ''}
     </header>
     <div class="progress-bar">
       <div class="progress-fill" id="progress" style="width: 0%"></div>
@@ -964,7 +964,11 @@ export function renderFunnelHtml(template: FunnelTemplate, orgData: {
         }
 
         html += '</div>';
-        html += '<a href="tel:' + ORG_DATA.phone + '" class="btn">' + replaceVars(step.content.buttonText) + '</a>';
+        if (ORG_DATA.phone) {
+          html += '<a href="tel:' + ORG_DATA.phone + '" class="btn">' + replaceVars(step.content.buttonText) + '</a>';
+        } else {
+          html += '<div class="btn" style="cursor: default;">We\'ll Be In Touch Soon!</div>';
+        }
       }
 
       html += '</div>';
