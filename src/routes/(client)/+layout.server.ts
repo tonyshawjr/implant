@@ -45,7 +45,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
         throw redirect(302, '/login?error=organization_not_found');
       }
 
-      if (organization.status !== 'active') {
+      if (organization.status !== 'active' && organization.status !== 'onboarding') {
         throw redirect(302, '/login?error=organization_suspended');
       }
     }
