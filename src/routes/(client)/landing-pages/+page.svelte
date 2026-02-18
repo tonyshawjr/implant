@@ -2,13 +2,6 @@
   import type { PageData } from './$types';
   import { goto } from '$app/navigation';
   import {
-    Card,
-    Badge,
-    Button,
-    Tooltip,
-    Modal
-  } from 'flowbite-svelte';
-  import {
     FileDocOutline,
     EyeOutline,
     UsersGroupOutline,
@@ -45,44 +38,31 @@
     });
   }
 
-  function getStatusColor(status: string): 'green' | 'yellow' | 'gray' {
+  function getStatusBadgeClass(status: string): string {
     switch (status) {
-      case 'published':
-        return 'green';
-      case 'draft':
-        return 'yellow';
-      case 'archived':
-        return 'gray';
-      default:
-        return 'gray';
+      case 'published': return 'badge-success';
+      case 'draft': return 'badge-warning';
+      case 'archived': return 'badge-gray';
+      default: return 'badge-gray';
     }
   }
 
   function getStatusLabel(status: string): string {
     switch (status) {
-      case 'published':
-        return 'Published';
-      case 'draft':
-        return 'Draft';
-      case 'archived':
-        return 'Archived';
-      default:
-        return status;
+      case 'published': return 'Published';
+      case 'draft': return 'Draft';
+      case 'archived': return 'Archived';
+      default: return status;
     }
   }
 
-  function getCategoryColor(category: string): 'blue' | 'purple' | 'green' | 'yellow' {
+  function getCategoryBadgeClass(category: string): string {
     switch (category) {
-      case 'implant':
-        return 'blue';
-      case 'cosmetic':
-        return 'purple';
-      case 'general':
-        return 'green';
-      case 'promo':
-        return 'yellow';
-      default:
-        return 'blue';
+      case 'implant': return 'badge-primary';
+      case 'cosmetic': return 'badge-purple';
+      case 'general': return 'badge-success';
+      case 'promo': return 'badge-warning';
+      default: return 'badge-primary';
     }
   }
 
@@ -197,9 +177,9 @@
             <h3 class="landing-page-name">{landingPage.name}</h3>
             <div class="landing-page-meta">
               {#if landingPage.template}
-                <Badge color={getCategoryColor(landingPage.template.category)} class="text-xs">
+                <span class="badge {getCategoryBadgeClass(landingPage.template.category)}">
                   {landingPage.template.name}
-                </Badge>
+                </span>
               {/if}
               {#if landingPage.campaign}
                 <span class="campaign-tag">
@@ -208,9 +188,9 @@
               {/if}
             </div>
           </div>
-          <Badge color={getStatusColor(landingPage.status)}>
+          <span class="badge {getStatusBadgeClass(landingPage.status)}">
             {getStatusLabel(landingPage.status)}
-          </Badge>
+          </span>
         </div>
 
         <!-- Metrics Row -->
@@ -318,60 +298,65 @@
 {/if}
 
 <!-- Template Selection Modal -->
-<Modal bind:open={showTemplateModal} size="xl" title="Choose a Template">
-  <p class="text-gray-500 dark:text-gray-400 mb-6">
-    Select a template to get started. You can customize everything after creation.
-  </p>
-
-  {#if data.templates && data.templates.length > 0}
-    <div class="template-grid">
-      {#each data.templates as template}
-        <button
-          class="template-card"
-          onclick={() => selectTemplate(template.id)}
-        >
-          <div class="template-preview">
-            {#if template.thumbnailUrl}
-              <img src={template.thumbnailUrl} alt={template.name} />
-            {:else}
-              <div class="template-placeholder">
-                <FileDocOutline class="w-12 h-12 text-gray-400" />
-              </div>
-            {/if}
-          </div>
-          <div class="template-info">
-            <h4 class="template-name">{template.name}</h4>
-            <Badge color={getCategoryColor(template.category)} class="text-xs mb-2">
-              {template.category}
-            </Badge>
-            {#if template.description}
-              <p class="template-description">{template.description}</p>
-            {/if}
-            {#if template.estimatedConversionRate}
-              <div class="template-conversion">
-                <CheckCircleOutline class="w-4 h-4 text-green-500" />
-                <span>~{template.estimatedConversionRate}% avg. conversion</span>
-              </div>
-            {/if}
-          </div>
+{#if showTemplateModal}
+  <div class="modal-overlay open" onclick={(e) => e.target === e.currentTarget && (showTemplateModal = false)} role="presentation">
+    <div class="modal modal-xl" role="dialog" aria-modal="true" tabindex="-1">
+      <div class="modal-header">
+        <h3 class="modal-title">Choose a Template</h3>
+        <button class="modal-close" onclick={() => showTemplateModal = false} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
-      {/each}
-    </div>
-  {:else}
-    <div class="no-templates">
-      <p class="text-gray-500">No templates available. Please contact support.</p>
-    </div>
-  {/if}
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Select a template to get started. You can customize everything after creation.</p>
 
-  {#snippet footer()}
-    <Button color="alternative" onclick={() => (showTemplateModal = false)}>
-      Cancel
-    </Button>
-    <Button href="/landing-pages/create">
-      Start from Scratch
-    </Button>
-  {/snippet}
-</Modal>
+        {#if data.templates && data.templates.length > 0}
+          <div class="template-grid">
+            {#each data.templates as template}
+              <button
+                class="template-card"
+                onclick={() => selectTemplate(template.id)}
+              >
+                <div class="template-preview">
+                  {#if template.thumbnailUrl}
+                    <img src={template.thumbnailUrl} alt={template.name} />
+                  {:else}
+                    <div class="template-placeholder">
+                      <FileDocOutline class="w-12 h-12" />
+                    </div>
+                  {/if}
+                </div>
+                <div class="template-info">
+                  <h4 class="template-name">{template.name}</h4>
+                  <span class="badge {getCategoryBadgeClass(template.category)}">{template.category}</span>
+                  {#if template.description}
+                    <p class="template-description">{template.description}</p>
+                  {/if}
+                  {#if template.estimatedConversionRate}
+                    <div class="template-conversion">
+                      <CheckCircleOutline class="w-4 h-4" />
+                      <span>~{template.estimatedConversionRate}% avg. conversion</span>
+                    </div>
+                  {/if}
+                </div>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <div class="no-templates">
+            <p>No templates available. Please contact support.</p>
+          </div>
+        {/if}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick={() => showTemplateModal = false}>Cancel</button>
+        <a href="/landing-pages/create" class="btn btn-primary">Start from Scratch</a>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .stats-row {
@@ -633,6 +618,23 @@
   .footer-actions {
     display: flex;
     gap: var(--spacing-2);
+  }
+
+  /* Badge purple variant */
+  .badge-purple {
+    background: var(--purple-100, #f3e8ff);
+    color: var(--purple-700, #7c3aed);
+  }
+
+  /* Modal size */
+  .modal-xl {
+    max-width: 900px;
+  }
+
+  .modal-description {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-5);
   }
 
   /* Template Modal Styles */

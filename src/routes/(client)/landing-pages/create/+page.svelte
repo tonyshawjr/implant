@@ -2,14 +2,6 @@
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
   import {
-    Button,
-    Input,
-    Label,
-    Helper,
-    Badge,
-    Alert
-  } from 'flowbite-svelte';
-  import {
     ArrowLeftOutline,
     CheckCircleOutline,
     EyeOutline,
@@ -39,18 +31,13 @@
   );
 
   // Helper functions
-  function getCategoryColor(category: string): 'blue' | 'purple' | 'green' | 'yellow' {
+  function getCategoryBadgeClass(category: string): string {
     switch (category) {
-      case 'implant':
-        return 'blue';
-      case 'cosmetic':
-        return 'purple';
-      case 'general':
-        return 'green';
-      case 'promo':
-        return 'yellow';
-      default:
-        return 'blue';
+      case 'implant': return 'badge-primary';
+      case 'cosmetic': return 'badge-purple';
+      case 'general': return 'badge-success';
+      case 'promo': return 'badge-warning';
+      default: return 'badge-primary';
     }
   }
 
@@ -85,10 +72,10 @@
 
 <!-- Error Alert -->
 {#if form?.message}
-  <Alert color="red" class="mb-6">
-    <ExclamationCircleOutline slot="icon" class="w-5 h-5" />
-    {form.message}
-  </Alert>
+  <div class="alert alert-danger">
+    <ExclamationCircleOutline class="w-5 h-5" />
+    <span>{form.message}</span>
+  </div>
 {/if}
 
 <form
@@ -138,9 +125,9 @@
             <div class="template-info">
               <div class="template-header">
                 <h3 class="template-name">{template.name}</h3>
-                <Badge color={getCategoryColor(template.category)} class="text-xs">
+                <span class="badge {getCategoryBadgeClass(template.category)}">
                   {template.category}
-                </Badge>
+                </span>
               </div>
 
               {#if template.description}
@@ -200,9 +187,9 @@
                 <span class="summary-label">Selected Template</span>
                 <span class="summary-name">{selectedTemplate.name}</span>
               </div>
-              <Badge color={getCategoryColor(selectedTemplate.category)} class="text-xs">
+              <span class="badge {getCategoryBadgeClass(selectedTemplate.category)}">
                 {selectedTemplate.category}
-              </Badge>
+              </span>
             </div>
           {:else}
             <div class="no-template-selected">
@@ -213,42 +200,37 @@
 
           <!-- Page Name -->
           <div class="form-group">
-            <Label for="pageName" class="mb-2">Page Name *</Label>
-            <Input
+            <label class="form-label" for="pageName">Page Name *</label>
+            <input
               id="pageName"
               name="name"
               type="text"
+              class="form-input"
               placeholder="e.g., Dental Implants Consultation"
               bind:value={pageName}
               required
             />
-            <Helper class="mt-1">
-              A descriptive name for your landing page
-            </Helper>
+            <span class="form-hint">A descriptive name for your landing page</span>
           </div>
 
           <!-- Custom Slug -->
           <div class="form-group">
-            <Label for="customSlug" class="mb-2">URL Slug (optional)</Label>
+            <label class="form-label" for="customSlug">URL Slug (optional)</label>
             <div class="slug-input-wrapper">
               <span class="slug-prefix">/lp/</span>
-              <Input
+              <input
                 id="customSlug"
                 name="slug"
                 type="text"
+                class="form-input slug-input"
                 placeholder="auto-generated"
                 bind:value={customSlug}
-                class="slug-input"
               />
             </div>
             {#if slugPreview}
-              <Helper class="mt-1">
-                Your page will be at: <code class="url-preview">/lp/{slugPreview}</code>
-              </Helper>
+              <span class="form-hint">Your page will be at: <code class="url-preview">/lp/{slugPreview}</code></span>
             {:else}
-              <Helper class="mt-1">
-                Leave empty to auto-generate from page name
-              </Helper>
+              <span class="form-hint">Leave empty to auto-generate from page name</span>
             {/if}
           </div>
 
@@ -263,9 +245,9 @@
           <a href="/landing-pages" class="btn btn-secondary">
             Cancel
           </a>
-          <Button
+          <button
             type="submit"
-            color="primary"
+            class="btn btn-primary"
             disabled={!selectedTemplateId || !pageName.trim() || isSubmitting}
           >
             {#if isSubmitting}
@@ -273,7 +255,7 @@
             {:else}
               Create Landing Page
             {/if}
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -603,8 +585,39 @@
     color: var(--gray-500);
   }
 
-  :global(.slug-input) {
-    border-radius: 0 var(--radius-lg) var(--radius-lg) 0 !important;
+  .slug-input {
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    flex: 1;
+  }
+
+  /* Alert */
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-6);
+  }
+
+  .alert-danger {
+    background: var(--danger-50, #fef2f2);
+    color: var(--danger-700, #b91c1c);
+    border: 1px solid var(--danger-100, #fee2e2);
+  }
+
+  /* Badge purple variant */
+  .badge-purple {
+    background: var(--purple-100, #f3e8ff);
+    color: var(--purple-700, #7c3aed);
+  }
+
+  .form-hint {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin-top: var(--spacing-1);
   }
 
   .url-preview {
