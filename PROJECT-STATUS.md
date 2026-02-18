@@ -145,12 +145,14 @@ SqueezMedia Platform is an AI-powered, territory-exclusive lead generation SaaS 
    - Fixed New Campaign button in AI Operations
    - Fixed territory release form
    - Fixed waitlist individual delete/assign buttons
+   - Fixed client landing pages using ID instead of slug for URLs
+   - Added preview mode support to client landing pages
 
 ### Still Needs Work
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Client landing pages UI | High | Needs design system update like internal |
+| Client landing pages UI | High | Replace Flowbite Badge/Modal with CSS design system |
 | Landing page editor | Medium | Edit content after creation |
 | Email notifications | Low | Lead alerts, status changes |
 
