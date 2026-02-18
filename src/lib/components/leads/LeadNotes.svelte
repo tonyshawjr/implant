@@ -1,19 +1,10 @@
 <script lang="ts">
-  import { Card, Button, Textarea } from 'flowbite-svelte';
-  import { PlusOutline, UserOutline } from 'flowbite-svelte-icons';
-  import { formatDate, getFriendlyRelativeTime } from '$lib/utils';
   import { enhance } from '$app/forms';
-
-  interface Note {
-    id: string;
-    content: string;
-    createdAt: string | Date;
-    createdBy?: { firstName: string; lastName: string } | null;
-  }
+  import { formatDate, getFriendlyRelativeTime } from '$lib/utils';
 
   interface Props {
     leadId: string;
-    notes: Note[];
+    notes: string | null;
   }
 
   let { leadId, notes }: Props = $props();
@@ -30,76 +21,94 @@
   }
 </script>
 
-<Card>
-  <div class="mb-4 flex items-center justify-between">
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Notes</h3>
-    <Button color="light" size="sm" onclick={toggleAddNote}>
-      <PlusOutline class="mr-2 h-4 w-4" />
+<div class="card">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h3 class="card-title">Notes</h3>
+    <button class="btn btn-secondary btn-sm" onclick={toggleAddNote}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
       Add Note
-    </Button>
+    </button>
   </div>
-
-  {#if showAddNote}
-    <form
-      method="POST"
-      action="?/addNote"
-      use:enhance={() => {
-        isSubmitting = true;
-        return async ({ update }) => {
-          await update();
-          isSubmitting = false;
-          showAddNote = false;
-          newNoteContent = '';
-        };
-      }}
-      class="mb-4"
-    >
-      <input type="hidden" name="leadId" value={leadId} />
-      <Textarea
-        name="content"
-        bind:value={newNoteContent}
-        rows={3}
-        placeholder="Add a note about this lead..."
-        class="mb-2"
-      />
-      <div class="flex justify-end gap-2">
-        <Button color="light" size="sm" onclick={toggleAddNote} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button color="primary" size="sm" type="submit" disabled={isSubmitting || !newNoteContent.trim()}>
-          {isSubmitting ? 'Saving...' : 'Save Note'}
-        </Button>
-      </div>
-    </form>
-  {/if}
-
-  {#if notes.length === 0}
-    <p class="py-8 text-center text-gray-500 dark:text-gray-400">No notes yet</p>
-  {:else}
-    <div class="space-y-4">
-      {#each notes as note (note.id)}
-        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800">
-          <div class="mb-2 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              {#if note.createdBy}
-                <div class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-100 text-xs font-medium text-primary-700 dark:bg-primary-900 dark:text-primary-300">
-                  {note.createdBy.firstName.charAt(0)}{note.createdBy.lastName.charAt(0)}
-                </div>
-                <span class="text-sm font-medium text-gray-900 dark:text-white">
-                  {note.createdBy.firstName} {note.createdBy.lastName}
-                </span>
-              {:else}
-                <UserOutline class="h-5 w-5 text-gray-400" />
-                <span class="text-sm text-gray-500 dark:text-gray-400">System</span>
-              {/if}
-            </div>
-            <time class="text-xs text-gray-500 dark:text-gray-400" title={formatDate(note.createdAt, 'long')}>
-              {getFriendlyRelativeTime(note.createdAt)}
-            </time>
-          </div>
-          <p class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{note.content}</p>
+  <div class="card-body">
+    {#if showAddNote}
+      <form
+        method="POST"
+        action="?/addNote"
+        use:enhance={() => {
+          isSubmitting = true;
+          return async ({ update }) => {
+            await update();
+            isSubmitting = false;
+            showAddNote = false;
+            newNoteContent = '';
+          };
+        }}
+        class="note-form"
+      >
+        <textarea
+          name="note"
+          bind:value={newNoteContent}
+          rows={3}
+          class="form-input"
+          placeholder="Add a note about this lead..."
+        ></textarea>
+        <div class="note-form-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick={toggleAddNote} disabled={isSubmitting}>
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary btn-sm" disabled={isSubmitting || !newNoteContent.trim()}>
+            {isSubmitting ? 'Saving...' : 'Save Note'}
+          </button>
         </div>
-      {/each}
-    </div>
-  {/if}
-</Card>
+      </form>
+    {/if}
+
+    {#if notes}
+      <div class="notes-content">
+        <p class="note-text">{notes}</p>
+      </div>
+    {:else if !showAddNote}
+      <p class="empty-text">No notes yet</p>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .note-form {
+    margin-bottom: var(--spacing-4);
+  }
+
+  .note-form textarea {
+    width: 100%;
+    margin-bottom: var(--spacing-2);
+    resize: vertical;
+  }
+
+  .note-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-2);
+  }
+
+  .notes-content {
+    padding: var(--spacing-4);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+  }
+
+  .note-text {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    white-space: pre-wrap;
+  }
+
+  .empty-text {
+    text-align: center;
+    color: var(--gray-500);
+    padding: var(--spacing-8) 0;
+  }
+</style>
