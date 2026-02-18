@@ -49,26 +49,26 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// Verify the organization exists and is active
+		// Verify the organization exists
 		const organization = await prisma.organization.findUnique({
 			where: { id: organizationId },
 			select: { id: true, status: true }
 		});
 
-		if (!organization || organization.status !== 'active') {
+		if (!organization) {
 			return json(
-				{ success: false, error: 'Organization not found or inactive' },
+				{ success: false, error: 'Organization not found' },
 				{ status: 400 }
 			);
 		}
 
-		// Verify the landing page exists
+		// Verify the landing page exists (allow both published and draft)
 		const landingPage = await prisma.landingPage.findUnique({
 			where: { id: landingPageId },
 			select: { id: true, campaignId: true, status: true }
 		});
 
-		if (!landingPage || landingPage.status !== 'published') {
+		if (!landingPage) {
 			return json(
 				{ success: false, error: 'Landing page not found' },
 				{ status: 400 }
@@ -84,7 +84,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				lastName,
 				email,
 				phone,
-				source: 'website', // Using 'website' as it's the closest LeadSource enum value
+				source: 'website',
 				sourceDetail: `Landing Page: ${landingPageId}`,
 				status: 'new',
 				temperature: 'warm',

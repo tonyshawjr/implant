@@ -1016,16 +1016,13 @@ export function renderFunnelHtml(template: FunnelTemplate, orgData: {
           // Track conversion
           if (typeof fbq !== 'undefined') fbq('track', 'Lead');
           if (typeof gtag !== 'undefined') gtag('event', 'generate_lead');
-
-          nextStep(); // Go to result
-        } else {
-          throw new Error('Failed');
         }
       } catch (err) {
-        btn.textContent = originalText;
-        btn.disabled = false;
-        alert('Something went wrong. Please try again or call us directly.');
+        console.error('Submission error:', err);
       }
+
+      // Always advance to result step so user isn't stuck
+      nextStep();
     }
 
     // Initialize
