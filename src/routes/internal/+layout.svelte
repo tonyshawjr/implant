@@ -51,6 +51,14 @@
     '/internal/users': {
       title: 'User Management',
       breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Users' }]
+    },
+    '/internal/landing-pages': {
+      title: 'Landing Pages',
+      breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Landing Pages' }]
+    },
+    '/internal/landing-pages/create': {
+      title: 'Create Landing Page',
+      breadcrumbs: [{ label: 'Dashboard', href: '/internal' }, { label: 'Landing Pages', href: '/internal/landing-pages' }, { label: 'Create' }]
     }
   };
 
