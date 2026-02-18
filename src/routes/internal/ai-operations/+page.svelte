@@ -1,8 +1,13 @@
 <script lang="ts">
   import type { PageData } from './$types';
   import { enhance } from '$app/forms';
+  import { goto } from '$app/navigation';
 
   let { data }: { data: PageData } = $props();
+
+  // Modal state for new campaign
+  let showNewCampaignModal = $state(false);
+  let selectedClientId = $state('');
 
   // Active tab state
   let activeTab = $state(data.activeTab || 'voice-queue');
@@ -421,7 +426,7 @@
         <h3 class="card-title">Campaign Factory</h3>
         <p class="card-subtitle">Campaigns in draft or pending review status</p>
       </div>
-      <button class="btn btn-primary header-action-btn">
+      <button class="btn btn-primary header-action-btn" onclick={() => showNewCampaignModal = true}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
@@ -769,6 +774,48 @@
           <p class="empty-state-description">AI optimizations will appear here as they are applied.</p>
         </div>
       {/if}
+    </div>
+  </div>
+{/if}
+
+<!-- New Campaign Modal -->
+{#if showNewCampaignModal}
+  <div class="modal-overlay" onclick={() => showNewCampaignModal = false}>
+    <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h3 class="modal-title">Create New Campaign</h3>
+        <button class="modal-close" onclick={() => showNewCampaignModal = false}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label for="selectClient" class="form-label">Select Client</label>
+        <select id="selectClient" class="form-select" bind:value={selectedClientId}>
+          <option value="">-- Choose a client --</option>
+          {#each data.organizations as org}
+            <option value={org.id}>{org.name}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick={() => showNewCampaignModal = false}>
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          disabled={!selectedClientId}
+          onclick={() => {
+            if (selectedClientId) {
+              goto(`/internal/clients/${selectedClientId}/campaigns/create`);
+            }
+          }}
+        >
+          Continue
+        </button>
+      </div>
     </div>
   </div>
 {/if}
@@ -1314,5 +1361,90 @@
   /* Utility */
   .flex-1 {
     flex: 1;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--color-text-tertiary);
+  }
+
+  .modal-close:hover {
+    color: var(--color-text-primary);
+  }
+
+  .modal-body {
+    padding: var(--spacing-4);
+  }
+
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    background: white;
+  }
+
+  .form-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-2);
+    padding: var(--spacing-4);
+    border-top: 1px solid var(--color-border);
   }
 </style>

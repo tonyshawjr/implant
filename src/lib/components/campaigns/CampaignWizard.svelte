@@ -29,6 +29,7 @@
     FileLinesOutline
   } from 'flowbite-svelte-icons';
   import AssetUploader from '$lib/components/assets/AssetUploader.svelte';
+  import { AdPreview } from '$lib/components/ads';
 
   // Types
   interface Asset {
