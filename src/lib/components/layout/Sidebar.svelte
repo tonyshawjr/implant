@@ -31,6 +31,7 @@
     management: [
       { label: 'Clients', href: '/internal', icon: 'users' },
       { label: 'Territories', href: '/internal/territories', icon: 'map' },
+      { label: 'Landing Pages', href: '/internal/landing-pages', icon: 'file-text' },
       { label: 'AI Operations', href: '/internal/ai-operations', icon: 'cpu', badge: 3 }
     ],
     business: [
@@ -51,6 +52,7 @@
       { label: 'Overview', href: '/', icon: 'home' },
       { label: 'Leads', href: '/leads', icon: 'users' },
       { label: 'Campaigns', href: '/campaigns', icon: 'megaphone' },
+      { label: 'Landing Pages', href: '/landing-pages', icon: 'file-text' },
       { label: 'Brand Voice', href: '/brand-voice', icon: 'mic' },
       { label: 'Territory', href: '/territory', icon: 'map' }
     ],
@@ -104,6 +106,12 @@
               {:else if item.icon === 'map'}
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                 <circle cx="12" cy="10" r="3"/>
+              {:else if item.icon === 'file-text'}
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
               {:else if item.icon === 'cpu'}
                 <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
                 <rect x="9" y="9" width="6" height="6"/>
@@ -195,6 +203,12 @@
               {:else if item.icon === 'megaphone'}
                 <path d="M3 11l18-5v12L3 13v-2z"/>
                 <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>
+              {:else if item.icon === 'file-text'}
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
               {:else if item.icon === 'mic'}
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
